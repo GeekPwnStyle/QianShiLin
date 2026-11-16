@@ -1,0 +1,4 @@
+redir /qian /qian/ 308
+handle_path /qian/* {
+    reverse_proxy qianshilin:8080
+}

@@ -71,7 +71,9 @@ const NavigationContext = createContext<NavigationContextValue | null>(null);
 
 function resolveInitialRoute(): string {
   if (typeof window === 'undefined') return '/workbench';
-  const path = window.location.pathname;
+  const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+  const pathname = window.location.pathname;
+  const path = pathname === base ? "/" : pathname.startsWith(base + "/") ? pathname.slice(base.length) : pathname;
   if (path === '/' || path === '') return '/workbench';
   return path;
 }
@@ -122,7 +124,9 @@ export const NavigationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   useEffect(() => {
     const onPopState = () => {
-      const path = window.location.pathname;
+      const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+  const pathname = window.location.pathname;
+  const path = pathname === base ? "/" : pathname.startsWith(base + "/") ? pathname.slice(base.length) : pathname;
       setCurrentRoute(path === '/' || path === '' ? '/workbench' : path);
     };
     window.addEventListener('popstate', onPopState);
@@ -185,7 +189,7 @@ export const NavigationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   const pushHistory = useCallback((route: string) => {
     if (typeof window !== 'undefined' && window.location.pathname !== route) {
-      window.history.pushState({}, '', route);
+      window.history.pushState({}, '', import.meta.env.BASE_URL.replace(/\/$/, '') + route);
     }
     setCurrentRoute(route);
     setMobileDrawerOpen(false);

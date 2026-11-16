@@ -1,0 +1,10 @@
+services:
+  qianshilin:
+    image: ${QIANSHILIN_IMAGE:?Set QIANSHILIN_IMAGE}
+    container_name: qianshilin
+    restart: unless-stopped
+    networks:
+      - proxy
+networks:
+  proxy:
+    external: true
