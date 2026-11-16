@@ -5,12 +5,43 @@ import {
   PRESET_SESSIONS,
   checkPermission,
   type AuthSession,
+  type AvatarColorPreset,
   type RoleDefinition,
 } from '@/src/modules/auth/domain/identity';
 import { appRepositories } from '@/src/app/composition/container';
 import type { DataScopeContext } from '@/src/shared/types/common';
 
 const AUTH_SESSION_KEY = 'qsl_auth_preset_key_v2';
+const AVATAR_STORAGE_KEY = 'qsl_user_avatars_v1';
+
+interface SavedAvatarPref {
+  avatarUrl?: string;
+  avatarInitials?: string;
+  avatarColorPreset?: AvatarColorPreset;
+}
+
+function readAvatarMap(): Record<string, SavedAvatarPref> {
+  if (typeof window === 'undefined') return {};
+  try {
+    const raw = window.localStorage.getItem(AVATAR_STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? (parsed as Record<string, SavedAvatarPref>) : {};
+  } catch {
+    return {};
+  }
+}
+
+function applySavedAvatar(base: AuthSession): AuthSession {
+  const saved = readAvatarMap()[base.username];
+  if (!saved) return base;
+  return {
+    ...base,
+    avatarUrl: saved.avatarUrl ?? base.avatarUrl,
+    avatarInitials: saved.avatarInitials?.trim() || base.avatarInitials,
+    avatarColorPreset: saved.avatarColorPreset ?? base.avatarColorPreset,
+  };
+}
 
 function loadInitialAuthState(): { isAuthenticated: boolean; session: AuthSession } {
   if (typeof window === 'undefined') {
@@ -19,17 +50,23 @@ function loadInitialAuthState(): { isAuthenticated: boolean; session: AuthSessio
   try {
     const saved = window.sessionStorage.getItem(AUTH_SESSION_KEY);
     if (saved && saved !== 'logged_out' && saved in PRESET_SESSIONS) {
-      return { isAuthenticated: true, session: PRESET_SESSIONS[saved] };
+      return { isAuthenticated: true, session: applySavedAvatar(PRESET_SESSIONS[saved]) };
     }
   } catch {
     // Ignore storage read errors
   }
-  return { isAuthenticated: false, session: PRESET_SESSIONS.admin };
+  return { isAuthenticated: false, session: applySavedAvatar(PRESET_SESSIONS.admin) };
 }
 
 interface LoginResult {
   ok: boolean;
   error?: string;
+}
+
+interface AvatarUpdatePatch {
+  avatarUrl?: string | null;
+  avatarInitials?: string;
+  avatarColorPreset?: AvatarColorPreset;
 }
 
 interface AuthContextValue {
@@ -40,6 +77,8 @@ interface AuthContextValue {
   dataScope: DataScopeContext;
   loginWithCredentials: (username: string, password: string) => LoginResult;
   logout: () => void;
+  updateAvatar: (patch: AvatarUpdatePatch) => void;
+  resetAvatar: () => void;
   switchPresetIdentity: (presetKey: string) => void;
   switchStore: (storeId: string) => void;
   hasPermission: (permissionCode?: string) => boolean;
@@ -117,7 +156,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
     }
 
-    setSession(PRESET_SESSIONS[matched.presetKey]);
+    setSession(applySavedAvatar(PRESET_SESSIONS[matched.presetKey]));
     setIsAuthenticated(true);
     persistAuthKey(matched.presetKey);
     return { ok: true };
@@ -128,9 +167,71 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     persistAuthKey('logged_out');
   };
 
+  const updateAvatar = (patch: AvatarUpdatePatch) => {
+    setSession((prev) => {
+      const nextUrl =
+        patch.avatarUrl === null
+          ? undefined
+          : patch.avatarUrl !== undefined
+            ? patch.avatarUrl
+            : prev.avatarUrl;
+      const nextInitials =
+        patch.avatarInitials !== undefined
+          ? patch.avatarInitials.trim().slice(0, 2) ||
+            PRESET_SESSIONS[
+              Object.keys(PRESET_SESSIONS).find(
+                (k) => PRESET_SESSIONS[k].username === prev.username
+              ) ?? 'admin'
+            ]?.avatarInitials ||
+            prev.avatarInitials
+          : prev.avatarInitials;
+      const nextPreset = patch.avatarColorPreset ?? prev.avatarColorPreset;
+
+      try {
+        const map = readAvatarMap();
+        map[prev.username] = {
+          ...(nextUrl ? { avatarUrl: nextUrl } : {}),
+          avatarInitials: nextInitials,
+          ...(nextPreset ? { avatarColorPreset: nextPreset } : {}),
+        };
+        window.localStorage.setItem(AVATAR_STORAGE_KEY, JSON.stringify(map));
+      } catch {
+        // Ignore storage quota errors
+      }
+
+      return {
+        ...prev,
+        avatarUrl: nextUrl,
+        avatarInitials: nextInitials,
+        avatarColorPreset: nextPreset,
+      };
+    });
+  };
+
+  const resetAvatar = () => {
+    setSession((prev) => {
+      const base =
+        Object.values(PRESET_SESSIONS).find((s) => s.username === prev.username) ??
+        PRESET_SESSIONS.admin;
+      try {
+        const map = readAvatarMap();
+        delete map[prev.username];
+        window.localStorage.setItem(AVATAR_STORAGE_KEY, JSON.stringify(map));
+      } catch {
+        // Ignore storage errors
+      }
+      return {
+        ...prev,
+        avatarUrl: undefined,
+        avatarInitials: base.avatarInitials,
+        avatarColorPreset: undefined,
+      };
+    });
+  };
+
   const switchPresetIdentity = (presetKey: string) => {
     if (presetKey in PRESET_SESSIONS) {
-      setSession(PRESET_SESSIONS[presetKey]);
+      setSession(applySavedAvatar(PRESET_SESSIONS[presetKey]));
       setIsAuthenticated(true);
       persistAuthKey(presetKey);
       return;
@@ -138,9 +239,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const matchedRole = allRoles.find((r) => r.id === presetKey);
     if (!matchedRole) return;
     if (matchedRole.identityType === 'admin') {
-      setSession({ ...PRESET_SESSIONS.admin, roleId: matchedRole.id, roleName: matchedRole.name });
+      setSession(
+        applySavedAvatar({
+          ...PRESET_SESSIONS.admin,
+          roleId: matchedRole.id,
+          roleName: matchedRole.name,
+        })
+      );
     } else if (matchedRole.identityType === 'supplier') {
-      setSession({ ...PRESET_SESSIONS.supplier, roleId: matchedRole.id, roleName: matchedRole.name });
+      setSession(
+        applySavedAvatar({
+          ...PRESET_SESSIONS.supplier,
+          roleId: matchedRole.id,
+          roleName: matchedRole.name,
+        })
+      );
     } else {
       const base =
         matchedRole.subRole === 'store_guide'
@@ -148,12 +261,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           : matchedRole.subRole === 'store_optometrist'
             ? PRESET_SESSIONS.store_optometrist
             : PRESET_SESSIONS.store_manager;
-      setSession({
-        ...base,
-        roleId: matchedRole.id,
-        roleName: matchedRole.name,
-        title: `${matchedRole.name} · ${base.currentStoreName}`,
-      });
+      setSession(
+        applySavedAvatar({
+          ...base,
+          roleId: matchedRole.id,
+          roleName: matchedRole.name,
+          title: `${matchedRole.name} · ${base.currentStoreName}`,
+        })
+      );
     }
     setIsAuthenticated(true);
   };
@@ -191,6 +306,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     dataScope,
     loginWithCredentials,
     logout,
+    updateAvatar,
+    resetAvatar,
     switchPresetIdentity,
     switchStore,
     hasPermission,

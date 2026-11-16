@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, Save, Shield } from 'lucide-react';
+import { CheckCircle2, Lock, Save, Shield } from 'lucide-react';
 import { appRepositories } from '@/src/app/composition/container';
 import { useAuth } from '@/src/modules/auth/application/AuthContext';
 import type { DataScopeType, RoleDefinition } from '@/src/modules/auth/domain/identity';
@@ -8,79 +8,109 @@ import { formatDateTime } from '@/src/shared/lib/format';
 import { Button } from '@/src/shared/ui/Button';
 import { StatusLabel } from '@/src/shared/ui/StatusLabel';
 
+interface PermissionItemDef {
+  code: string;
+  label: string;
+  isModuleEntry?: boolean;
+  parentModuleCode?: string;
+}
+
 const PERMISSION_GROUPS: Array<{
   group: string;
-  items: Array<{ code: string; label: string }>;
+  items: PermissionItemDef[];
 }> = [
   {
     group: '工作台与基本资料',
     items: [
-      { code: 'workbench.read', label: '访问系统工作台' },
-      { code: 'basic.read', label: '基本资料模块可见' },
-      { code: 'basic.product.read', label: '商品列表查看' },
-      { code: 'basic.product.create', label: '商品新增/复制' },
-      { code: 'basic.product.update', label: '商品编辑/批量设置' },
-      { code: 'basic.product.delete', label: '商品删除' },
-      { code: 'basic.product.import', label: '商品批量导入' },
-      { code: 'basic.product.export', label: '商品导出' },
-      { code: 'basic.product.cost.read', label: '进货价敏感字段查看' },
+      { code: 'workbench.read', label: '访问系统工作台', isModuleEntry: true },
+      { code: 'basic.read', label: '基本资料（一级模块）', isModuleEntry: true },
+      { code: 'basic.product.read', label: '商品列表查看', parentModuleCode: 'basic.read' },
+      { code: 'basic.product.create', label: '商品新增/复制', parentModuleCode: 'basic.read' },
+      { code: 'basic.product.update', label: '商品编辑/批量设置', parentModuleCode: 'basic.read' },
+      { code: 'basic.product.delete', label: '商品删除', parentModuleCode: 'basic.read' },
+      { code: 'basic.product.import', label: '商品批量导入', parentModuleCode: 'basic.read' },
+      { code: 'basic.product.export', label: '商品导出', parentModuleCode: 'basic.read' },
+      { code: 'basic.product.cost.read', label: '进货价敏感字段查看', parentModuleCode: 'basic.read' },
+      { code: 'basic.customer.read', label: '客户信息档案', parentModuleCode: 'basic.read' },
+      { code: 'basic.staff.read', label: '职员与岗位档案', parentModuleCode: 'basic.read' },
+      { code: 'basic.supplier.read', label: '供应商档案', parentModuleCode: 'basic.read' },
+      { code: 'basic.brand.read', label: '品牌列表管理', parentModuleCode: 'basic.read' },
+      { code: 'basic.fee.read', label: '费用项目字典', parentModuleCode: 'basic.read' },
     ],
   },
   {
-    group: '销售、采购、调拨与库存',
+    group: '销售、采购、调拨、库存与售后',
     items: [
-      { code: 'sales.read', label: '销售管理模块' },
-      { code: 'sales.pos.create', label: '销售开单' },
-      { code: 'sales.discount.override', label: '低于8.5折超权折扣' },
-      { code: 'purchase.read', label: '采购管理查看' },
-      { code: 'purchase.approve', label: '采购审批' },
-      { code: 'transfer.read', label: '调拨管理查看' },
-      { code: 'inventory.read', label: '库存查询' },
-      { code: 'inventory.adjust.doc', label: '报损报溢/盘点制单' },
+      { code: 'sales.read', label: '销售管理（一级模块）', isModuleEntry: true },
+      { code: 'sales.pos.create', label: '销售开单收银', parentModuleCode: 'sales.read' },
+      { code: 'sales.order.read', label: '销售单据查询', parentModuleCode: 'sales.read' },
+      { code: 'sales.discount.override', label: '低于8.5折超权折扣', parentModuleCode: 'sales.read' },
+      { code: 'sales.settings.manage', label: '销售策略设置', parentModuleCode: 'sales.read' },
+      { code: 'purchase.read', label: '采购管理（一级模块）', isModuleEntry: true },
+      { code: 'purchase.create', label: '采购制单', parentModuleCode: 'purchase.read' },
+      { code: 'purchase.approve', label: '采购审批', parentModuleCode: 'purchase.read' },
+      { code: 'transfer.read', label: '调拨管理（一级模块）', isModuleEntry: true },
+      { code: 'transfer.create', label: '发起门店调拨', parentModuleCode: 'transfer.read' },
+      { code: 'inventory.read', label: '库存管理（一级模块）', isModuleEntry: true },
+      { code: 'inventory.adjust.doc', label: '报损报溢/盘点制单', parentModuleCode: 'inventory.read' },
+      { code: 'after_sales.read', label: '售后管理（一级模块）', isModuleEntry: true },
     ],
   },
   {
-    group: '会员与售后回访推送',
+    group: '会员管理与精细化回访',
     items: [
-      { code: 'members.read', label: '会员管理模块' },
-      { code: 'members.profile.read', label: '会员基本资料查看' },
-      { code: 'members.profile.create', label: '会员新增/导入' },
-      { code: 'members.followup.notification.read', label: '视力复查/取镜/过期提醒查看' },
-      { code: 'members.followup.notification.send', label: '批量发送演示通知' },
-      { code: 'members.analytics.read', label: '会员RFM及数据分析' },
+      { code: 'members.read', label: '会员管理（一级模块）', isModuleEntry: true },
+      { code: 'members.profile.read', label: '会员基本资料查看', parentModuleCode: 'members.read' },
+      { code: 'members.profile.create', label: '会员新增/导入', parentModuleCode: 'members.read' },
+      { code: 'members.followup.notification.read', label: '视力复查/取镜/过期提醒', parentModuleCode: 'members.read' },
+      { code: 'members.followup.notification.send', label: '批量发送通知', parentModuleCode: 'members.read' },
+      { code: 'members.points.read', label: '会员积分管理', parentModuleCode: 'members.read' },
+      { code: 'members.recharge.read', label: '会员充值/退充', parentModuleCode: 'members.read' },
+      { code: 'members.appointments.read', label: '预约到店管理', parentModuleCode: 'members.read' },
+      { code: 'members.marketing.read', label: '老带新与转介绍', parentModuleCode: 'members.read' },
+      { code: 'members.analytics.read', label: '会员RFM及数据分析', parentModuleCode: 'members.read' },
+      { code: 'members.optometry.read', label: '会员验光档案查询', parentModuleCode: 'members.read' },
+      { code: 'members.settings.manage', label: '会员等级/积分规则设置', parentModuleCode: 'members.read' },
     ],
   },
   {
-    group: '视光、加工、隐形医疗器械与财务',
+    group: '视光、加工、隐形医疗器械、报表与财务',
     items: [
-      { code: 'contact_lenses.read', label: '隐形眼镜三类器械合规管理' },
-      { code: 'processing.read', label: '加工中心工单' },
-      { code: 'vision_records.read', label: '视光档案管理' },
-      { code: 'vision_screening.read', label: '校园视力筛查' },
-      { code: 'orthokeratology.read', label: '角膜塑形镜管理' },
-      { code: 'finance.read', label: '账款与往来对账' },
-      { code: 'finance.audit', label: '采购单财务审核与核销' },
-      { code: 'brands.read', label: '品牌专区' },
+      { code: 'contact_lenses.read', label: '隐形眼镜管理（一级模块）', isModuleEntry: true },
+      { code: 'processing.read', label: '加工中心（一级模块）', isModuleEntry: true },
+      { code: 'vision_records.read', label: '视光档案（一级模块）', isModuleEntry: true },
+      { code: 'vision_screening.read', label: '视力筛查（一级模块）', isModuleEntry: true },
+      { code: 'orthokeratology.read', label: '角膜塑形管理（一级模块）', isModuleEntry: true },
+      { code: 'reports.read', label: '报表中心（一级模块）', isModuleEntry: true },
+      { code: 'finance.read', label: '财务管理（一级模块）', isModuleEntry: true },
+      { code: 'finance.audit', label: '采购单财务审核与核销', parentModuleCode: 'finance.read' },
+      { code: 'brands.read', label: '品牌专区（一级模块）', isModuleEntry: true },
+      { code: 'brands.order.create', label: '品牌订货下单', parentModuleCode: 'brands.read' },
+      { code: 'marketing.read', label: '营销推广（一级模块）', isModuleEntry: true },
     ],
   },
   {
-    group: '系统管理与高敏操作',
+    group: '系统管理、帮助中心与高敏操作',
     items: [
-      { code: 'system.read', label: '系统管理基础菜单' },
-      { code: 'system.role.manage', label: '角色权限管理' },
-      { code: 'system.user.manage', label: '用户权限分配' },
-      { code: 'system.store.manage', label: '门店与仓库资料' },
-      { code: 'system.period_close.execute', label: '期末处理执行（高敏）' },
+      { code: 'system.read', label: '系统管理（一级模块）', isModuleEntry: true },
+      { code: 'system.role.manage', label: '角色权限管理（最高权限）', parentModuleCode: 'system.read' },
+      { code: 'system.user.manage', label: '用户权限分配', parentModuleCode: 'system.read' },
+      { code: 'system.store.manage', label: '门店与仓库资料', parentModuleCode: 'system.read' },
+      { code: 'system.period_close.execute', label: '期末处理执行（高敏）', parentModuleCode: 'system.read' },
+      { code: 'help.read', label: '帮助中心（一级模块）', isModuleEntry: true },
     ],
   },
 ];
 
 export const RolePermissionsPage: React.FC = () => {
   const queryClient = useQueryClient();
-  const { session, allRoles, refetchRoles } = useAuth();
+  const { session, allRoles, refetchRoles, hasPermission } = useAuth();
   const [selectedRoleId, setSelectedRoleId] = useState(allRoles[0]?.id ?? 'role_hq_admin');
   const [draftRole, setDraftRole] = useState<RoleDefinition | null>(null);
   const [savedBanner, setSavedBanner] = useState<string | null>(null);
+
+  const canManageRoles =
+    session.identityType === 'admin' && hasPermission('system.role.manage');
 
   const { data: auditEntries = [] } = useQuery({
     queryKey: ['rbac', 'audits'],
@@ -100,10 +130,12 @@ export const RolePermissionsPage: React.FC = () => {
       appRepositories.roles.updateRole(
         role,
         session.displayName,
-        `更新角色「${role.name}」权限配置（${role.permissions.length}项功能权，范围：${role.dataScope}）`
+        `更新角色「${role.name}」可操作功能配置（${role.permissions.length}项功能权，范围：${role.dataScope}）`
       ),
     onSuccess: (updated) => {
-      setSavedBanner(`角色「${updated.name}」权限与数据范围已更新并写入变更记录。`);
+      setSavedBanner(
+        `角色「${updated.name}」可操作功能与数据范围已更新，顶部导航及「全部菜单」已按新权限同步生效。`
+      );
       refetchRoles();
       void queryClient.invalidateQueries({ queryKey: ['rbac'] });
     },
@@ -111,21 +143,67 @@ export const RolePermissionsPage: React.FC = () => {
 
   if (!draftRole) return null;
 
-  const togglePermission = (code: string) => {
+  const isLockedAdminPerm = (code: string) =>
+    draftRole.id === 'role_hq_admin' &&
+    (code === 'system.read' || code === 'system.role.manage');
+
+  const togglePermission = (item: PermissionItemDef) => {
+    if (!canManageRoles || isLockedAdminPerm(item.code)) return;
+
     setDraftRole((prev) => {
       if (!prev) return prev;
-      const exists = prev.permissions.includes(code);
+      const exists = prev.permissions.includes(item.code);
+      let nextPerms = exists
+        ? prev.permissions.filter((p) => p !== item.code)
+        : [...prev.permissions, item.code];
+
+      // Auto-cascade: enabling a sub-permission enables its parent module entry;
+      // disabling a module entry removes its child sub-permissions.
+      if (!exists && item.parentModuleCode && !nextPerms.includes(item.parentModuleCode)) {
+        nextPerms = [...nextPerms, item.parentModuleCode];
+      } else if (exists && item.isModuleEntry) {
+        const childCodes = PERMISSION_GROUPS.flatMap((g) => g.items)
+          .filter((i) => i.parentModuleCode === item.code && !isLockedAdminPerm(i.code))
+          .map((i) => i.code);
+        nextPerms = nextPerms.filter((p) => !childCodes.includes(p));
+      }
+
       return {
         ...prev,
-        permissions: exists
-          ? prev.permissions.filter((p) => p !== code)
-          : [...prev.permissions, code],
+        permissions: Array.from(new Set(nextPerms)),
+      };
+    });
+  };
+
+  const toggleGroupAll = (items: PermissionItemDef[], selectAll: boolean) => {
+    if (!canManageRoles) return;
+    setDraftRole((prev) => {
+      if (!prev) return prev;
+      const groupCodes = items.map((i) => i.code);
+      if (selectAll) {
+        return {
+          ...prev,
+          permissions: Array.from(new Set([...prev.permissions, ...groupCodes])),
+        };
+      }
+      return {
+        ...prev,
+        permissions: prev.permissions.filter(
+          (code) => !groupCodes.includes(code) || isLockedAdminPerm(code)
+        ),
       };
     });
   };
 
   return (
     <div className="space-y-6">
+      {!canManageRoles && (
+        <div className="p-4 rounded-2xl bg-[#FEF7EC] border border-[#FCD34D] text-[15px] text-[#B45309] flex items-center gap-2.5">
+          <Lock className="w-4 h-4 shrink-0" />
+          <span>仅总部最高管理员（admin）可编辑各角色的可操作功能与模块菜单权限。</span>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Role List */}
         <div className="lg:col-span-4 bg-white border border-[#D9DDD4] rounded-[20px] p-4 space-y-2">
@@ -185,20 +263,22 @@ export const RolePermissionsPage: React.FC = () => {
             <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-[#E5E8E0]">
               <div>
                 <h2 className="text-[19px] font-semibold text-[#171916]">
-                  {draftRole.name} · 权限配置矩阵
+                  {draftRole.name} · 可操作功能与菜单权限配置
                 </h2>
-                <p className="text-[14px] text-[#5F645D] mt-0.5">
-                  已勾选 {draftRole.permissions.length} 项权限编码 · 最近修改：{draftRole.updatedBy}
+                <p className="text-[14px] text-[#5F645D] mt-0.5 tabular-nums">
+                  已分配 {draftRole.permissions.length} 项可操作功能 · 最近修改：{draftRole.updatedBy}
                 </p>
               </div>
-              <Button
-                variant="primary"
-                loading={updateMutation.isPending}
-                icon={<Save className="w-3.5 h-3.5" />}
-                onClick={() => updateMutation.mutate(draftRole)}
-              >
-                保存角色权限
-              </Button>
+              {canManageRoles && (
+                <Button
+                  variant="primary"
+                  loading={updateMutation.isPending}
+                  icon={<Save className="w-3.5 h-3.5" />}
+                  onClick={() => updateMutation.mutate(draftRole)}
+                >
+                  保存角色权限
+                </Button>
+              )}
             </div>
 
             {/* Data Scope */}
@@ -212,7 +292,9 @@ export const RolePermissionsPage: React.FC = () => {
                 ].map((opt) => (
                   <label
                     key={opt.value}
-                    className={`p-3 rounded-xl border cursor-pointer flex items-center gap-2 ${
+                    className={`p-3 rounded-xl border flex items-center gap-2 ${
+                      canManageRoles ? 'cursor-pointer' : 'cursor-not-allowed opacity-75'
+                    } ${
                       draftRole.dataScope === opt.value
                         ? 'bg-[#F8F9F5] border-[#171916] font-medium'
                         : 'border-[#E5E8E0]'
@@ -221,6 +303,7 @@ export const RolePermissionsPage: React.FC = () => {
                     <input
                       type="radio"
                       name="dataScope"
+                      disabled={!canManageRoles}
                       checked={draftRole.dataScope === opt.value}
                       onChange={() =>
                         setDraftRole({ ...draftRole, dataScope: opt.value as DataScopeType })
@@ -248,10 +331,13 @@ export const RolePermissionsPage: React.FC = () => {
                   return (
                     <label
                       key={field.key}
-                      className="p-2.5 rounded-xl bg-[#F8F9F5] border border-[#E5E8E0] flex items-center gap-2 cursor-pointer"
+                      className={`p-2.5 rounded-xl bg-[#F8F9F5] border border-[#E5E8E0] flex items-center gap-2 ${
+                        canManageRoles ? 'cursor-pointer' : 'cursor-not-allowed opacity-75'
+                      }`}
                     >
                       <input
                         type="checkbox"
+                        disabled={!canManageRoles}
                         checked={draftRole.sensitiveFields[k]}
                         onChange={(e) =>
                           setDraftRole({
@@ -271,40 +357,87 @@ export const RolePermissionsPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Permission Tree */}
+            {/* Complete 18-Module & Operable Function Tree */}
             <div className="space-y-4">
-              <h3 className="text-[16px] font-semibold text-[#171916]">功能权限树</h3>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h3 className="text-[16px] font-semibold text-[#171916]">
+                  模块菜单与可操作功能树（勾选一级模块后将展示在对应角色的顶部与「全部菜单」中）
+                </h3>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {PERMISSION_GROUPS.map((grp) => (
-                  <div
-                    key={grp.group}
-                    className="p-4 rounded-2xl bg-[#F8F9F5] border border-[#E5E8E0] space-y-2.5"
-                  >
-                    <div className="text-[15px] font-semibold text-[#171916]">{grp.group}</div>
-                    <div className="space-y-1.5">
-                      {grp.items.map((item) => {
-                        const checked = draftRole.permissions.includes(item.code);
-                        return (
-                          <label
-                            key={item.code}
-                            className="flex items-center justify-between gap-2 text-[14px] py-1 cursor-pointer"
+                {PERMISSION_GROUPS.map((grp) => {
+                  const checkedCount = grp.items.filter((i) =>
+                    draftRole.permissions.includes(i.code)
+                  ).length;
+                  const allSelected = checkedCount === grp.items.length;
+
+                  return (
+                    <div
+                      key={grp.group}
+                      className="p-4 rounded-2xl bg-[#F8F9F5] border border-[#E5E8E0] space-y-2.5"
+                    >
+                      <div className="flex items-center justify-between gap-2 pb-2 border-b border-[#E5E8E0]">
+                        <div className="text-[15px] font-semibold text-[#171916]">
+                          {grp.group}
+                          <span className="ml-2 text-[12px] font-normal text-[#73796F] tabular-nums">
+                            {checkedCount}/{grp.items.length}
+                          </span>
+                        </div>
+                        {canManageRoles && (
+                          <button
+                            type="button"
+                            onClick={() => toggleGroupAll(grp.items, !allSelected)}
+                            className="text-[12px] font-medium text-[#171916] hover:underline cursor-pointer"
                           >
-                            <span className="flex items-center gap-2 text-[#171916]">
-                              <input
-                                type="checkbox"
-                                checked={checked}
-                                onChange={() => togglePermission(item.code)}
-                                className="accent-[#171916]"
-                              />
-                              <span>{item.label}</span>
-                            </span>
-                            <span className="font-mono text-[12px] text-[#73796F]">{item.code}</span>
-                          </label>
-                        );
-                      })}
+                            {allSelected ? '取消全选' : '全选本组'}
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="space-y-1">
+                        {grp.items.map((item) => {
+                          const checked = draftRole.permissions.includes(item.code);
+                          const locked = isLockedAdminPerm(item.code);
+                          return (
+                            <label
+                              key={item.code}
+                              className={`flex items-center justify-between gap-2 text-[14px] py-1 px-1.5 rounded-lg ${
+                                !canManageRoles || locked
+                                  ? 'cursor-not-allowed opacity-85'
+                                  : 'cursor-pointer hover:bg-white/70'
+                              }`}
+                            >
+                              <span className="flex items-center gap-2 text-[#171916] min-w-0">
+                                <input
+                                  type="checkbox"
+                                  disabled={!canManageRoles || locked}
+                                  checked={checked}
+                                  onChange={() => togglePermission(item)}
+                                  className="accent-[#171916] shrink-0"
+                                />
+                                <span
+                                  className={`truncate ${
+                                    item.isModuleEntry ? 'font-bold text-[#171916]' : 'text-[#5F645D]'
+                                  }`}
+                                >
+                                  {item.label}
+                                </span>
+                                {locked && (
+                                  <span className="text-[11px] text-[#73796F] shrink-0">
+                                    (锁定保留)
+                                  </span>
+                                )}
+                              </span>
+                              <span className="font-mono text-[12px] text-[#73796F] shrink-0">
+                                {item.code}
+                              </span>
+                            </label>
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>

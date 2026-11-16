@@ -37,12 +37,52 @@ export interface PermissionAuditEntry {
   createdAt: string;
 }
 
+export type AvatarColorPreset = 'charcoal' | 'lime' | 'forest' | 'amber' | 'slate';
+
+export const AVATAR_PRESET_STYLES: Record<
+  AvatarColorPreset,
+  { label: string; bgClass: string; textClass: string; swatchHex: string }
+> = {
+  charcoal: {
+    label: '炭黑黄绿',
+    bgClass: 'bg-[#171916]',
+    textClass: 'text-[#D7FF00]',
+    swatchHex: '#171916',
+  },
+  lime: {
+    label: '荧光黄绿',
+    bgClass: 'bg-[#D7FF00] border border-[#171916]/25',
+    textClass: 'text-[#171916]',
+    swatchHex: '#D7FF00',
+  },
+  forest: {
+    label: '深森绿',
+    bgClass: 'bg-[#166534]',
+    textClass: 'text-[#FFFFFF]',
+    swatchHex: '#166534',
+  },
+  amber: {
+    label: '暖琥珀',
+    bgClass: 'bg-[#B45309]',
+    textClass: 'text-[#FFFFFF]',
+    swatchHex: '#B45309',
+  },
+  slate: {
+    label: '静谧灰',
+    bgClass: 'bg-[#475569]',
+    textClass: 'text-[#FFFFFF]',
+    swatchHex: '#475569',
+  },
+};
+
 export interface AuthSession {
   userId: string;
   username: string;
   displayName: string;
   title: string;
   avatarInitials: string;
+  avatarUrl?: string;
+  avatarColorPreset?: AvatarColorPreset;
   identityType: IdentityType;
   roleId: string;
   roleName: string;

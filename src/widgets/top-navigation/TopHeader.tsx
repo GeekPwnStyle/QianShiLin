@@ -2,19 +2,26 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowRight,
   Bell,
+  Camera,
   ChevronDown,
   HelpCircle,
   LayoutGrid,
-  Lock,
   LogOut,
   Menu,
+  RotateCcw,
   Search,
   Shield,
   Store,
+  Upload,
   User,
   X,
 } from 'lucide-react';
 import { useAuth } from '@/src/modules/auth/application/AuthContext';
+import {
+  AVATAR_PRESET_STYLES,
+  type AvatarColorPreset,
+} from '@/src/modules/auth/domain/identity';
+import { UserAvatar } from '@/src/modules/auth/ui/UserAvatar';
 import {
   MAX_TOP_MODULE_SLOTS,
   resolveVisibleTopModuleIds,
@@ -29,6 +36,7 @@ import {
 } from '@/src/modules/navigation/domain/menuRegistry';
 import { formatDateTime } from '@/src/shared/lib/format';
 import { Modal } from '@/src/shared/ui/Modal';
+import { Select } from '@/src/shared/ui/Select';
 import { StatusLabel } from '@/src/shared/ui/StatusLabel';
 import { ModuleIcon } from '@/src/widgets/top-navigation/ModuleIcon';
 
@@ -55,6 +63,8 @@ export const TopHeader: React.FC = () => {
     currentRole,
     hasPermission,
     logout,
+    updateAvatar,
+    resetAvatar,
     switchStore,
   } = useAuth();
   const {
@@ -77,6 +87,8 @@ export const TopHeader: React.FC = () => {
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [messagesOpen, setMessagesOpen] = useState(false);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
+  const [initialsDraft, setInitialsDraft] = useState(session.avatarInitials);
   const [dragOverModuleId, setDragOverModuleId] = useState<string | null>(null);
 
   // Expandable inline search in header
@@ -86,6 +98,11 @@ export const TopHeader: React.FC = () => {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const accountMenuRef = useRef<HTMLDivElement>(null);
   const messagesMenuRef = useRef<HTMLDivElement>(null);
+  const avatarFileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setInitialsDraft(session.avatarInitials);
+  }, [session.avatarInitials]);
 
   const visibleModules = useMemo(
     () => MENU_TREE.filter((mod) => hasPermission(mod.permission)),
@@ -113,11 +130,13 @@ export const TopHeader: React.FC = () => {
   const effectiveHeaderVisible =
     headerVisible || searchExpanded || accountMenuOpen || messagesOpen || allModulesOpen;
 
-  // Live inline search results
+  // Live inline search results (only permitted menus)
   const inlineResults = useMemo(() => {
     const q = inlineQuery.trim().toLowerCase();
     const leaves = FLAT_MENU_NODES.filter(
-      (n) => n.nodeType === 'page' || n.nodeType === 'tab'
+      (n) =>
+        (n.nodeType === 'page' || n.nodeType === 'tab') &&
+        getAncestorChain(n.id).every((ancestor) => hasPermission(ancestor.permission))
     );
     if (!q) return leaves.slice(0, 8);
     return leaves
@@ -132,7 +151,7 @@ export const TopHeader: React.FC = () => {
         );
       })
       .slice(0, 10);
-  }, [inlineQuery]);
+  }, [inlineQuery, hasPermission]);
 
   useEffect(() => {
     if (searchExpanded) {
@@ -202,6 +221,57 @@ export const TopHeader: React.FC = () => {
     setAccountMenuOpen(false);
     logout();
     navigateToRoute('/login');
+  };
+
+  const handleAvatarFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setAvatarError('请选择图片格式文件（JPG / PNG / WebP）。');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setAvatarError('图片大小请控制在 5MB 以内。');
+      return;
+    }
+
+    setAvatarError(null);
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = typeof reader.result === 'string' ? reader.result : '';
+      if (!result) {
+        setAvatarError('图片读取失败，请重试。');
+        return;
+      }
+      const img = new Image();
+      img.onload = () => {
+        const size = 192;
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          updateAvatar({ avatarUrl: result });
+          return;
+        }
+        const minSide = Math.min(img.width, img.height);
+        const sx = (img.width - minSide) / 2;
+        const sy = (img.height - minSide) / 2;
+        ctx.drawImage(img, sx, sy, minSide, minSide, 0, 0, size, size);
+        const compressed = canvas.toDataURL('image/jpeg', 0.86);
+        updateAvatar({ avatarUrl: compressed });
+      };
+      img.onerror = () => {
+        setAvatarError('无法解析该图片文件，请更换其他图片。');
+      };
+      img.src = result;
+    };
+    reader.onerror = () => {
+      setAvatarError('图片读取失败，请重试。');
+    };
+    reader.readAsDataURL(file);
   };
 
   const sensitiveItems = currentRole
@@ -415,7 +485,6 @@ export const TopHeader: React.FC = () => {
                         const chain = getAncestorChain(item.id);
                         const modName = chain[0]?.label ?? '系统';
                         const fullPath = chain.map((c) => c.label).join(' / ');
-                        const allowed = hasPermission(item.permission);
                         return (
                           <button
                             key={item.id}
@@ -429,7 +498,6 @@ export const TopHeader: React.FC = () => {
                                   {item.label}
                                 </span>
                                 <span className="text-[12px] text-[#5F645D]">· {modName}</span>
-                                {!allowed && <Lock className="w-3.5 h-3.5 text-[#B45309]" />}
                               </div>
                               <div className="text-[12px] text-[#73796F] truncate">{fullPath}</div>
                             </div>
@@ -478,24 +546,26 @@ export const TopHeader: React.FC = () => {
                   <span className="truncate">{session.supplierName}</span>
                 </div>
               ) : (
-                <label className="hidden xl:flex items-center gap-1.5 h-9 px-3 rounded-full bg-[#F8F9F5] border border-[#D9DDD4] text-[13px] text-[#171916]">
-                  <Store className="w-4 h-4 text-[#5F645D] shrink-0" />
-                  <select
-                    aria-label="切换门店或组织范围"
-                    value={session.currentStoreId}
-                    onChange={(e) => switchStore(e.target.value)}
-                    className="bg-transparent text-[13px] text-[#171916] font-medium outline-none cursor-pointer max-w-[125px] 2xl:max-w-[155px]"
-                  >
-                    {session.identityType === 'admin' && (
-                      <option value="all">全部授权门店 (4家)</option>
-                    )}
-                    {session.authorizedStores.map((st) => (
-                      <option key={st.id} value={st.id}>
-                        {st.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                <Select
+                  ariaLabel="切换门店或组织范围"
+                  variant="pill"
+                  prefixIcon={<Store className="w-4 h-4 text-[#5F645D] shrink-0" />}
+                  value={session.currentStoreId}
+                  onChange={(val) => switchStore(val)}
+                  className="hidden xl:block"
+                  buttonClassName="max-w-[175px] 2xl:max-w-[210px]"
+                  menuMinWidth={210}
+                  align="right"
+                  options={[
+                    ...(session.identityType === 'admin'
+                      ? [{ value: 'all', label: '全部授权门店 (4家)' }]
+                      : []),
+                    ...session.authorizedStores.map((st) => ({
+                      value: st.id,
+                      label: st.name,
+                    })),
+                  ]}
+                />
               )}
 
               {/* Messages */}
@@ -572,9 +642,7 @@ export const TopHeader: React.FC = () => {
                   }}
                   className="h-9 pl-1 pr-2.5 rounded-full bg-[#F8F9F5] border border-[#D9DDD4] hover:border-[#A8B0A0] flex items-center gap-1.5 cursor-pointer"
                 >
-                  <span className="w-7 h-7 rounded-full bg-[#171916] text-[#D7FF00] text-[12px] font-semibold inline-flex items-center justify-center">
-                    {session.avatarInitials}
-                  </span>
+                  <UserAvatar session={session} size="sm" />
                   <span className="text-[13px] font-medium text-[#171916] hidden 2xl:inline whitespace-nowrap">
                     {session.displayName} · {session.roleName}
                   </span>
@@ -583,12 +651,15 @@ export const TopHeader: React.FC = () => {
 
                 {accountMenuOpen && (
                   <div className="absolute right-0 mt-2 w-60 qsl-glass-popover rounded-2xl p-2 z-50">
-                    <div className="px-3 py-2 border-b border-[#171916]/[0.08] mb-1">
-                      <div className="text-[15px] font-bold text-[#171916]">
-                        {session.displayName}
-                      </div>
-                      <div className="text-[13px] text-[#5F645D] mt-0.5">
-                        {session.roleName}
+                    <div className="px-3 py-2 border-b border-[#171916]/[0.08] mb-1 flex items-center gap-2.5">
+                      <UserAvatar session={session} size="md" />
+                      <div className="min-w-0">
+                        <div className="text-[15px] font-bold text-[#171916] truncate">
+                          {session.displayName}
+                        </div>
+                        <div className="text-[13px] text-[#5F645D] truncate">
+                          {session.roleName}
+                        </div>
                       </div>
                     </div>
 
@@ -623,47 +694,152 @@ export const TopHeader: React.FC = () => {
       {/* Personal Info & Detailed Role Modal */}
       <Modal
         open={profileModalOpen}
-        onClose={() => setProfileModalOpen(false)}
+        onClose={() => {
+          setAvatarError(null);
+          setProfileModalOpen(false);
+        }}
         title="个人信息与角色详情"
         subtitle={`当前登录账号：${session.username}`}
-        maxWidthClass="max-w-2xl"
+        maxWidthClass="max-w-5xl"
       >
         <div className="space-y-5 text-[15px]">
-          {/* Basic Account Details */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-2xl bg-white/42 border border-[#171916]/[0.08]">
-            <div>
-              <div className="text-[13px] text-[#73796F]">员工姓名</div>
-              <div className="font-bold text-[#171916] mt-0.5">{session.displayName}</div>
-            </div>
-            <div>
-              <div className="text-[13px] text-[#73796F]">登录用户名</div>
-              <div className="font-mono font-medium text-[#171916] mt-0.5">{session.username}</div>
-            </div>
-            <div>
-              <div className="text-[13px] text-[#73796F]">岗位与头衔</div>
-              <div className="font-medium text-[#171916] mt-0.5">{session.title}</div>
-            </div>
-            <div>
-              <div className="text-[13px] text-[#73796F]">身份类型</div>
-              <div className="mt-1">
-                <StatusLabel
-                  tone={
-                    session.identityType === 'admin'
-                      ? 'processing'
-                      : session.identityType === 'supplier'
-                        ? 'warning'
-                        : 'success'
-                  }
-                  label={IDENTITY_LABEL[session.identityType] ?? session.identityType}
+          {/* Avatar Editor + Basic Account Details */}
+          <div className="p-4 rounded-2xl bg-white/65 border border-[#171916]/[0.08] flex flex-col lg:flex-row gap-5 lg:items-center">
+            {/* Avatar Editor Section */}
+            <div className="flex items-center gap-4 lg:pr-5 lg:border-r lg:border-[#171916]/[0.08] shrink-0">
+              <div className="relative group">
+                <UserAvatar session={session} size="xl" />
+                <button
+                  type="button"
+                  onClick={() => avatarFileInputRef.current?.click()}
+                  aria-label="更换头像图片"
+                  title="点击上传自定义头像"
+                  className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-[#171916] text-[#D7FF00] border-2 border-white inline-flex items-center justify-center cursor-pointer hover:scale-105 transition-transform"
+                >
+                  <Camera className="w-3.5 h-3.5" />
+                </button>
+                <input
+                  ref={avatarFileInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/gif"
+                  onChange={handleAvatarFileChange}
+                  className="hidden"
                 />
               </div>
+
+              <div className="space-y-2">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => avatarFileInputRef.current?.click()}
+                    className="h-8 px-3 rounded-full bg-[#171916] text-white text-[13px] font-medium inline-flex items-center gap-1.5 hover:bg-[#2F332D] transition-colors cursor-pointer"
+                  >
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>上传图片</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAvatarError(null);
+                      resetAvatar();
+                    }}
+                    title="恢复默认文字头像"
+                    className="h-8 px-2.5 rounded-full bg-white/80 border border-[#171916]/12 text-[#5F645D] hover:text-[#171916] text-[13px] inline-flex items-center gap-1 transition-colors cursor-pointer"
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                    <span>恢复默认</span>
+                  </button>
+                </div>
+
+                {/* Color Presets & Custom Initials */}
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex items-center gap-1.5" role="group" aria-label="文字头像配色">
+                    {(Object.keys(AVATAR_PRESET_STYLES) as AvatarColorPreset[]).map((presetKey) => {
+                      const preset = AVATAR_PRESET_STYLES[presetKey];
+                      const active =
+                        !session.avatarUrl &&
+                        (session.avatarColorPreset ?? 'charcoal') === presetKey;
+                      return (
+                        <button
+                          key={presetKey}
+                          type="button"
+                          title={`使用「${preset.label}」风格`}
+                          aria-label={`使用${preset.label}头像配色`}
+                          onClick={() => {
+                            setAvatarError(null);
+                            updateAvatar({
+                              avatarUrl: null,
+                              avatarColorPreset: presetKey,
+                            });
+                          }}
+                          style={{ backgroundColor: preset.swatchHex }}
+                          className={`w-5 h-5 rounded-full border transition-transform cursor-pointer ${
+                            active
+                              ? 'ring-2 ring-[#171916] ring-offset-1 scale-110 border-white'
+                              : 'border-[#171916]/20 hover:scale-110'
+                          }`}
+                        />
+                      );
+                    })}
+                  </div>
+
+                  <input
+                    type="text"
+                    maxLength={2}
+                    value={initialsDraft}
+                    aria-label="自定义头像文字缩写"
+                    placeholder="缩写"
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setInitialsDraft(val);
+                      if (val.trim()) {
+                        updateAvatar({ avatarInitials: val.trim() });
+                      }
+                    }}
+                    className="w-14 h-7 px-2 rounded-lg bg-white/85 border border-[#171916]/12 text-[13px] text-center font-semibold text-[#171916] outline-none focus:border-[#171916]"
+                  />
+                </div>
+
+                {avatarError && (
+                  <p className="text-[12px] text-[#DC2626]">{avatarError}</p>
+                )}
+              </div>
             </div>
-            <div className="sm:col-span-2">
-              <div className="text-[13px] text-[#73796F]">当前数据范围与门店</div>
-              <div className="font-medium text-[#171916] mt-0.5">
-                {session.currentStoreName}
+
+            {/* Wide 4-column Basic Account Info */}
+            <div className="flex-1 min-w-0 grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div>
+                <div className="text-[13px] text-[#73796F]">员工姓名</div>
+                <div className="font-bold text-[#171916] mt-0.5">{session.displayName}</div>
+              </div>
+              <div>
+                <div className="text-[13px] text-[#73796F]">登录用户名</div>
+                <div className="font-mono font-medium text-[#171916] mt-0.5">{session.username}</div>
+              </div>
+              <div>
+                <div className="text-[13px] text-[#73796F]">岗位与头衔</div>
+                <div className="font-medium text-[#171916] mt-0.5">{session.title}</div>
+              </div>
+              <div>
+                <div className="text-[13px] text-[#73796F]">身份类型</div>
+                <div className="mt-1">
+                  <StatusLabel
+                    tone={
+                      session.identityType === 'admin'
+                        ? 'processing'
+                        : session.identityType === 'supplier'
+                          ? 'warning'
+                          : 'success'
+                    }
+                    label={IDENTITY_LABEL[session.identityType] ?? session.identityType}
+                  />
+                </div>
+              </div>
+              <div className="col-span-2 sm:col-span-4 pt-2.5 border-t border-[#171916]/[0.07] flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                <span className="text-[13px] text-[#73796F] shrink-0">当前数据范围与门店</span>
+                <span className="font-medium text-[#171916]">{session.currentStoreName}</span>
                 {session.authorizedStores.length > 0 && (
-                  <span className="ml-2 text-[13px] text-[#5F645D]">
+                  <span className="text-[13px] text-[#5F645D]">
                     （授权门店：{session.authorizedStores.map((s) => s.name).join('、')}）
                   </span>
                 )}
@@ -671,10 +847,10 @@ export const TopHeader: React.FC = () => {
             </div>
           </div>
 
-          {/* Role Details */}
+          {/* Role Details - Balanced Wide 2-Column Layout */}
           {currentRole && (
             <div className="space-y-4">
-              <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-[#E5E8E0]">
+              <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-[#171916]/[0.08]">
                 <div className="flex items-center gap-2">
                   <Shield className="w-4 h-4 text-[#171916]" />
                   <h3 className="text-[17px] font-bold text-[#171916]">
@@ -684,60 +860,68 @@ export const TopHeader: React.FC = () => {
                 <span className="text-[13px] font-mono text-[#73796F]">{currentRole.id}</span>
               </div>
 
-              <div className="space-y-2">
-                <div className="text-[13px] text-[#73796F]">角色职责与权限描述</div>
-                <p className="text-[14px] text-[#171916] leading-relaxed bg-white/42 p-3.5 rounded-xl border border-[#171916]/[0.08]">
-                  {currentRole.description}
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-[14px]">
-                <div className="p-3.5 rounded-xl bg-white/42 border border-[#171916]/[0.08]">
-                  <div className="text-[13px] text-[#73796F]">数据范围策略</div>
-                  <div className="font-medium text-[#171916] mt-1">
-                    {DATA_SCOPE_LABEL[currentRole.dataScope] ?? currentRole.dataScope}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+                {/* Left Column: Description + Policy + Updated */}
+                <div className="lg:col-span-6 space-y-3.5">
+                  <div className="space-y-1.5">
+                    <div className="text-[13px] text-[#73796F]">角色职责与权限描述</div>
+                    <p className="text-[14px] text-[#171916] leading-relaxed bg-white/55 p-3.5 rounded-xl border border-[#171916]/[0.08]">
+                      {currentRole.description}
+                    </p>
                   </div>
-                </div>
-                <div className="p-3.5 rounded-xl bg-white/42 border border-[#171916]/[0.08]">
-                  <div className="text-[13px] text-[#73796F]">最近权限更新</div>
-                  <div className="font-medium text-[#171916] mt-1 tabular-nums">
-                    {currentRole.updatedBy} · {formatDateTime(currentRole.updatedAt)}
-                  </div>
-                </div>
-              </div>
 
-              <div>
-                <div className="text-[13px] text-[#73796F] mb-2">敏感字段控制策略</div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {sensitiveItems.map((item) => (
-                    <div
-                      key={item.label}
-                      className="px-3 py-2 rounded-xl border border-[#171916]/[0.08] bg-white/55 flex items-center justify-between gap-2 text-[14px]"
-                    >
-                      <span className="text-[#171916]">{item.label}</span>
-                      <StatusLabel
-                        tone={item.allowed ? 'success' : 'neutral'}
-                        label={item.allowed ? '已授权' : '已隔离'}
-                      />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-[14px]">
+                    <div className="p-3.5 rounded-xl bg-white/55 border border-[#171916]/[0.08]">
+                      <div className="text-[13px] text-[#73796F]">数据范围策略</div>
+                      <div className="font-medium text-[#171916] mt-1">
+                        {DATA_SCOPE_LABEL[currentRole.dataScope] ?? currentRole.dataScope}
+                      </div>
                     </div>
-                  ))}
+                    <div className="p-3.5 rounded-xl bg-white/55 border border-[#171916]/[0.08]">
+                      <div className="text-[13px] text-[#73796F]">最近权限更新</div>
+                      <div className="font-medium text-[#171916] mt-1 tabular-nums">
+                        {currentRole.updatedBy} · {formatDateTime(currentRole.updatedAt)}
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
 
-              <div>
-                <div className="flex items-center justify-between text-[13px] text-[#73796F] mb-2">
-                  <span>已授予功能权限编码</span>
-                  <span className="tabular-nums">共 {currentRole.permissions.length} 项</span>
-                </div>
-                <div className="max-h-36 overflow-y-auto qsl-scroll p-3 rounded-xl bg-white/42 border border-[#171916]/[0.08] flex flex-wrap gap-1.5">
-                  {currentRole.permissions.map((perm) => (
-                    <span
-                      key={perm}
-                      className="px-2 py-0.5 rounded-md bg-white/65 border border-[#171916]/10 text-[12px] font-mono text-[#171916]"
-                    >
-                      {perm}
-                    </span>
-                  ))}
+                {/* Right Column: Sensitive Field Controls + Permission Codes */}
+                <div className="lg:col-span-6 space-y-3.5">
+                  <div>
+                    <div className="text-[13px] text-[#73796F] mb-1.5">敏感字段控制策略</div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {sensitiveItems.map((item) => (
+                        <div
+                          key={item.label}
+                          className="px-3 py-2 rounded-xl border border-[#171916]/[0.08] bg-white/60 flex items-center justify-between gap-2 text-[14px]"
+                        >
+                          <span className="text-[#171916]">{item.label}</span>
+                          <StatusLabel
+                            tone={item.allowed ? 'success' : 'neutral'}
+                            label={item.allowed ? '已授权' : '已隔离'}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between text-[13px] text-[#73796F] mb-1.5">
+                      <span>已授予功能权限编码</span>
+                      <span className="tabular-nums">共 {currentRole.permissions.length} 项</span>
+                    </div>
+                    <div className="max-h-36 overflow-y-auto qsl-scroll p-3 rounded-xl bg-white/55 border border-[#171916]/[0.08] flex flex-wrap gap-1.5">
+                      {currentRole.permissions.map((perm) => (
+                        <span
+                          key={perm}
+                          className="px-2 py-0.5 rounded-md bg-white/75 border border-[#171916]/10 text-[12px] font-mono text-[#171916]"
+                        >
+                          {perm}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

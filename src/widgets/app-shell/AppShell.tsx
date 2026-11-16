@@ -57,7 +57,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
         <ModuleSidebar />
 
         <main className="flex-1 min-w-0 bg-transparent">
-          <div className="px-5 sm:px-7 lg:px-10 py-6 max-w-[1600px] mx-auto space-y-6">
+          <div className="w-full px-4 sm:px-6 lg:px-9 py-6 space-y-6">
             {!isWorkbench && (
               <>
                 <nav

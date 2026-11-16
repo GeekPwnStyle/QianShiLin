@@ -29,6 +29,7 @@ import { Button } from '@/src/shared/ui/Button';
 import { DataTable, type TableColumn } from '@/src/shared/ui/DataTable';
 import { HelpTooltip } from '@/src/shared/ui/HelpTooltip';
 import { Modal } from '@/src/shared/ui/Modal';
+import { Select } from '@/src/shared/ui/Select';
 import {
   EmptyState,
   ErrorState,
@@ -324,18 +325,18 @@ export const FollowupNotificationPage: React.FC<Props> = ({ category }) => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-3">
           <div>
             <label className="block text-[14px] text-[#5F645D] mb-1">所属门店</label>
-            <select
+            <Select
+              ariaLabel="所属门店"
               value={storeId}
-              onChange={(e) => setStoreId(e.target.value)}
-              className="w-full h-10 px-3 rounded-[9px] bg-[#F8F9F5] border border-[#D9DDD4] text-[15px] text-[#171916] outline-none focus:border-[#171916]"
-            >
-              <option value="all">全部授权门店</option>
-              {STORE_CATALOG.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
+              onChange={setStoreId}
+              options={[
+                { value: 'all', label: '全部授权门店' },
+                ...STORE_CATALOG.map((s) => ({
+                  value: s.id,
+                  label: s.name,
+                })),
+              ]}
+            />
           </div>
 
           <div>
@@ -371,32 +372,34 @@ export const FollowupNotificationPage: React.FC<Props> = ({ category }) => {
 
           <div>
             <label className="block text-[14px] text-[#5F645D] mb-1">通知状态</label>
-            <select
+            <Select
+              ariaLabel="通知状态"
               value={status}
-              onChange={(e) => setStatus(e.target.value as NotificationStatus | 'all')}
-              className="w-full h-10 px-3 rounded-[9px] bg-[#F8F9F5] border border-[#D9DDD4] text-[15px] text-[#171916] outline-none focus:border-[#171916]"
-            >
-              <option value="all">全部状态</option>
-              <option value="pending_notify">待通知</option>
-              <option value="notified">已通知</option>
-              <option value="notify_failed">通知失败</option>
-              <option value="review_completed">已完成复查</option>
-            </select>
+              onChange={(val) => setStatus(val as NotificationStatus | 'all')}
+              options={[
+                { value: 'all', label: '全部状态' },
+                { value: 'pending_notify', label: '待通知' },
+                { value: 'notified', label: '已通知' },
+                { value: 'notify_failed', label: '通知失败' },
+                { value: 'review_completed', label: '已完成复查' },
+              ]}
+            />
           </div>
 
           <div>
             <label className="block text-[14px] text-[#5F645D] mb-1">通知渠道</label>
-            <select
+            <Select
+              ariaLabel="通知渠道"
               value={channel}
-              onChange={(e) => setChannel(e.target.value as NotificationChannel | 'all')}
-              className="w-full h-10 px-3 rounded-[9px] bg-[#F8F9F5] border border-[#D9DDD4] text-[15px] text-[#171916] outline-none focus:border-[#171916]"
-            >
-              <option value="all">全部渠道</option>
-              <option value="微信服务通知">微信服务通知</option>
-              <option value="企微专属顾问">企微专属顾问</option>
-              <option value="短信">短信</option>
-              <option value="电话外呼">电话外呼</option>
-            </select>
+              onChange={(val) => setChannel(val as NotificationChannel | 'all')}
+              options={[
+                { value: 'all', label: '全部渠道' },
+                { value: '微信服务通知', label: '微信服务通知' },
+                { value: '企微专属顾问', label: '企微专属顾问' },
+                { value: '短信', label: '短信' },
+                { value: '电话外呼', label: '电话外呼' },
+              ]}
+            />
           </div>
         </div>
 
@@ -581,16 +584,18 @@ export const FollowupNotificationPage: React.FC<Props> = ({ category }) => {
                     ariaLabel="查看演示通道说明"
                   />
                 </div>
-                <select
+                <Select
+                  ariaLabel="选择通知渠道"
+                  variant="white"
                   value={batchChannel}
-                  onChange={(e) => setBatchChannel(e.target.value as NotificationChannel)}
-                  className="w-full h-10 px-3 rounded-lg bg-white border border-[#D9DDD4] text-[15px] text-[#171916]"
-                >
-                  <option value="微信服务通知">微信服务通知</option>
-                  <option value="企微专属顾问">企微专属顾问</option>
-                  <option value="短信">短信</option>
-                  <option value="电话外呼">电话外呼</option>
-                </select>
+                  onChange={(val) => setBatchChannel(val as NotificationChannel)}
+                  options={[
+                    { value: '微信服务通知', label: '微信服务通知' },
+                    { value: '企微专属顾问', label: '企微专属顾问' },
+                    { value: '短信', label: '短信' },
+                    { value: '电话外呼', label: '电话外呼' },
+                  ]}
+                />
               </div>
             </div>
 

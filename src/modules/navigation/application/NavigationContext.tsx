@@ -12,28 +12,33 @@ import {
 import { useAuth } from '@/src/modules/auth/application/AuthContext';
 
 export const MAX_TOP_MODULE_SLOTS = 5; // 工作台(1固定) + 最多5个可配置一级模块 = 顶部最多6个菜单项
-const TOP_MODULES_STORAGE_KEY = 'qsl_pinned_top_modules_v1';
+const TOP_MODULES_STORAGE_KEY = 'qsl_pinned_top_modules_v2';
 const DEFAULT_PINNED_MODULE_IDS = MENU_TREE.slice(0, MAX_TOP_MODULE_SLOTS).map((m) => m.id);
 
-function loadInitialPinnedModules(): string[] {
-  if (typeof window === 'undefined') return DEFAULT_PINNED_MODULE_IDS;
+function readPinnedMap(): Record<string, string[]> {
+  if (typeof window === 'undefined') return {};
   try {
     const raw = window.localStorage.getItem(TOP_MODULES_STORAGE_KEY);
-    if (!raw) return DEFAULT_PINNED_MODULE_IDS;
+    if (!raw) return {};
     const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return DEFAULT_PINNED_MODULE_IDS;
-    const validIds = parsed.filter(
-      (id): id is string => typeof id === 'string' && MENU_TREE.some((m) => m.id === id)
-    );
-    const deduped = Array.from(new Set(validIds));
-    for (const fallbackId of MENU_TREE.map((m) => m.id)) {
-      if (deduped.length >= MAX_TOP_MODULE_SLOTS) break;
-      if (!deduped.includes(fallbackId)) deduped.push(fallbackId);
-    }
-    return deduped.slice(0, MAX_TOP_MODULE_SLOTS);
+    return parsed && typeof parsed === 'object' ? (parsed as Record<string, string[]>) : {};
   } catch {
-    return DEFAULT_PINNED_MODULE_IDS;
+    return {};
   }
+}
+
+function loadPinnedModulesForRole(roleId: string): string[] {
+  const saved = readPinnedMap()[roleId];
+  if (!Array.isArray(saved)) return DEFAULT_PINNED_MODULE_IDS;
+  const validIds = saved.filter(
+    (id): id is string => typeof id === 'string' && MENU_TREE.some((m) => m.id === id)
+  );
+  const deduped = Array.from(new Set(validIds));
+  for (const fallbackId of MENU_TREE.map((m) => m.id)) {
+    if (deduped.length >= MAX_TOP_MODULE_SLOTS) break;
+    if (!deduped.includes(fallbackId)) deduped.push(fallbackId);
+  }
+  return deduped.slice(0, MAX_TOP_MODULE_SLOTS);
 }
 
 interface NavigationContextValue {
@@ -84,13 +89,15 @@ export function resolveVisibleTopModuleIds(
 }
 
 export const NavigationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { hasPermission } = useAuth();
+  const { hasPermission, session } = useAuth();
   const [currentRoute, setCurrentRoute] = useState<string>(resolveInitialRoute);
   const [allModulesOpen, setAllModulesOpen] = useState(false);
   const [headerVisible, setHeaderVisible] = useState(true);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
-  const [pinnedModuleIds, setPinnedModuleIds] = useState<string[]>(loadInitialPinnedModules);
+  const [pinnedModuleIds, setPinnedModuleIds] = useState<string[]>(() =>
+    loadPinnedModulesForRole(session.roleId)
+  );
   const [draggingModuleId, setDraggingModuleId] = useState<string | null>(null);
   const [favorites, setFavorites] = useState<string[]>([
     'members.followup.notifications',
@@ -100,12 +107,18 @@ export const NavigationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   ]);
 
   useEffect(() => {
+    setPinnedModuleIds(loadPinnedModulesForRole(session.roleId));
+  }, [session.roleId]);
+
+  useEffect(() => {
     try {
-      window.localStorage.setItem(TOP_MODULES_STORAGE_KEY, JSON.stringify(pinnedModuleIds));
+      const map = readPinnedMap();
+      map[session.roleId] = pinnedModuleIds;
+      window.localStorage.setItem(TOP_MODULES_STORAGE_KEY, JSON.stringify(map));
     } catch {
       // Ignore storage quota errors in prototype mode
     }
-  }, [pinnedModuleIds]);
+  }, [pinnedModuleIds, session.roleId]);
 
   useEffect(() => {
     const onPopState = () => {

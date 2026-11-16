@@ -363,7 +363,7 @@ export const ModuleSidebar: React.FC = () => {
             if (e.target === e.currentTarget) setMobileDrawerOpen(false);
           }}
         >
-          <aside className="w-[272px] h-full bg-white/80 backdrop-blur-2xl backdrop-saturate-150 shadow-2xl border-r border-white/75">
+          <aside className="w-[272px] h-full bg-white/82 backdrop-blur-2xl backdrop-saturate-150 shadow-2xl border-r border-[#171916]/[0.08]">
             {renderExpandedContent()}
           </aside>
         </div>

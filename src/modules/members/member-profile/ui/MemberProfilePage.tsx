@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Eye, Plus, Search } from 'lucide-react';
@@ -12,6 +12,7 @@ import { formatCurrency, maskPhone } from '@/src/shared/lib/format';
 import { Button } from '@/src/shared/ui/Button';
 import { DataTable, type TableColumn } from '@/src/shared/ui/DataTable';
 import { Modal } from '@/src/shared/ui/Modal';
+import { Select } from '@/src/shared/ui/Select';
 import { EmptyState, ErrorState, LoadingSkeleton } from '@/src/shared/ui/StateViews';
 import { StatusLabel } from '@/src/shared/ui/StatusLabel';
 
@@ -173,17 +174,19 @@ export const MemberProfilePage: React.FC<{ defaultOpenCreate?: boolean }> = ({
               className="w-full h-10 pl-9 pr-3 rounded-[9px] bg-[#F8F9F5] border border-[#D9DDD4] text-[15px] outline-none focus:border-[#171916]"
             />
           </div>
-          <select
+          <Select
+            ariaLabel="筛选会员等级"
             value={tierFilter}
-            onChange={(e) => setTierFilter(e.target.value as MemberTier | 'all')}
-            className="h-10 px-3 rounded-[9px] bg-[#F8F9F5] border border-[#D9DDD4] text-[15px]"
-          >
-            <option value="all">全部等级</option>
-            <option value="银卡会员">银卡会员</option>
-            <option value="金卡会员">金卡会员</option>
-            <option value="黑卡会员">黑卡会员</option>
-            <option value="青少年护眼会员">青少年护眼会员</option>
-          </select>
+            onChange={(val) => setTierFilter(val as MemberTier | 'all')}
+            className="w-44"
+            options={[
+              { value: 'all', label: '全部等级' },
+              { value: '银卡会员', label: '银卡会员' },
+              { value: '金卡会员', label: '金卡会员' },
+              { value: '黑卡会员', label: '黑卡会员' },
+              { value: '青少年护眼会员', label: '青少年护眼会员' },
+            ]}
+          />
           <Button
             variant="primary"
             onClick={() => {
@@ -446,10 +449,22 @@ export const MemberProfilePage: React.FC<{ defaultOpenCreate?: boolean }> = ({
           </div>
           <div>
             <label className="block text-[14px] text-[#5F645D] mb-1">性别</label>
-            <select {...form.register('gender')} className="w-full h-10 px-3 rounded-[9px] border border-[#D9DDD4]">
-              <option value="女">女</option>
-              <option value="男">男</option>
-            </select>
+            <Controller
+              control={form.control}
+              name="gender"
+              render={({ field }) => (
+                <Select
+                  ariaLabel="性别"
+                  variant="white"
+                  value={field.value}
+                  onChange={field.onChange}
+                  options={[
+                    { value: '女', label: '女' },
+                    { value: '男', label: '男' },
+                  ]}
+                />
+              )}
+            />
           </div>
           <div>
             <label className="block text-[14px] text-[#5F645D] mb-1">年龄</label>
@@ -461,22 +476,43 @@ export const MemberProfilePage: React.FC<{ defaultOpenCreate?: boolean }> = ({
           </div>
           <div>
             <label className="block text-[14px] text-[#5F645D] mb-1">会员等级</label>
-            <select {...form.register('tier')} className="w-full h-10 px-3 rounded-[9px] border border-[#D9DDD4]">
-              <option value="银卡会员">银卡会员</option>
-              <option value="金卡会员">金卡会员</option>
-              <option value="黑卡会员">黑卡会员</option>
-              <option value="青少年护眼会员">青少年护眼会员</option>
-            </select>
+            <Controller
+              control={form.control}
+              name="tier"
+              render={({ field }) => (
+                <Select
+                  ariaLabel="会员等级"
+                  variant="white"
+                  value={field.value}
+                  onChange={field.onChange}
+                  options={[
+                    { value: '银卡会员', label: '银卡会员' },
+                    { value: '金卡会员', label: '金卡会员' },
+                    { value: '黑卡会员', label: '黑卡会员' },
+                    { value: '青少年护眼会员', label: '青少年护眼会员' },
+                  ]}
+                />
+              )}
+            />
           </div>
           <div>
             <label className="block text-[14px] text-[#5F645D] mb-1">归属门店</label>
-            <select {...form.register('storeId')} className="w-full h-10 px-3 rounded-[9px] border border-[#D9DDD4]">
-              {STORE_CATALOG.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
+            <Controller
+              control={form.control}
+              name="storeId"
+              render={({ field }) => (
+                <Select
+                  ariaLabel="归属门店"
+                  variant="white"
+                  value={field.value}
+                  onChange={field.onChange}
+                  options={STORE_CATALOG.map((s) => ({
+                    value: s.id,
+                    label: s.name,
+                  }))}
+                />
+              )}
+            />
           </div>
           <div className="sm:col-span-2">
             <label className="block text-[14px] text-[#5F645D] mb-1">专属导购</label>

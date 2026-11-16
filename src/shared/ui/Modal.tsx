@@ -27,6 +27,11 @@ export const Modal: React.FC<ModalProps> = ({
     if (!open) return;
     previousFocusRef.current = document.activeElement as HTMLElement | null;
 
+    const prevHtmlOverflow = document.documentElement.style.overflow;
+    const prevBodyOverflow = document.body.style.overflow;
+    document.documentElement.style.overflow = 'hidden';
+    document.body.style.overflow = 'hidden';
+
     const timer = window.setTimeout(() => {
       const container = containerRef.current;
       if (!container) return;
@@ -69,6 +74,8 @@ export const Modal: React.FC<ModalProps> = ({
     return () => {
       window.clearTimeout(timer);
       document.removeEventListener('keydown', handleKeyDown);
+      document.documentElement.style.overflow = prevHtmlOverflow;
+      document.body.style.overflow = prevBodyOverflow;
       previousFocusRef.current?.focus();
     };
   }, [open, onClose]);
@@ -110,7 +117,7 @@ export const Modal: React.FC<ModalProps> = ({
         </div>
         <div className="px-6 py-5 overflow-y-auto qsl-scroll flex-1">{children}</div>
         {footer && (
-          <div className="px-6 py-4 border-t border-[#171916]/[0.08] bg-white/25 backdrop-blur-md flex items-center justify-end gap-3">
+          <div className="px-6 py-4 border-t border-[#171916]/[0.08] bg-white/45 backdrop-blur-md flex items-center justify-end gap-3">
             {footer}
           </div>
         )}

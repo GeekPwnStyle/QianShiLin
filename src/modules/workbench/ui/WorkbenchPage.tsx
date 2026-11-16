@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import React, { useEffect, useState } from 'react';
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowUpRight, AlertTriangle, CalendarClock, ShieldAlert } from 'lucide-react';
 import { appRepositories } from '@/src/app/composition/container';
 import { useAuth } from '@/src/modules/auth/application/AuthContext';
@@ -20,15 +20,30 @@ const TIME_RANGES: Array<{ key: WorkbenchTimeRange; label: string }> = [
 export const WorkbenchPage: React.FC = () => {
   const { session, dataScope } = useAuth();
   const { navigateToRoute } = useNavigation();
+  const queryClient = useQueryClient();
   const [timeRange, setTimeRange] = useState<WorkbenchTimeRange>('today');
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['workbench', timeRange, session.currentStoreId, session.roleId],
     queryFn: () =>
       appRepositories.workbench.getSnapshot(timeRange, session.currentStoreId, dataScope),
+    placeholderData: keepPreviousData,
+    staleTime: 60_000,
   });
 
-  if (isLoading) return <LoadingSkeleton rows={6} />;
+  useEffect(() => {
+    for (const tr of TIME_RANGES) {
+      if (tr.key === timeRange) continue;
+      void queryClient.prefetchQuery({
+        queryKey: ['workbench', tr.key, session.currentStoreId, session.roleId],
+        queryFn: () =>
+          appRepositories.workbench.getSnapshot(tr.key, session.currentStoreId, dataScope),
+        staleTime: 60_000,
+      });
+    }
+  }, [queryClient, session.currentStoreId, session.roleId, dataScope, timeRange]);
+
+  if (isLoading && !data) return <LoadingSkeleton rows={6} />;
   if (isError || !data) return <ErrorState onRetry={() => void refetch()} />;
 
   return (

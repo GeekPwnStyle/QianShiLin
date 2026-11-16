@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
@@ -31,6 +31,7 @@ import { Button } from '@/src/shared/ui/Button';
 import { DataTable, type TableColumn } from '@/src/shared/ui/DataTable';
 import { HelpTooltip } from '@/src/shared/ui/HelpTooltip';
 import { Modal } from '@/src/shared/ui/Modal';
+import { Select } from '@/src/shared/ui/Select';
 import {
   EmptyState,
   ErrorState,
@@ -691,43 +692,46 @@ export const ProductListPage: React.FC = () => {
               <div className="pt-3 border-t border-[#E5E8E0] grid grid-cols-1 sm:grid-cols-4 gap-3">
                 <div>
                   <label className="block text-[14px] text-[#5F645D] mb-1">品牌</label>
-                  <select
+                  <Select
+                    ariaLabel="筛选品牌"
                     value={brandFilter}
-                    onChange={(e) => setBrandFilter(e.target.value)}
-                    className="w-full h-10 px-3 rounded-[9px] bg-[#F8F9F5] border border-[#D9DDD4] text-[15px]"
-                  >
-                    <option value="all">全部品牌</option>
-                    <option value="卡尔蔡司">卡尔蔡司</option>
-                    <option value="依视路">依视路</option>
-                    <option value="林德伯格">林德伯格</option>
-                    <option value="千视林甄选">千视林甄选</option>
-                    <option value="强生安视优">强生安视优</option>
-                    <option value="暴龙">暴龙</option>
-                  </select>
+                    onChange={setBrandFilter}
+                    options={[
+                      { value: 'all', label: '全部品牌' },
+                      { value: '卡尔蔡司', label: '卡尔蔡司' },
+                      { value: '依视路', label: '依视路' },
+                      { value: '林德伯格', label: '林德伯格' },
+                      { value: '千视林甄选', label: '千视林甄选' },
+                      { value: '强生安视优', label: '强生安视优' },
+                      { value: '暴龙', label: '暴龙' },
+                    ]}
+                  />
                 </div>
                 <div>
                   <label className="block text-[14px] text-[#5F645D] mb-1">启用状态</label>
-                  <select
+                  <Select
+                    ariaLabel="筛选启用状态"
                     value={enabledFilter}
-                    onChange={(e) => setEnabledFilter(e.target.value as 'all' | 'true' | 'false')}
-                    className="w-full h-10 px-3 rounded-[9px] bg-[#F8F9F5] border border-[#D9DDD4] text-[15px]"
-                  >
-                    <option value="all">全部状态</option>
-                    <option value="true">启用</option>
-                    <option value="false">停用</option>
-                  </select>
+                    onChange={(val) => setEnabledFilter(val as 'all' | 'true' | 'false')}
+                    options={[
+                      { value: 'all', label: '全部状态' },
+                      { value: 'true', label: '启用' },
+                      { value: 'false', label: '停用' },
+                    ]}
+                  />
                 </div>
                 <div>
                   <label className="block text-[14px] text-[#5F645D] mb-1">是否定制镜片</label>
-                  <select
+                  <Select
+                    ariaLabel="筛选是否定制镜片"
                     value={customLensFilter}
-                    onChange={(e) => setCustomLensFilter(e.target.value as 'all' | 'true' | 'false')}
-                    className="w-full h-10 px-3 rounded-[9px] bg-[#F8F9F5] border border-[#D9DDD4] text-[15px]"
-                  >
-                    <option value="all">全部</option>
-                    <option value="true">仅定制镜片</option>
-                    <option value="false">非定制标品</option>
-                  </select>
+                    onChange={(val) => setCustomLensFilter(val as 'all' | 'true' | 'false')}
+                    options={[
+                      { value: 'all', label: '全部' },
+                      { value: 'true', label: '仅定制镜片' },
+                      { value: 'false', label: '非定制标品' },
+                    ]}
+                  />
                 </div>
                 <div className="flex items-end">
                   <Button
@@ -833,16 +837,22 @@ export const ProductListPage: React.FC = () => {
           </div>
           <div>
             <label className="block text-[14px] text-[#5F645D] mb-1">品类 *</label>
-            <select
-              {...form.register('categoryId')}
-              className="w-full h-10 px-3 rounded-[9px] border border-[#D9DDD4]"
-            >
-              {Object.entries(CATEGORY_LABEL_MAP).map(([id, label]) => (
-                <option key={id} value={id}>
-                  {label}
-                </option>
-              ))}
-            </select>
+            <Controller
+              control={form.control}
+              name="categoryId"
+              render={({ field }) => (
+                <Select
+                  ariaLabel="品类"
+                  variant="white"
+                  value={field.value}
+                  onChange={field.onChange}
+                  options={Object.entries(CATEGORY_LABEL_MAP).map(([id, label]) => ({
+                    value: id,
+                    label,
+                  }))}
+                />
+              )}
+            />
           </div>
           <div>
             <label className="block text-[14px] text-[#5F645D] mb-1">型号 *</label>
@@ -892,16 +902,22 @@ export const ProductListPage: React.FC = () => {
           </div>
           <div>
             <label className="block text-[14px] text-[#5F645D] mb-1">归属门店</label>
-            <select
-              {...form.register('storeId')}
-              className="w-full h-10 px-3 rounded-[9px] border border-[#D9DDD4]"
-            >
-              {STORE_CATALOG.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
+            <Controller
+              control={form.control}
+              name="storeId"
+              render={({ field }) => (
+                <Select
+                  ariaLabel="归属门店"
+                  variant="white"
+                  value={field.value}
+                  onChange={field.onChange}
+                  options={STORE_CATALOG.map((s) => ({
+                    value: s.id,
+                    label: s.name,
+                  }))}
+                />
+              )}
+            />
           </div>
         </form>
       </Modal>
@@ -957,15 +973,17 @@ export const ProductListPage: React.FC = () => {
         <div className="space-y-4 text-[15px]">
           <div>
             <label className="block text-[14px] text-[#5F645D] mb-1">启停状态</label>
-            <select
+            <Select
+              ariaLabel="启停状态"
+              variant="white"
               value={batchEnabled}
-              onChange={(e) => setBatchEnabled(e.target.value as 'keep' | 'true' | 'false')}
-              className="w-full h-10 px-3 rounded-[9px] border border-[#D9DDD4]"
-            >
-              <option value="keep">保持不变</option>
-              <option value="true">批量启用</option>
-              <option value="false">批量停用</option>
-            </select>
+              onChange={(val) => setBatchEnabled(val as 'keep' | 'true' | 'false')}
+              options={[
+                { value: 'keep', label: '保持不变' },
+                { value: 'true', label: '批量启用' },
+                { value: 'false', label: '批量停用' },
+              ]}
+            />
           </div>
           <div>
             <label className="block text-[14px] text-[#5F645D] mb-1">

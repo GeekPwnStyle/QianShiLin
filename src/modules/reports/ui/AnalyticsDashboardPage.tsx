@@ -4,6 +4,7 @@ import { formatCurrency } from '@/src/shared/lib/format';
 import { DotMatrixChart, RoundedBarChart, ThinLineChart } from '@/src/shared/ui/Charts';
 import { DataTable, type TableColumn } from '@/src/shared/ui/DataTable';
 import { Modal } from '@/src/shared/ui/Modal';
+import { Select } from '@/src/shared/ui/Select';
 import { Button } from '@/src/shared/ui/Button';
 
 interface StoreAnalysisRow {
@@ -47,18 +48,19 @@ export const AnalyticsDashboardPage: React.FC<{ pageTitle: string }> = ({ pageTi
       <div className="bg-white border border-[#D9DDD4] rounded-[20px] p-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-[15px] text-[#5F645D]">联动筛选门店：</span>
-          <select
+          <Select
+            ariaLabel="联动筛选门店"
             value={selectedStore}
-            onChange={(e) => setSelectedStore(e.target.value)}
-            className="h-10 px-3 rounded-[9px] bg-[#F8F9F5] border border-[#D9DDD4] text-[15px]"
-          >
-            <option value="all">全部授权门店</option>
-            {STORE_ANALYTICS.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.storeName}
-              </option>
-            ))}
-          </select>
+            onChange={setSelectedStore}
+            className="w-56"
+            options={[
+              { value: 'all', label: '全部授权门店' },
+              ...STORE_ANALYTICS.map((s) => ({
+                value: s.id,
+                label: s.storeName,
+              })),
+            ]}
+          />
         </div>
 
         <Button

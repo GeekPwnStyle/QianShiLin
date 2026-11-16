@@ -13,6 +13,7 @@ import {
 import { formatCurrency, formatDateTime, maskPhone } from '@/src/shared/lib/format';
 import { Button } from '@/src/shared/ui/Button';
 import { HelpTooltip } from '@/src/shared/ui/HelpTooltip';
+import { Select } from '@/src/shared/ui/Select';
 import { StatusLabel } from '@/src/shared/ui/StatusLabel';
 
 export const SalesPosPage: React.FC = () => {
@@ -189,44 +190,44 @@ export const SalesPosPage: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-[15px]">
               <div>
                 <label className="block text-[14px] text-[#5F645D] mb-1">选择顾客档案</label>
-                <select
+                <Select
+                  ariaLabel="选择顾客档案"
                   value={selectedMemberId}
-                  onChange={(e) => setSelectedMemberId(e.target.value)}
-                  className="w-full h-10 px-3 rounded-[9px] bg-[#F8F9F5] border border-[#D9DDD4]"
-                >
-                  {members.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.name} ({maskPhone(m.phone, allowPlainPhone)})
-                    </option>
-                  ))}
-                </select>
+                  onChange={setSelectedMemberId}
+                  options={members.map((m) => ({
+                    value: m.id,
+                    label: `${m.name} (${maskPhone(m.phone, allowPlainPhone)})`,
+                  }))}
+                />
               </div>
 
               <div>
                 <label className="block text-[14px] text-[#5F645D] mb-1">导购员</label>
-                <select
+                <Select
+                  ariaLabel="导购员"
                   value={guideName}
-                  onChange={(e) => setGuideName(e.target.value)}
-                  className="w-full h-10 px-3 rounded-[9px] bg-[#F8F9F5] border border-[#D9DDD4]"
-                >
-                  <option value="苏晓晴">苏晓晴</option>
-                  <option value="周婉宁">周婉宁</option>
-                  <option value="陈明轩">陈明轩</option>
-                  <option value="林语嫣">林语嫣</option>
-                </select>
+                  onChange={setGuideName}
+                  options={[
+                    { value: '苏晓晴', label: '苏晓晴' },
+                    { value: '周婉宁', label: '周婉宁' },
+                    { value: '陈明轩', label: '陈明轩' },
+                    { value: '林语嫣', label: '林语嫣' },
+                  ]}
+                />
               </div>
 
               <div>
                 <label className="block text-[14px] text-[#5F645D] mb-1">验光师</label>
-                <select
+                <Select
+                  ariaLabel="验光师"
                   value={optometristName}
-                  onChange={(e) => setOptometristName(e.target.value)}
-                  className="w-full h-10 px-3 rounded-[9px] bg-[#F8F9F5] border border-[#D9DDD4]"
-                >
-                  <option value="许文博">许文博（高级验光师）</option>
-                  <option value="赵青">赵青（主治验光师）</option>
-                  <option value="冯思远">冯思远（视光主任）</option>
-                </select>
+                  onChange={setOptometristName}
+                  options={[
+                    { value: '许文博', label: '许文博（高级验光师）' },
+                    { value: '赵青', label: '赵青（主治验光师）' },
+                    { value: '冯思远', label: '冯思远（视光主任）' },
+                  ]}
+                />
               </div>
             </div>
 
@@ -400,15 +401,16 @@ export const SalesPosPage: React.FC = () => {
             <div className="pt-3 border-t border-[#E5E8E0] space-y-3 text-[15px]">
               <div>
                 <label className="block text-[14px] text-[#5F645D] mb-1">取货或配送方式</label>
-                <select
+                <Select
+                  ariaLabel="取货或配送方式"
                   value={deliveryMethod}
-                  onChange={(e) => setDeliveryMethod(e.target.value as DeliveryMethod)}
-                  className="w-full h-10 px-3 rounded-[9px] bg-[#F8F9F5] border border-[#D9DDD4]"
-                >
-                  <option value="in_store_pickup">门店自提（含现场调校）</option>
-                  <option value="express_delivery">快递配送到家</option>
-                  <option value="store_transfer_pickup">跨店调拨后门店自提</option>
-                </select>
+                  onChange={(val) => setDeliveryMethod(val as DeliveryMethod)}
+                  options={[
+                    { value: 'in_store_pickup', label: '门店自提（含现场调校）' },
+                    { value: 'express_delivery', label: '快递配送到家' },
+                    { value: 'store_transfer_pickup', label: '跨店调拨后门店自提' },
+                  ]}
+                />
               </div>
               <div>
                 <label className="block text-[14px] text-[#5F645D] mb-1">加工或服务备注</label>
