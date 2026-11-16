@@ -1,4 +1,36 @@
 services:
+  database:
+    image: docker.m.daocloud.io/library/postgres:17-alpine
+    container_name: qianshilin-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: qianshilin
+      POSTGRES_USER: qianshilin
+      POSTGRES_PASSWORD: ${QIANSHILIN_DB_PASSWORD:?Set QIANSHILIN_DB_PASSWORD}
+    volumes:
+      - qianshilin_pgdata:/var/lib/postgresql/data
+      - ./apps/api/db/migrations/001_identity.sql:/docker-entrypoint-initdb.d/001_identity.sql:ro
+      - ./apps/api/db/seed_demo.sql:/docker-entrypoint-initdb.d/002_seed_demo.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U qianshilin -d qianshilin"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - internal
+  api:
+    build: ./apps/api
+    image: qianshilin-api:local
+    container_name: qianshilin-api
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://qianshilin:${QIANSHILIN_DB_PASSWORD}@database:5432/qianshilin
+    depends_on:
+      database:
+        condition: service_healthy
+    networks:
+      - internal
+      - proxy
   qianshilin:
     image: ${QIANSHILIN_IMAGE:?Set QIANSHILIN_IMAGE}
     container_name: qianshilin
@@ -8,3 +40,7 @@ services:
 networks:
   proxy:
     external: true
+  internal:
+    internal: true
+volumes:
+  qianshilin_pgdata:

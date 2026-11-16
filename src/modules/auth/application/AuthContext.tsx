@@ -1,7 +1,6 @@
-import React, { createContext, useContext, useMemo, useState } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  LOGIN_ACCOUNTS,
   PRESET_SESSIONS,
   checkPermission,
   type AuthSession,
@@ -11,7 +10,6 @@ import {
 import { appRepositories } from '@/src/app/composition/container';
 import type { DataScopeContext } from '@/src/shared/types/common';
 
-const AUTH_SESSION_KEY = 'qsl_auth_preset_key_v2';
 const AVATAR_STORAGE_KEY = 'qsl_user_avatars_v1';
 
 interface SavedAvatarPref {
@@ -43,21 +41,6 @@ function applySavedAvatar(base: AuthSession): AuthSession {
   };
 }
 
-function loadInitialAuthState(): { isAuthenticated: boolean; session: AuthSession } {
-  if (typeof window === 'undefined') {
-    return { isAuthenticated: false, session: PRESET_SESSIONS.admin };
-  }
-  try {
-    const saved = window.sessionStorage.getItem(AUTH_SESSION_KEY);
-    if (saved && saved !== 'logged_out' && saved in PRESET_SESSIONS) {
-      return { isAuthenticated: true, session: applySavedAvatar(PRESET_SESSIONS[saved]) };
-    }
-  } catch {
-    // Ignore storage read errors
-  }
-  return { isAuthenticated: false, session: applySavedAvatar(PRESET_SESSIONS.admin) };
-}
-
 interface LoginResult {
   ok: boolean;
   error?: string;
@@ -71,11 +54,12 @@ interface AvatarUpdatePatch {
 
 interface AuthContextValue {
   isAuthenticated: boolean;
+  authLoading: boolean;
   session: AuthSession;
   currentRole: RoleDefinition | undefined;
   allRoles: RoleDefinition[];
   dataScope: DataScopeContext;
-  loginWithCredentials: (username: string, password: string) => LoginResult;
+  loginWithCredentials: (username: string, password: string) => Promise<LoginResult>;
   logout: () => void;
   updateAvatar: (patch: AvatarUpdatePatch) => void;
   resetAvatar: () => void;
@@ -90,9 +74,23 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const queryClient = useQueryClient();
-  const initialState = useMemo(() => loadInitialAuthState(), []);
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(initialState.isAuthenticated);
-  const [session, setSession] = useState<AuthSession>(initialState.session);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [session, setSession] = useState<AuthSession>(PRESET_SESSIONS.admin);
+  useEffect(() => {
+    let active = true;
+    fetch(`${import.meta.env.BASE_URL}api/session`, { credentials: 'same-origin' })
+      .then(async (r) => {
+        if (!r.ok) return;
+        const { user } = await r.json();
+        const preset = Object.values(PRESET_SESSIONS).find((s) => s.username === user.username);
+        if (active && preset) {
+          setSession(applySavedAvatar({ ...preset, userId: user.id }));
+          setIsAuthenticated(true);
+        }
+      }).catch(() => {}).finally(() => { if (active) setAuthLoading(false); });
+    return () => { active = false; };
+  }, []);
 
   const { data: allRoles = [], refetch } = useQuery({
     queryKey: ['rbac', 'roles'],
@@ -116,55 +114,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     [session]
   );
 
-  const persistAuthKey = (value: string) => {
+  const loginWithCredentials = async (username: string, password: string): Promise<LoginResult> => {
+    if (!username.trim() || !password) return { ok: false, error: '请输入用户名和密码。' };
     try {
-      window.sessionStorage.setItem(AUTH_SESSION_KEY, value);
-    } catch {
-      // Ignore storage write errors
-    }
-  };
-
-  const loginWithCredentials = (rawUsername: string, rawPassword: string): LoginResult => {
-    const usernameInput = rawUsername.trim();
-    const passwordInput = rawPassword;
-
-    if (!usernameInput) {
-      return { ok: false, error: '请输入用户名。' };
-    }
-    if (!passwordInput) {
-      return { ok: false, error: '请输入密码。' };
-    }
-
-    const lower = usernameInput.toLowerCase();
-    const matched = LOGIN_ACCOUNTS.find(
-      (acc) =>
-        acc.username.toLowerCase() === lower ||
-        acc.aliases.some((alias) => alias.toLowerCase() === lower)
-    );
-
-    if (!matched) {
-      return {
-        ok: false,
-        error: '用户名不存在，请点击用户名输入框旁的「?」查看账号与角色说明。',
-      };
-    }
-
-    if (passwordInput !== usernameInput && passwordInput !== matched.username) {
-      return {
-        ok: false,
-        error: '密码错误：演示环境设定密码与用户名一致。',
-      };
-    }
-
-    setSession(applySavedAvatar(PRESET_SESSIONS[matched.presetKey]));
-    setIsAuthenticated(true);
-    persistAuthKey(matched.presetKey);
-    return { ok: true };
+      const response = await fetch(`${import.meta.env.BASE_URL}api/login`, {
+        method: 'POST', credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      });
+      if (!response.ok) return { ok: false, error: response.status === 401 ? '用户名或密码错误。' : '登录服务暂不可用。' };
+      const { user } = await response.json();
+      const preset = Object.values(PRESET_SESSIONS).find((s) => s.username === user.username);
+      if (!preset) return { ok: false, error: '账号角色尚未配置。' };
+      setSession(applySavedAvatar({ ...preset, userId: user.id }));
+      setIsAuthenticated(true);
+      return { ok: true };
+    } catch { return { ok: false, error: '无法连接登录服务。' }; }
   };
 
   const logout = () => {
     setIsAuthenticated(false);
-    persistAuthKey('logged_out');
+    void fetch(`${import.meta.env.BASE_URL}api/logout`, { method: 'POST', credentials: 'same-origin' });
   };
 
   const updateAvatar = (patch: AvatarUpdatePatch) => {
@@ -229,49 +199,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   };
 
-  const switchPresetIdentity = (presetKey: string) => {
-    if (presetKey in PRESET_SESSIONS) {
-      setSession(applySavedAvatar(PRESET_SESSIONS[presetKey]));
-      setIsAuthenticated(true);
-      persistAuthKey(presetKey);
-      return;
-    }
-    const matchedRole = allRoles.find((r) => r.id === presetKey);
-    if (!matchedRole) return;
-    if (matchedRole.identityType === 'admin') {
-      setSession(
-        applySavedAvatar({
-          ...PRESET_SESSIONS.admin,
-          roleId: matchedRole.id,
-          roleName: matchedRole.name,
-        })
-      );
-    } else if (matchedRole.identityType === 'supplier') {
-      setSession(
-        applySavedAvatar({
-          ...PRESET_SESSIONS.supplier,
-          roleId: matchedRole.id,
-          roleName: matchedRole.name,
-        })
-      );
-    } else {
-      const base =
-        matchedRole.subRole === 'store_guide'
-          ? PRESET_SESSIONS.store_guide
-          : matchedRole.subRole === 'store_optometrist'
-            ? PRESET_SESSIONS.store_optometrist
-            : PRESET_SESSIONS.store_manager;
-      setSession(
-        applySavedAvatar({
-          ...base,
-          roleId: matchedRole.id,
-          roleName: matchedRole.name,
-          title: `${matchedRole.name} · ${base.currentStoreName}`,
-        })
-      );
-    }
-    setIsAuthenticated(true);
-  };
+  // Identity switching is disabled once credentials are verified by the API.
+  const switchPresetIdentity = (_presetKey: string) => {};
 
   const switchStore = (storeId: string) => {
     if (storeId === 'all' && session.identityType === 'admin') {
@@ -300,6 +229,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const value: AuthContextValue = {
     isAuthenticated,
+    authLoading,
     session,
     currentRole,
     allRoles,

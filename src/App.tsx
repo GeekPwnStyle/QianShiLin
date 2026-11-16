@@ -25,15 +25,16 @@ const queryClient = new QueryClient({
 });
 
 const AppRouterView: React.FC = () => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, authLoading } = useAuth();
   const { isLoginRoute, navigateToRoute } = useNavigation();
 
   React.useEffect(() => {
-    if (!isAuthenticated && !isLoginRoute) {
+    if (!authLoading && !isAuthenticated && !isLoginRoute) {
       navigateToRoute('/login');
     }
-  }, [isAuthenticated, isLoginRoute, navigateToRoute]);
+  }, [isAuthenticated, authLoading, isLoginRoute, navigateToRoute]);
 
+  if (authLoading) return null;
   if (!isAuthenticated || isLoginRoute) {
     return <LoginView />;
   }

@@ -27,6 +27,10 @@ case "$ACTION" in
   *) usage >&2; exit 2 ;;
 esac
 cd "$PROJECT_DIR"
+[[ -f "$STATE_FILE" ]] || { echo 'Missing .env.deploy.' >&2; exit 1; }
+DB_PASSWORD="$(sed -n 's/^QIANSHILIN_DB_PASSWORD=//p' "$STATE_FILE")"
+[[ -n "$DB_PASSWORD" ]] || { echo 'Missing QIANSHILIN_DB_PASSWORD in .env.deploy.' >&2; exit 1; }
+export QIANSHILIN_DB_PASSWORD="$DB_PASSWORD"
 command -v docker >/dev/null || { echo 'Docker is required.' >&2; exit 1; }
 # Prevent concurrent releases; the lock file stays outside the build context.
 exec 9>"${TMPDIR:-/tmp}/qianshilin-release-$(id -u).lock"
@@ -50,10 +54,11 @@ docker compose -f "$PROJECT_DIR/compose.yaml" config --quiet
 printf 'Building: %s\n' "$IMAGE"
 docker build -t "$IMAGE" "$PROJECT_DIR"
 # --wait fails if the application does not become healthy.
-docker compose -f "$PROJECT_DIR/compose.yaml" up -d --wait --wait-timeout 120 qianshilin
+docker compose -f "$PROJECT_DIR/compose.yaml" up -d --build --wait --wait-timeout 120
 TEMP_STATE="$(mktemp "$PROJECT_DIR/.env.deploy.XXXXXX")"
 trap 'rm -f -- "$TEMP_STATE"' EXIT
-printf 'QIANSHILIN_IMAGE=%s\n' "$IMAGE" > "$TEMP_STATE"
+printf 'QIANSHILIN_IMAGE=%s\nQIANSHILIN_DB_PASSWORD=%s\n' "$IMAGE" "$DB_PASSWORD" > "$TEMP_STATE"
+chmod 600 "$TEMP_STATE"
 mv -f -- "$TEMP_STATE" "$STATE_FILE"
 trap - EXIT
 printf 'Deployed: %s\nURL: https://zhiarch.org/qian/\nTo push: bash script/release.sh push\n' "$IMAGE"

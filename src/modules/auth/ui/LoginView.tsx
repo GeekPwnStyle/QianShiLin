@@ -11,15 +11,15 @@ export const LoginView: React.FC = () => {
   const { loginWithCredentials } = useAuth();
   const { navigateToRoute } = useNavigation();
 
-  const [username, setUsername] = useState('admin');
-  const [password, setPassword] = useState('admin');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const roleTooltipContent = (
     <div className="space-y-2.5">
       <div className="font-bold text-[#171916]">
-        登录约定：用户名与密码设为相同（例如：用户名 admin，密码 admin）。
+        演示账号使用各自的账号名作为初始密码。
       </div>
       <div className="text-[13px] text-[#5F645D]">
         不同用户对应不同岗位角色与数据隔离范围：
@@ -40,10 +40,10 @@ export const LoginView: React.FC = () => {
     </div>
   );
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
-    const res = loginWithCredentials(username, password);
+    const res = await loginWithCredentials(username, password);
     if (!res.ok) {
       setErrorMsg(res.error ?? '登录失败，请检查用户名与密码。');
       return;

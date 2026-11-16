@@ -1,0 +1,1 @@
+{"name":"qianshilin-api","private":true,"type":"module","scripts":{"start":"node src/server.js"},"dependencies":{"pg":"^8.16.3"}}
