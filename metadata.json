@@ -1,0 +1,6 @@
+{
+  "name": "千视林零售管理系统 Qianshilink",
+  "description": "面向眼镜零售连锁企业的全链路业务管理前端原型，涵盖商品、销售、采购、调拨、库存、会员、视光、加工、财务及系统管理。",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
