@@ -18,6 +18,7 @@ import {
   UnconfirmedPageShell,
   VisionScreeningView,
 } from '@/src/modules/shared-business-views/ui/DomainSpecializedViews';
+import { SystemParametersPage } from '@/src/modules/system/parameters/ui/SystemParametersPage';
 import { RolePermissionsPage } from '@/src/modules/system/roles/ui/RolePermissionsPage';
 import { StoreProfilePage } from '@/src/modules/system/stores/ui/StoreProfilePage';
 import { VisionRecordPage } from '@/src/modules/vision-records/ui/VisionRecordPage';
@@ -59,6 +60,9 @@ export const PageDispatcher: React.FC = () => {
 
     case 'store_profiles':
       return <StoreProfilePage />;
+
+    case 'system_parameters':
+      return <SystemParametersPage />;
 
     case 'vision_record':
       return <VisionRecordPage pageTitle={activeNode.label} />;

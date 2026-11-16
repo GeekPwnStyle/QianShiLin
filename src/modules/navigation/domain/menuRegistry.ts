@@ -8,6 +8,7 @@ export type PageKind =
   | 'followup_notification'
   | 'role_permissions'
   | 'store_profiles'
+  | 'system_parameters'
   | 'vision_record'
   | 'inventory_query'
   | 'finance_ledger'
@@ -744,7 +745,7 @@ const RAW_MODULES: RawNodeInput[] = [
     children: [
       { id: 'system.roles', label: '角色权限管理', description: '配置身份类型、18模块功能权限树、数据范围与敏感字段可见性及变更留痕。', permission: 'system.role.manage', nodeType: 'page', favoritable: true, pageKind: 'role_permissions' },
       { id: 'system.user_assignments', label: '用户权限分配', description: '为员工、店长及供应商账号绑定角色及授权门店范围。', permission: 'system.user.manage', nodeType: 'page', pageKind: 'master_data' },
-      { id: 'system.parameters', label: '参数设置', description: '系统全局业务参数（脱敏规则、导入阈值待确认项可配置）。', permission: 'system.read', nodeType: 'page', pageKind: 'master_data', unconfirmedNote: '导入文件上限、重复SKU处理策略等服务端校验参数待确认。' },
+      { id: 'system.parameters', label: '参数设置', description: '配置销售收银、充值验光、加工中心、采购调拨、小程序、工作提醒、近效期预警及管理员授权等全局与门店参数。', permission: 'system.read', nodeType: 'page', favoritable: true, pageKind: 'system_parameters', implemented: true },
       { id: 'system.notices_send', label: '发送站内信', description: '向指定门店或岗位发布总部运营通知与合规公告。', permission: 'system.read', nodeType: 'page', pageKind: 'document_list' },
       { id: 'system.notices_history', label: '站内信发布记录', description: '查看历史站内公告已读人数与下发范围。', permission: 'system.read', nodeType: 'page', pageKind: 'document_list' },
       { id: 'system.product_maintenance', label: '商品维护管理', description: '批量校准商品条码、默认归属门店及停用清洗规则。', permission: 'basic.product.update', nodeType: 'page', pageKind: 'product_list' },
