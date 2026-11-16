@@ -10,24 +10,21 @@ import {
 import { appRepositories } from '@/src/app/composition/container';
 import type { DataScopeContext } from '@/src/shared/types/common';
 
-const AUTH_SESSION_KEY = 'qsl_auth_preset_key_v1';
+const AUTH_SESSION_KEY = 'qsl_auth_preset_key_v2';
 
 function loadInitialAuthState(): { isAuthenticated: boolean; session: AuthSession } {
   if (typeof window === 'undefined') {
-    return { isAuthenticated: true, session: PRESET_SESSIONS.admin };
+    return { isAuthenticated: false, session: PRESET_SESSIONS.admin };
   }
   try {
     const saved = window.sessionStorage.getItem(AUTH_SESSION_KEY);
-    if (saved === 'logged_out') {
-      return { isAuthenticated: false, session: PRESET_SESSIONS.admin };
-    }
-    if (saved && saved in PRESET_SESSIONS) {
+    if (saved && saved !== 'logged_out' && saved in PRESET_SESSIONS) {
       return { isAuthenticated: true, session: PRESET_SESSIONS[saved] };
     }
   } catch {
     // Ignore storage read errors
   }
-  return { isAuthenticated: true, session: PRESET_SESSIONS.admin };
+  return { isAuthenticated: false, session: PRESET_SESSIONS.admin };
 }
 
 interface LoginResult {
