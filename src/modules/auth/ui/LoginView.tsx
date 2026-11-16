@@ -4,6 +4,7 @@ import { useAuth } from '@/src/modules/auth/application/AuthContext';
 import { LOGIN_ACCOUNTS } from '@/src/modules/auth/domain/identity';
 import { useNavigation } from '@/src/modules/navigation/application/NavigationContext';
 import { Button } from '@/src/shared/ui/Button';
+import { BrandLogoMark } from '@/src/shared/ui/BrandLogoMark';
 import { HelpTooltip } from '@/src/shared/ui/HelpTooltip';
 
 export const LoginView: React.FC = () => {
@@ -55,19 +56,7 @@ export const LoginView: React.FC = () => {
       {/* Top Brand Bar */}
       <div className="max-w-5xl w-full mx-auto flex items-center justify-between border-b border-[#D9DDD4] pb-6">
         <div className="flex items-center gap-3">
-          <svg
-            width="38"
-            height="38"
-            viewBox="0 0 32 32"
-            fill="none"
-            aria-hidden="true"
-            className="shrink-0"
-          >
-            <rect width="32" height="32" rx="9" fill="#171916" />
-            <circle cx="11.5" cy="16" r="4.5" stroke="#D7FF00" strokeWidth="2" />
-            <circle cx="20.5" cy="16" r="4.5" stroke="#FFFFFF" strokeWidth="2" />
-            <path d="M16 16H16.2" stroke="#D7FF00" strokeWidth="2" strokeLinecap="round" />
-          </svg>
+          <BrandLogoMark size={38} />
           <div>
             <div className="flex items-baseline gap-2">
               <span className="text-[22px] font-bold tracking-tight">千视林</span>

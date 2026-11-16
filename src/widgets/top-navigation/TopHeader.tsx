@@ -36,6 +36,7 @@ import {
 } from '@/src/modules/navigation/domain/menuRegistry';
 import { formatDateTime } from '@/src/shared/lib/format';
 import { Modal } from '@/src/shared/ui/Modal';
+import { BrandLogoMark } from '@/src/shared/ui/BrandLogoMark';
 import { Select } from '@/src/shared/ui/Select';
 import { StatusLabel } from '@/src/shared/ui/StatusLabel';
 import { ModuleIcon } from '@/src/widgets/top-navigation/ModuleIcon';
@@ -308,19 +309,7 @@ export const TopHeader: React.FC = () => {
               onClick={() => navigateToRoute('/workbench')}
               className="flex items-center gap-2 text-left cursor-pointer shrink-0"
             >
-              <svg
-                width="30"
-                height="30"
-                viewBox="0 0 32 32"
-                fill="none"
-                aria-hidden="true"
-                className="shrink-0"
-              >
-                <rect width="32" height="32" rx="9" fill="#171916" />
-                <circle cx="11.5" cy="16" r="4.5" stroke="#D7FF00" strokeWidth="2" />
-                <circle cx="20.5" cy="16" r="4.5" stroke="#FFFFFF" strokeWidth="2" />
-                <path d="M16 16H16.2" stroke="#D7FF00" strokeWidth="2" strokeLinecap="round" />
-              </svg>
+              <BrandLogoMark size={30} />
               <div className="flex items-baseline gap-1.5">
                 <span className="text-[17px] font-bold tracking-tight text-[#171916] whitespace-nowrap">
                   千视林
