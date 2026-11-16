@@ -8,12 +8,13 @@ import { BrandLogoMark } from '@/src/shared/ui/BrandLogoMark';
 import { HelpTooltip } from '@/src/shared/ui/HelpTooltip';
 
 export const LoginView: React.FC = () => {
-  const { loginWithCredentials } = useAuth();
+  const { loginWithCredentials, debugMode, setDebugMode } = useAuth();
   const { navigateToRoute } = useNavigation();
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const roleTooltipContent = (
@@ -43,12 +44,17 @@ export const LoginView: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
-    const res = await loginWithCredentials(username, password);
-    if (!res.ok) {
-      setErrorMsg(res.error ?? '登录失败，请检查用户名与密码。');
-      return;
+    setSubmitting(true);
+    try {
+      const res = await loginWithCredentials(username, password);
+      if (!res.ok) {
+        setErrorMsg(res.error ?? '登录失败，请检查用户名与密码。');
+        return;
+      }
+      navigateToRoute('/workbench');
+    } finally {
+      setSubmitting(false);
     }
-    navigateToRoute('/workbench');
   };
 
   return (
@@ -186,16 +192,59 @@ export const LoginView: React.FC = () => {
               </div>
             </div>
 
-            <div className="pt-2">
-              <Button
-                type="submit"
-                variant="primary"
-                size="lg"
-                className="w-full justify-center"
-                icon={<ArrowRight className="w-4 h-4" />}
-              >
-                登录进入系统
-              </Button>
+            <div className="pt-2 space-y-2.5">
+              <div className="flex items-center gap-2.5">
+                <Button
+                  type="submit"
+                  variant="primary"
+                  size="lg"
+                  loading={submitting}
+                  className="flex-1 justify-center"
+                  icon={<ArrowRight className="w-4 h-4" />}
+                >
+                  登录进入系统
+                </Button>
+
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={debugMode}
+                  aria-label="切换 debug 本地校验开关"
+                  onClick={() => {
+                    setDebugMode(!debugMode);
+                    if (errorMsg) setErrorMsg(null);
+                  }}
+                  title={
+                    debugMode
+                      ? 'debug 已开启：使用本地账号密码校验直接进入系统'
+                      : 'debug 已关闭：使用真实后端数据库接口校验'
+                  }
+                  className={`h-11 px-3 rounded-[10px] border inline-flex items-center gap-2 shrink-0 transition-colors cursor-pointer select-none ${
+                    debugMode
+                      ? 'bg-[#ECF9A8]/85 border-[#171916] text-[#171916]'
+                      : 'bg-[#F8F9F5] border-[#D9DDD4] text-[#5F645D] hover:border-[#171916]/45 hover:text-[#171916]'
+                  }`}
+                >
+                  <span
+                    className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors ${
+                      debugMode ? 'bg-[#171916]' : 'bg-[#CFD4C8]'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-3.5 w-3.5 transform rounded-full transition-transform ${
+                        debugMode ? 'translate-x-[18px] bg-[#D7FF00]' : 'translate-x-[3px] bg-white'
+                      }`}
+                    />
+                  </span>
+                  <span className="text-[13px] font-semibold tracking-tight">debug</span>
+                </button>
+              </div>
+
+              <p className="text-[12px] text-[#73796F]">
+                {debugMode
+                  ? 'debug 已开启：走本地用户名/密码校验流程，不请求真实数据库。'
+                  : 'debug 已关闭：走真实数据库接口校验登录。'}
+              </p>
             </div>
           </form>
         </div>

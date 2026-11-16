@@ -5,7 +5,7 @@ import {
   resolveVisibleTopModuleIds,
   useNavigation,
 } from '@/src/modules/navigation/application/NavigationContext';
-import { MENU_TREE } from '@/src/modules/navigation/domain/menuRegistry';
+import { MENU_TREE, isNodeDevelopedForUser } from '@/src/modules/navigation/domain/menuRegistry';
 import { HelpTooltip } from '@/src/shared/ui/HelpTooltip';
 import { ModuleIcon } from '@/src/widgets/top-navigation/ModuleIcon';
 
@@ -81,7 +81,7 @@ export const AllModulesPanel: React.FC = () => {
             <HelpTooltip
               title="顶部菜单自定义说明"
               content={
-                '此处仅展示当前角色已获授权的可操作业务模块。\n\n按住任意模块卡片，向上拖拽到顶部菜单栏的对应位置即可替换原有菜单项；顶部各模块之间也可直接互相拖动调整顺序。「工作台」为固定入口，不可移动或替换。'
+                '此处仅展示当前角色已获授权的可操作业务模块；正常色彩显示的模块包含按真实需求完成开发的页面，置灰模块为原型占位预览。\n\n按住任意模块卡片，向上拖拽到顶部菜单栏的对应位置即可替换原有菜单项；顶部各模块之间也可直接互相拖动调整顺序。「工作台」为固定入口，不可移动或替换。'
               }
               ariaLabel="查看顶部菜单自定义说明"
             />
@@ -112,11 +112,12 @@ export const AllModulesPanel: React.FC = () => {
             当前角色暂未分配可访问的一级业务模块，请联系管理员在「系统管理 / 角色权限管理」中进行配置。
           </div>
         ) : (
-          <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+          <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             {visibleModules.map((mod) => {
               const isActive = activeModule?.id === mod.id;
               const isPinnedTop = currentTopIds.includes(mod.id);
               const isSelected = selectedCardId === mod.id || draggingModuleId === mod.id;
+              const isDeveloped = isNodeDevelopedForUser(mod, hasPermission);
 
               return (
                 <div
@@ -148,42 +149,70 @@ export const AllModulesPanel: React.FC = () => {
                       setAllModulesOpen(false);
                     }
                   }}
-                  title="点击进入模块，或拖拽到顶部菜单栏替换"
-                  className={`group text-left p-3.5 rounded-2xl border transition-colors flex flex-col justify-between min-h-[96px] select-none focus-visible:outline-2 focus-visible:outline-[#171916] cursor-grab active:cursor-grabbing ${
-                    isSelected
-                      ? 'bg-[#ECF9A8]/85 border-[#171916] ring-2 ring-[#D7FF00]'
-                      : isActive
-                        ? 'bg-[#ECF9A8]/80 border-[#171916]'
-                        : 'bg-white/55 border-[#171916]/[0.08] hover:bg-white/85 hover:border-[#171916]/45'
+                  title={
+                    isDeveloped
+                      ? '包含已完成真实需求开发的页面，点击进入或拖拽到顶部菜单栏替换'
+                      : '暂未按真实需求完成开发（置灰预览），点击可浏览原型或拖拽到顶部菜单栏'
+                  }
+                  className={`group text-left px-3.5 py-2.5 h-[54px] rounded-2xl border transition-colors flex items-center justify-between gap-2.5 select-none focus-visible:outline-2 focus-visible:outline-[#171916] cursor-grab active:cursor-grabbing ${
+                    isDeveloped
+                      ? isSelected
+                        ? 'bg-[#ECF9A8]/85 border-[#171916] ring-2 ring-[#D7FF00]'
+                        : isActive
+                          ? 'bg-[#ECF9A8]/80 border-[#171916]'
+                          : 'bg-white/80 border-[#171916]/15 hover:bg-white hover:border-[#171916]/55'
+                      : isSelected
+                        ? 'bg-[#E2E5DE] border-[#9EA49A] opacity-85 grayscale'
+                        : isActive
+                          ? 'bg-[#E5E7E1] border-[#AEB4AA] opacity-85 grayscale'
+                          : 'bg-[#ECEEE9]/60 border-[#E0E3DC] opacity-65 grayscale hover:opacity-85 hover:border-[#C5CAC0]'
                   }`}
                 >
-                  <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
                     <span
-                      className={`w-8 h-8 rounded-xl inline-flex items-center justify-center ${
-                        isActive || isSelected
-                          ? 'bg-[#171916] text-[#D7FF00]'
-                          : 'bg-white border border-[#E5E8E0] text-[#171916]'
+                      className={`w-8 h-8 rounded-xl inline-flex items-center justify-center shrink-0 ${
+                        isDeveloped
+                          ? isActive || isSelected
+                            ? 'bg-[#171916] text-[#D7FF00]'
+                            : 'bg-white border border-[#E5E8E0] text-[#171916]'
+                          : isActive || isSelected
+                            ? 'bg-[#9EA49A] text-white'
+                            : 'bg-[#E5E7E1] border border-[#D8DCD3] text-[#9EA39A]'
                       }`}
                     >
                       <ModuleIcon name={mod.icon} className="w-4 h-4" />
                     </span>
-                    <div className="flex items-center gap-1">
-                      {isPinnedTop && (
-                        <span className="text-[12px] px-1.5 py-0.5 rounded bg-[#171916]/8 text-[#171916] font-medium">
-                          顶部
-                        </span>
-                      )}
-                      <GripVertical
-                        className="w-4 h-4 text-[#A8B0A0] group-hover:text-[#5F645D]"
-                        aria-hidden="true"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="mt-3 flex items-center justify-between gap-1">
-                    <span className="text-[16px] font-bold text-[#171916] leading-snug">
+                    <span
+                      className={`text-[15px] whitespace-nowrap truncate leading-none ${
+                        isDeveloped
+                          ? 'font-bold text-[#171916]'
+                          : 'font-medium text-[#9EA39A]'
+                      }`}
+                    >
                       {mod.label}
                     </span>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {isPinnedTop && (
+                      <span
+                        className={`text-[12px] px-1.5 py-0.5 rounded font-medium whitespace-nowrap ${
+                          isDeveloped
+                            ? 'bg-[#171916]/8 text-[#171916]'
+                            : 'bg-[#171916]/[0.05] text-[#9EA39A]'
+                        }`}
+                      >
+                        顶部
+                      </span>
+                    )}
+                    <GripVertical
+                      className={`w-4 h-4 shrink-0 ${
+                        isDeveloped
+                          ? 'text-[#A8B0A0] group-hover:text-[#5F645D]'
+                          : 'text-[#C4C8BF]'
+                      }`}
+                      aria-hidden="true"
+                    />
                   </div>
                 </div>
               );

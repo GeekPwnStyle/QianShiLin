@@ -31,7 +31,9 @@ import {
   FLAT_MENU_NODES,
   MENU_BY_ID,
   MENU_TREE,
+  WORKBENCH_NODE,
   getAncestorChain,
+  isNodeDevelopedForUser,
   type NavNode,
 } from '@/src/modules/navigation/domain/menuRegistry';
 import { formatDateTime } from '@/src/shared/lib/format';
@@ -127,6 +129,10 @@ export const TopHeader: React.FC = () => {
   const activeOutsideTopBar = Boolean(
     activeModule && !displayedPrimaryModules.some((m) => m.id === activeModule.id)
   );
+  const activeModuleDeveloped = activeModule
+    ? isNodeDevelopedForUser(activeModule, hasPermission)
+    : false;
+  const workbenchDeveloped = isNodeDevelopedForUser(WORKBENCH_NODE, hasPermission);
 
   const effectiveHeaderVisible =
     headerVisible || searchExpanded || accountMenuOpen || messagesOpen || allModulesOpen;
@@ -331,11 +337,19 @@ export const TopHeader: React.FC = () => {
               type="button"
               draggable={false}
               onClick={() => navigateToRoute('/workbench')}
-              title="工作台（固定首页入口，不可移动）"
-              className={`h-9 px-3 xl:px-3.5 rounded-full text-[14px] 2xl:text-[15px] font-bold leading-none inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 select-none border border-transparent transition-colors duration-150 cursor-pointer ${
-                activeNode.id === 'workbench'
-                  ? 'bg-[#171916] text-white'
-                  : 'bg-transparent text-[#5F645D] hover:text-[#171916] hover:bg-[#F1F2EE]'
+              title={
+                workbenchDeveloped
+                  ? '工作台（固定首页入口，不可移动）'
+                  : '工作台（暂未按真实需求开发，置灰预览；固定首页入口）'
+              }
+              className={`h-9 px-3 xl:px-3.5 rounded-full text-[14px] 2xl:text-[15px] leading-none inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 select-none border border-transparent transition-colors duration-150 cursor-pointer ${
+                workbenchDeveloped
+                  ? activeNode.id === 'workbench'
+                    ? 'font-bold bg-[#171916] text-white'
+                    : 'font-bold bg-transparent text-[#5F645D] hover:text-[#171916] hover:bg-[#F1F2EE]'
+                  : activeNode.id === 'workbench'
+                    ? 'font-medium bg-[#E4E7E0] text-[#5F645D] grayscale'
+                    : 'font-medium bg-transparent text-[#A8ADA4] opacity-70 grayscale hover:opacity-90 hover:text-[#73796F] hover:bg-[#F1F2EE]/60'
               }`}
             >
               <ModuleIcon name="LayoutDashboard" className="w-4 h-4 shrink-0" />
@@ -348,6 +362,7 @@ export const TopHeader: React.FC = () => {
               const isDropTarget = dragOverModuleId === mod.id;
               const isBeingDragged = draggingModuleId === mod.id;
               const showDropHint = Boolean(draggingModuleId && draggingModuleId !== mod.id);
+              const isDeveloped = isNodeDevelopedForUser(mod, hasPermission);
 
               return (
                 <div
@@ -387,17 +402,27 @@ export const TopHeader: React.FC = () => {
                       navigateToModule(mod.id);
                     }
                   }}
-                  title={`${mod.label}（点击切换，拖拽可调整顺序或接收全部菜单替换）`}
-                  className={`h-9 px-3 xl:px-3.5 rounded-full text-[14px] 2xl:text-[15px] font-bold leading-none inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 select-none border transition-colors duration-150 cursor-grab active:cursor-grabbing ${
+                  title={
+                    isDeveloped
+                      ? `${mod.label}（含已完成开发页面；点击切换，拖拽可调整顺序或接收全部菜单替换）`
+                      : `${mod.label}（暂未按真实需求完成开发，置灰预览；点击浏览或拖拽调整顺序）`
+                  }
+                  className={`h-9 px-3 xl:px-3.5 rounded-full text-[14px] 2xl:text-[15px] leading-none inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 select-none border transition-colors duration-150 cursor-grab active:cursor-grabbing ${
                     isDropTarget
-                      ? 'bg-[#D7FF00] text-[#171916] border-[#171916] ring-2 ring-[#171916]/25'
+                      ? 'font-bold bg-[#D7FF00] text-[#171916] border-[#171916] ring-2 ring-[#171916]/25'
                       : isBeingDragged
-                        ? 'opacity-50 border-dashed border-[#171916] bg-[#F1F2EE] text-[#171916]'
-                        : isActive
-                          ? 'bg-[#171916] text-white border-transparent'
-                          : showDropHint
-                            ? 'bg-[#F8F9F5] text-[#171916] border-dashed border-[#171916]/40'
-                            : 'bg-transparent text-[#5F645D] border-transparent hover:text-[#171916] hover:bg-[#F1F2EE]'
+                        ? 'font-bold opacity-50 border-dashed border-[#171916] bg-[#F1F2EE] text-[#171916]'
+                        : isDeveloped
+                          ? isActive
+                            ? 'font-bold bg-[#171916] text-white border-transparent'
+                            : showDropHint
+                              ? 'font-bold bg-[#F8F9F5] text-[#171916] border-dashed border-[#171916]/40'
+                              : 'font-bold bg-transparent text-[#5F645D] border-transparent hover:text-[#171916] hover:bg-[#F1F2EE]'
+                          : isActive
+                            ? 'font-medium bg-[#E4E7E0] text-[#5F645D] border-transparent grayscale'
+                            : showDropHint
+                              ? 'font-medium bg-[#F4F5F1] text-[#9EA39A] border-dashed border-[#AEB4AA]/60 grayscale'
+                              : 'font-medium bg-transparent text-[#A8ADA4] opacity-70 grayscale border-transparent hover:opacity-90 hover:text-[#73796F] hover:bg-[#F1F2EE]/60'
                   }`}
                 >
                   <ModuleIcon name={mod.icon} className="w-4 h-4 shrink-0 pointer-events-none" />
@@ -415,7 +440,9 @@ export const TopHeader: React.FC = () => {
                   allModulesOpen
                     ? 'bg-[#D7FF00] text-[#171916] border-[#171916]'
                     : activeOutsideTopBar
-                      ? 'bg-[#ECF9A8] text-[#171916] border-[#171916]'
+                      ? activeModuleDeveloped
+                        ? 'bg-[#ECF9A8] text-[#171916] border-[#171916]'
+                        : 'bg-[#EAECE6] text-[#5F645D] border-[#C5CAC0]'
                       : 'bg-[#F8F9F5] text-[#171916] border-[#D9DDD4] hover:border-[#171916]'
                 }`}
               >
@@ -474,19 +501,26 @@ export const TopHeader: React.FC = () => {
                         const chain = getAncestorChain(item.id);
                         const modName = chain[0]?.label ?? '系统';
                         const fullPath = chain.map((c) => c.label).join(' / ');
+                        const isDeveloped = isNodeDevelopedForUser(item, hasPermission);
                         return (
                           <button
                             key={item.id}
                             type="button"
                             onClick={() => handleSelectSearchNode(item)}
-                            className="w-full text-left px-3 py-2 rounded-xl hover:bg-[#F8F9F5] flex items-center justify-between gap-2 cursor-pointer"
+                            className={`w-full text-left px-3 py-2 rounded-xl hover:bg-[#F8F9F5] flex items-center justify-between gap-2 cursor-pointer ${
+                              isDeveloped ? '' : 'opacity-60 grayscale hover:opacity-85'
+                            }`}
                           >
                             <div className="min-w-0">
                               <div className="flex items-center gap-1.5">
-                                <span className="text-[14px] font-medium text-[#171916] truncate">
+                                <span
+                                  className={`text-[14px] font-medium truncate ${
+                                    isDeveloped ? 'text-[#171916]' : 'text-[#73796F]'
+                                  }`}
+                                >
                                   {item.label}
                                 </span>
-                                <span className="text-[12px] text-[#5F645D]">· {modName}</span>
+                                <span className="text-[12px] text-[#73796F]">· {modName}</span>
                               </div>
                               <div className="text-[12px] text-[#73796F] truncate">{fullPath}</div>
                             </div>

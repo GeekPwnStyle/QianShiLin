@@ -7,6 +7,7 @@ export type PageKind =
   | 'member_profile'
   | 'followup_notification'
   | 'role_permissions'
+  | 'store_profiles'
   | 'vision_record'
   | 'inventory_query'
   | 'finance_ledger'
@@ -35,6 +36,10 @@ export interface NavNode {
   nodeType: MenuNodeType;
   favoritable: boolean;
   pageKind: PageKind;
+  /** Whether this exact menu node/page/tab has been developed according to real business requirements */
+  implemented: boolean;
+  /** True if this node itself is implemented OR any descendant (L2/L3/L4) is implemented */
+  hasDevelopedFeature: boolean;
   unconfirmedNote?: string;
   children?: NavNode[];
 }
@@ -49,6 +54,7 @@ interface RawNodeInput {
   nodeType: MenuNodeType;
   favoritable?: boolean;
   pageKind?: PageKind;
+  implemented?: boolean;
   unconfirmedNote?: string;
   children?: RawNodeInput[];
 }
@@ -68,6 +74,14 @@ function buildTree(
       item.id === 'workbench'
         ? '/workbench'
         : `/modules/${slugifyId(item.id)}`;
+    const children =
+      item.children && item.children.length > 0
+        ? buildTree(item.children, item.id, resolvedModuleId)
+        : undefined;
+    const implemented = Boolean(item.implemented);
+    const hasDevelopedFeature =
+      implemented || Boolean(children?.some((child) => child.hasDevelopedFeature));
+
     const node: NavNode = {
       id: item.id,
       code: item.code,
@@ -82,11 +96,11 @@ function buildTree(
       nodeType: item.nodeType,
       favoritable: item.favoritable ?? item.nodeType === 'page',
       pageKind: item.pageKind ?? 'document_list',
+      implemented,
+      hasDevelopedFeature,
       unconfirmedNote: item.unconfirmedNote,
+      children,
     };
-    if (item.children && item.children.length > 0) {
-      node.children = buildTree(item.children, item.id, resolvedModuleId);
-    }
     return node;
   });
 }
@@ -734,7 +748,7 @@ const RAW_MODULES: RawNodeInput[] = [
       { id: 'system.notices_send', label: '发送站内信', description: '向指定门店或岗位发布总部运营通知与合规公告。', permission: 'system.read', nodeType: 'page', pageKind: 'document_list' },
       { id: 'system.notices_history', label: '站内信发布记录', description: '查看历史站内公告已读人数与下发范围。', permission: 'system.read', nodeType: 'page', pageKind: 'document_list' },
       { id: 'system.product_maintenance', label: '商品维护管理', description: '批量校准商品条码、默认归属门店及停用清洗规则。', permission: 'basic.product.update', nodeType: 'page', pageKind: 'product_list' },
-      { id: 'system.stores', label: '门店资料', description: '维护直营/加盟门店编码、营业地址、门店仓库绑定关系。', permission: 'system.store.manage', nodeType: 'page', pageKind: 'master_data' },
+      { id: 'system.stores', label: '门店资料', description: '维护直营/加盟门店编码、营业地址、医疗器械资质、小程序显示与跨店查看权限。', permission: 'system.store.manage', nodeType: 'page', favoritable: true, pageKind: 'store_profiles', implemented: true },
       { id: 'system.processing_warehouses', label: '加工仓库设置', description: '配置门店对应的中央加工仓与毛坯片默认调出仓。', permission: 'system.store.manage', nodeType: 'page', pageKind: 'master_data' },
       { id: 'system.banks', label: '银行资料', description: '公司收付款对公账户与POS结算账户档案。', permission: 'system.read', nodeType: 'page', pageKind: 'master_data' },
       { id: 'system.audit_logs', label: '操作日志', description: '记录关键数据导出、权限变更与敏感操作审计追踪。', permission: 'system.read', nodeType: 'page', pageKind: 'document_list' },
@@ -770,6 +784,8 @@ export const WORKBENCH_NODE: NavNode = {
   nodeType: 'page',
   favoritable: false,
   pageKind: 'workbench',
+  implemented: false,
+  hasDevelopedFeature: false,
 };
 
 export const MENU_TREE: NavNode[] = buildTree(RAW_MODULES, null, '');
@@ -825,4 +841,13 @@ export function getAncestorChain(nodeId: string): NavNode[] {
     current = current.parentId ? MENU_BY_ID[current.parentId] : undefined;
   }
   return chain;
+}
+
+export function isNodeDevelopedForUser(
+  node: NavNode,
+  hasPerm: (perm: string) => boolean
+): boolean {
+  if (!hasPerm(node.permission)) return false;
+  if (node.implemented) return true;
+  return Boolean(node.children?.some((child) => isNodeDevelopedForUser(child, hasPerm)));
 }

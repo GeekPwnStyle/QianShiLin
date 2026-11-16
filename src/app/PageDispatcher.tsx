@@ -19,6 +19,7 @@ import {
   VisionScreeningView,
 } from '@/src/modules/shared-business-views/ui/DomainSpecializedViews';
 import { RolePermissionsPage } from '@/src/modules/system/roles/ui/RolePermissionsPage';
+import { StoreProfilePage } from '@/src/modules/system/stores/ui/StoreProfilePage';
 import { VisionRecordPage } from '@/src/modules/vision-records/ui/VisionRecordPage';
 import { WorkbenchPage } from '@/src/modules/workbench/ui/WorkbenchPage';
 
@@ -55,6 +56,9 @@ export const PageDispatcher: React.FC = () => {
 
     case 'role_permissions':
       return <RolePermissionsPage />;
+
+    case 'store_profiles':
+      return <StoreProfilePage />;
 
     case 'vision_record':
       return <VisionRecordPage pageTitle={activeNode.label} />;

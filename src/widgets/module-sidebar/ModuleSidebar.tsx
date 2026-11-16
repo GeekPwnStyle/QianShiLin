@@ -9,7 +9,11 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/src/modules/auth/application/AuthContext';
 import { useNavigation } from '@/src/modules/navigation/application/NavigationContext';
-import { MENU_BY_ID, type NavNode } from '@/src/modules/navigation/domain/menuRegistry';
+import {
+  MENU_BY_ID,
+  isNodeDevelopedForUser,
+  type NavNode,
+} from '@/src/modules/navigation/domain/menuRegistry';
 import { L2MenuIcon } from '@/src/widgets/top-navigation/ModuleIcon';
 
 export const ModuleSidebar: React.FC = () => {
@@ -101,6 +105,7 @@ export const ModuleSidebar: React.FC = () => {
               {favoriteNodes.map((node) => {
                 const mod = MENU_BY_ID[node.moduleId];
                 const isCurrent = activeNode.id === node.id || activeNode.parentId === node.id;
+                const isDeveloped = isNodeDevelopedForUser(node, hasPermission);
                 return (
                   <button
                     key={node.id}
@@ -110,9 +115,13 @@ export const ModuleSidebar: React.FC = () => {
                       setFavoritesHovered(false);
                     }}
                     className={`w-full text-left px-2.5 py-2 rounded-xl flex items-center justify-between gap-2 transition-colors cursor-pointer ${
-                      isCurrent
-                        ? 'bg-[#ECF9A8] text-[#171916]'
-                        : 'text-[#171916] hover:bg-[#F8F9F5]'
+                      isDeveloped
+                        ? isCurrent
+                          ? 'bg-[#ECF9A8] text-[#171916]'
+                          : 'text-[#171916] hover:bg-[#F8F9F5]'
+                        : isCurrent
+                          ? 'bg-[#E5E7E1] text-[#6E736B] opacity-80 grayscale'
+                          : 'text-[#9EA39A] opacity-65 grayscale hover:opacity-85 hover:bg-[#F8F9F5]'
                     }`}
                   >
                     <span className="text-[14px] font-medium truncate">{node.label}</span>
@@ -134,7 +143,13 @@ export const ModuleSidebar: React.FC = () => {
       {/* Minimalist borderless Module Header (no "01模块" code prefix) */}
       <div className="px-5 pt-5 pb-3">
         <div className="flex items-center justify-between gap-2">
-          <h2 className="text-[19px] font-bold text-[#171916] truncate">
+          <h2
+            className={`text-[19px] font-bold truncate ${
+              isNodeDevelopedForUser(activeModule, hasPermission)
+                ? 'text-[#171916]'
+                : 'text-[#8B9087]'
+            }`}
+          >
             {activeModule.label}
           </h2>
           <button
@@ -181,6 +196,7 @@ export const ModuleSidebar: React.FC = () => {
             );
             const hasActiveChild = visibleL3.some((c) => isNodeSelected(c));
             const expanded = expandedGroups[l2.id] ?? (hasActiveChild || Boolean(moduleSearch.trim()));
+            const l2Developed = isNodeDevelopedForUser(l2, hasPermission);
 
             if (!isGroup) {
               const selected = isNodeSelected(l2);
@@ -189,16 +205,31 @@ export const ModuleSidebar: React.FC = () => {
                   key={l2.id}
                   type="button"
                   onClick={() => navigateToNode(l2)}
-                  className={`w-full text-left px-3 py-2.5 rounded-2xl text-[15px] font-bold flex items-center gap-3 transition-colors cursor-pointer ${
-                    selected
-                      ? 'bg-[#ECF9A8] text-[#171916]'
-                      : 'text-[#5F645D] hover:text-[#171916] hover:bg-[#EAECE6]/70'
+                  title={
+                    l2Developed
+                      ? l2.label
+                      : `${l2.label}（暂未按真实需求完成开发，置灰预览）`
+                  }
+                  className={`w-full text-left px-3 py-2.5 rounded-2xl text-[15px] flex items-center gap-3 transition-colors cursor-pointer ${
+                    l2Developed
+                      ? selected
+                        ? 'font-bold bg-[#ECF9A8] text-[#171916]'
+                        : 'font-bold text-[#171916] hover:bg-[#EAECE6]/70'
+                      : selected
+                        ? 'font-medium bg-[#E4E7E0] text-[#6E736B] opacity-85 grayscale'
+                        : 'font-medium text-[#A8ADA4] opacity-65 grayscale hover:opacity-85 hover:text-[#73796F] hover:bg-[#EAECE6]/50'
                   }`}
                 >
                   <L2MenuIcon
                     nodeId={l2.id}
                     label={l2.label}
-                    className={`w-[18px] h-[18px] shrink-0 ${selected ? 'text-[#171916]' : 'text-[#5F645D]'}`}
+                    className={`w-[18px] h-[18px] shrink-0 ${
+                      l2Developed
+                        ? 'text-[#171916]'
+                        : selected
+                          ? 'text-[#6E736B]'
+                          : 'text-[#A8ADA4]'
+                    }`}
                   />
                   <span className="truncate">{l2.label}</span>
                 </button>
@@ -213,35 +244,58 @@ export const ModuleSidebar: React.FC = () => {
                     setExpandedGroups((prev) => ({ ...prev, [l2.id]: !expanded }))
                   }
                   aria-expanded={expanded}
-                  className={`w-full text-left px-3 py-2.5 rounded-2xl text-[15px] font-bold flex items-center justify-between gap-2 cursor-pointer transition-colors ${
-                    hasActiveChild
-                      ? 'text-[#171916] bg-[#EAECE6]/60'
-                      : 'text-[#171916] hover:bg-[#EAECE6]/70'
+                  className={`w-full text-left px-3 py-2.5 rounded-2xl text-[15px] flex items-center justify-between gap-2 cursor-pointer transition-colors ${
+                    l2Developed
+                      ? hasActiveChild
+                        ? 'font-bold text-[#171916] bg-[#EAECE6]/60'
+                        : 'font-bold text-[#171916] hover:bg-[#EAECE6]/70'
+                      : hasActiveChild
+                        ? 'font-medium text-[#6E736B] bg-[#EAECE6]/50 opacity-80 grayscale'
+                        : 'font-medium text-[#A8ADA4] opacity-65 grayscale hover:opacity-85 hover:bg-[#EAECE6]/45'
                   }`}
                 >
                   <span className="flex items-center gap-3 min-w-0">
-                    <L2MenuIcon nodeId={l2.id} label={l2.label} className="w-[18px] h-[18px] text-[#171916] shrink-0" />
+                    <L2MenuIcon
+                      nodeId={l2.id}
+                      label={l2.label}
+                      className={`w-[18px] h-[18px] shrink-0 ${
+                        l2Developed
+                          ? 'text-[#171916]'
+                          : hasActiveChild
+                            ? 'text-[#6E736B]'
+                            : 'text-[#A8ADA4]'
+                      }`}
+                    />
                     <span className="truncate">{l2.label}</span>
                   </span>
                   {expanded ? (
-                    <ChevronDown className="w-4 h-4 text-[#5F645D] shrink-0" />
+                    <ChevronDown
+                      className={`w-4 h-4 shrink-0 ${l2Developed ? 'text-[#5F645D]' : 'text-[#A8ADA4]'}`}
+                    />
                   ) : (
-                    <ChevronRight className="w-4 h-4 text-[#5F645D] shrink-0" />
+                    <ChevronRight
+                      className={`w-4 h-4 shrink-0 ${l2Developed ? 'text-[#5F645D]' : 'text-[#A8ADA4]'}`}
+                    />
                   )}
                 </button>
                 {expanded && (
                   <div className="pl-9 pr-1 space-y-0.5">
                     {visibleL3.map((l3) => {
                       const selected = isNodeSelected(l3);
+                      const l3Developed = isNodeDevelopedForUser(l3, hasPermission);
                       return (
                         <button
                           key={l3.id}
                           type="button"
                           onClick={() => navigateToNode(l3)}
-                          className={`w-full text-left px-3 py-2 rounded-xl text-[14px] font-normal flex items-center gap-2 transition-colors cursor-pointer ${
-                            selected
-                              ? 'bg-[#ECF9A8] text-[#171916]'
-                              : 'text-[#5F645D] hover:text-[#171916] hover:bg-[#EAECE6]/70'
+                          className={`w-full text-left px-3 py-2 rounded-xl text-[14px] flex items-center gap-2 transition-colors cursor-pointer ${
+                            l3Developed
+                              ? selected
+                                ? 'font-medium bg-[#ECF9A8] text-[#171916]'
+                                : 'font-medium text-[#171916] hover:bg-[#EAECE6]/70'
+                              : selected
+                                ? 'font-normal bg-[#E4E7E0] text-[#6E736B] opacity-85 grayscale'
+                                : 'font-normal text-[#A8ADA4] opacity-65 grayscale hover:opacity-85 hover:text-[#73796F] hover:bg-[#EAECE6]/50'
                           }`}
                         >
                           <span className="truncate">{l3.label}</span>
@@ -308,6 +362,7 @@ export const ModuleSidebar: React.FC = () => {
       <div className="flex-1 overflow-y-auto no-scrollbar flex flex-col items-center gap-2 w-full px-2">
         {l2Items.map((l2) => {
           const selected = isNodeSelected(l2);
+          const l2Developed = isNodeDevelopedForUser(l2, hasPermission);
           return (
             <button
               key={l2.id}
@@ -316,9 +371,13 @@ export const ModuleSidebar: React.FC = () => {
               title={l2.label}
               aria-label={l2.label}
               className={`w-11 h-11 rounded-2xl inline-flex items-center justify-center transition-colors cursor-pointer shrink-0 ${
-                selected
-                  ? 'bg-[#171916] text-[#D7FF00]'
-                  : 'text-[#5F645D] hover:text-[#171916] hover:bg-[#EAECE6]'
+                l2Developed
+                  ? selected
+                    ? 'bg-[#171916] text-[#D7FF00]'
+                    : 'text-[#171916] hover:bg-[#EAECE6]'
+                  : selected
+                    ? 'bg-[#E2E5DE] text-[#6E736B] opacity-80 grayscale'
+                    : 'text-[#B2B7AE] opacity-60 grayscale hover:opacity-85 hover:bg-[#EAECE6]/60'
               }`}
             >
               <L2MenuIcon nodeId={l2.id} label={l2.label} className="w-5 h-5" />

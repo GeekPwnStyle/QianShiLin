@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  LOGIN_ACCOUNTS,
   PRESET_SESSIONS,
   checkPermission,
   type AuthSession,
@@ -11,6 +12,20 @@ import { appRepositories } from '@/src/app/composition/container';
 import type { DataScopeContext } from '@/src/shared/types/common';
 
 const AVATAR_STORAGE_KEY = 'qsl_user_avatars_v1';
+const DEBUG_MODE_STORAGE_KEY = 'qsl_auth_debug_mode_v1';
+const DEBUG_SESSION_KEY = 'qsl_debug_auth_preset_v1';
+
+function loadInitialDebugMode(): boolean {
+  if (typeof window === 'undefined') return import.meta.env.BASE_URL === '/';
+  try {
+    const saved = window.localStorage.getItem(DEBUG_MODE_STORAGE_KEY);
+    if (saved === 'true') return true;
+    if (saved === 'false') return false;
+  } catch {
+    // Ignore storage read errors
+  }
+  return import.meta.env.BASE_URL === '/';
+}
 
 interface SavedAvatarPref {
   avatarUrl?: string;
@@ -55,6 +70,8 @@ interface AvatarUpdatePatch {
 interface AuthContextValue {
   isAuthenticated: boolean;
   authLoading: boolean;
+  debugMode: boolean;
+  setDebugMode: (enabled: boolean) => void;
   session: AuthSession;
   currentRole: RoleDefinition | undefined;
   allRoles: RoleDefinition[];
@@ -74,11 +91,39 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const queryClient = useQueryClient();
+  const [debugMode, setDebugModeState] = useState<boolean>(() => loadInitialDebugMode());
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
   const [session, setSession] = useState<AuthSession>(PRESET_SESSIONS.admin);
+
+  const setDebugMode = (enabled: boolean) => {
+    setDebugModeState(enabled);
+    try {
+      window.localStorage.setItem(DEBUG_MODE_STORAGE_KEY, String(enabled));
+    } catch {
+      // Ignore storage write errors
+    }
+  };
+
   useEffect(() => {
     let active = true;
+
+    if (debugMode) {
+      try {
+        const savedPreset = window.sessionStorage.getItem(DEBUG_SESSION_KEY);
+        if (savedPreset && savedPreset in PRESET_SESSIONS) {
+          setSession(applySavedAvatar(PRESET_SESSIONS[savedPreset]));
+          setIsAuthenticated(true);
+        }
+      } catch {
+        // Ignore storage read errors
+      }
+      setAuthLoading(false);
+      return () => {
+        active = false;
+      };
+    }
+
     fetch(`${import.meta.env.BASE_URL}api/session`, { credentials: 'same-origin' })
       .then(async (r) => {
         if (!r.ok) return;
@@ -88,8 +133,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setSession(applySavedAvatar({ ...preset, userId: user.id }));
           setIsAuthenticated(true);
         }
-      }).catch(() => {}).finally(() => { if (active) setAuthLoading(false); });
-    return () => { active = false; };
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (active) setAuthLoading(false);
+      });
+    return () => {
+      active = false;
+    };
   }, []);
 
   const { data: allRoles = [], refetch } = useQuery({
@@ -115,26 +166,87 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 
   const loginWithCredentials = async (username: string, password: string): Promise<LoginResult> => {
-    if (!username.trim() || !password) return { ok: false, error: '请输入用户名和密码。' };
+    const usernameInput = username.trim();
+    if (!usernameInput) return { ok: false, error: '请输入用户名。' };
+    if (!password) return { ok: false, error: '请输入密码。' };
+
+    if (debugMode) {
+      const lower = usernameInput.toLowerCase();
+      const matched = LOGIN_ACCOUNTS.find(
+        (acc) =>
+          acc.username.toLowerCase() === lower ||
+          acc.aliases.some((alias) => alias.toLowerCase() === lower)
+      );
+
+      if (!matched) {
+        return {
+          ok: false,
+          error: '用户名不存在，请点击用户名输入框旁的「?」查看账号与角色说明。',
+        };
+      }
+
+      if (password !== usernameInput && password !== matched.username) {
+        return {
+          ok: false,
+          error: '密码错误：debug 模式默认密码与用户名一致。',
+        };
+      }
+
+      setSession(applySavedAvatar(PRESET_SESSIONS[matched.presetKey]));
+      setIsAuthenticated(true);
+      try {
+        window.sessionStorage.setItem(DEBUG_SESSION_KEY, matched.presetKey);
+      } catch {
+        // Ignore storage write errors
+      }
+      return { ok: true };
+    }
+
     try {
       const response = await fetch(`${import.meta.env.BASE_URL}api/login`, {
-        method: 'POST', credentials: 'same-origin',
+        method: 'POST',
+        credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ username: usernameInput, password }),
       });
-      if (!response.ok) return { ok: false, error: response.status === 401 ? '用户名或密码错误。' : '登录服务暂不可用。' };
+      if (!response.ok) {
+        return {
+          ok: false,
+          error: response.status === 401 ? '用户名或密码错误。' : '登录服务暂不可用，可开启右侧 debug 开关以本地模式进入。',
+        };
+      }
       const { user } = await response.json();
       const preset = Object.values(PRESET_SESSIONS).find((s) => s.username === user.username);
       if (!preset) return { ok: false, error: '账号角色尚未配置。' };
       setSession(applySavedAvatar({ ...preset, userId: user.id }));
       setIsAuthenticated(true);
+      try {
+        window.sessionStorage.removeItem(DEBUG_SESSION_KEY);
+      } catch {
+        // Ignore storage errors
+      }
       return { ok: true };
-    } catch { return { ok: false, error: '无法连接登录服务。' }; }
+    } catch {
+      return {
+        ok: false,
+        error: '无法连接登录数据库服务，可开启右侧 debug 开关使用本地校验进入系统。',
+      };
+    }
   };
 
   const logout = () => {
     setIsAuthenticated(false);
-    void fetch(`${import.meta.env.BASE_URL}api/logout`, { method: 'POST', credentials: 'same-origin' });
+    try {
+      window.sessionStorage.removeItem(DEBUG_SESSION_KEY);
+    } catch {
+      // Ignore storage errors
+    }
+    if (!debugMode) {
+      void fetch(`${import.meta.env.BASE_URL}api/logout`, {
+        method: 'POST',
+        credentials: 'same-origin',
+      }).catch(() => {});
+    }
   };
 
   const updateAvatar = (patch: AvatarUpdatePatch) => {
@@ -230,6 +342,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const value: AuthContextValue = {
     isAuthenticated,
     authLoading,
+    debugMode,
+    setDebugMode,
     session,
     currentRole,
     allRoles,

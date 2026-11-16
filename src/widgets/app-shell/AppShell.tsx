@@ -2,7 +2,11 @@ import React from 'react';
 import { ChevronRight, Star } from 'lucide-react';
 import { useAuth } from '@/src/modules/auth/application/AuthContext';
 import { useNavigation } from '@/src/modules/navigation/application/NavigationContext';
-import { MENU_BY_ID } from '@/src/modules/navigation/domain/menuRegistry';
+import {
+  MENU_BY_ID,
+  WORKBENCH_NODE,
+  isNodeDevelopedForUser,
+} from '@/src/modules/navigation/domain/menuRegistry';
 import { HelpTooltip } from '@/src/shared/ui/HelpTooltip';
 import { NoPermissionState } from '@/src/shared/ui/StateViews';
 import { AllModulesPanel } from '@/src/widgets/all-modules-panel/AllModulesPanel';
@@ -67,22 +71,37 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
                   <button
                     type="button"
                     onClick={() => navigateToRoute('/workbench')}
-                    className="hover:text-[#171916] cursor-pointer"
+                    className={`cursor-pointer ${
+                      isNodeDevelopedForUser(WORKBENCH_NODE, hasPermission)
+                        ? 'text-[#5F645D] hover:text-[#171916]'
+                        : 'text-[#A8ADA4] hover:text-[#73796F]'
+                    }`}
                   >
                     工作台
                   </button>
                   {breadcrumbs.map((crumb, index) => {
                     const isLast = index === breadcrumbs.length - 1;
+                    const crumbDeveloped = isNodeDevelopedForUser(crumb, hasPermission);
                     return (
                       <React.Fragment key={crumb.id}>
                         <ChevronRight className="w-4 h-4 text-[#A8B0A0]" aria-hidden="true" />
                         {isLast ? (
-                          <span className="text-[#171916] font-medium">{crumb.label}</span>
+                          <span
+                            className={`font-medium ${
+                              crumbDeveloped ? 'text-[#171916]' : 'text-[#8B9087]'
+                            }`}
+                          >
+                            {crumb.label}
+                          </span>
                         ) : (
                           <button
                             type="button"
                             onClick={() => navigateToNode(crumb)}
-                            className="hover:text-[#171916] cursor-pointer"
+                            className={`cursor-pointer ${
+                              crumbDeveloped
+                                ? 'text-[#5F645D] hover:text-[#171916]'
+                                : 'text-[#A8ADA4] hover:text-[#73796F]'
+                            }`}
                           >
                             {crumb.label}
                           </button>
@@ -133,6 +152,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
                   >
                     {l4Tabs.map((tab) => {
                       const active = activeNode.id === tab.id;
+                      const tabDeveloped = isNodeDevelopedForUser(tab, hasPermission);
                       return (
                         <button
                           key={tab.id}
@@ -141,9 +161,13 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
                           type="button"
                           onClick={() => navigateToRoute(tab.route)}
                           className={`h-10 px-5 rounded-full text-[15px] font-medium whitespace-nowrap transition-colors cursor-pointer ${
-                            active
-                              ? 'bg-[#171916] text-white'
-                              : 'bg-white text-[#5F645D] border border-[#D9DDD4] hover:text-[#171916]'
+                            tabDeveloped
+                              ? active
+                                ? 'bg-[#171916] text-white'
+                                : 'bg-white text-[#171916] border border-[#D9DDD4] hover:border-[#171916]'
+                              : active
+                                ? 'bg-[#D9DDD4] text-[#5F645D] grayscale'
+                                : 'bg-[#F1F2EE] text-[#A8ADA4] border border-[#E2E5DE] opacity-70 grayscale hover:opacity-90'
                           }`}
                         >
                           {tab.label}
