@@ -44,6 +44,7 @@ export function importRows(text: string, fields: CatalogField[]): Record<string,
       const value = (cells[i] ?? '').trim();
       result[key] = field.type === 'boolean' ? value === '是' || value.toLowerCase() === 'true'
         : field.type === 'array' ? value.split(/[、，,]/).map(x => x.trim()).filter(Boolean)
+        : field.type === 'integer' ? Number(value) || 0
         : field.type === 'date' ? value || null : value;
     });
     const missing = fields.find(field => field.required && !String(result[field.key] ?? '').trim());

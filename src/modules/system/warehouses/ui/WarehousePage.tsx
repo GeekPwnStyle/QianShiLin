@@ -12,6 +12,7 @@ const config: CatalogConfig = {
     { key: 'warehouse_type', label: '仓库类型', type: 'select',
       options: ['加工仓', '成品仓', '门店仓', '退货仓'], required: true },
     { key: 'remark', label: '仓库备注' },
+    { key: 'display_order', label: '显示顺序', type: 'integer' },
     { key: 'enabled', label: '启用状态', type: 'boolean' },
   ],
 };

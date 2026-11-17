@@ -13,7 +13,7 @@ export type ResourceName = 'brands' | 'suppliers' | 'warehouses';
 export interface CatalogField {
   key: string;
   label: string;
-  type?: 'text' | 'boolean' | 'array' | 'date' | 'select';
+  type?: 'text' | 'boolean' | 'array' | 'date' | 'select' | 'integer';
   required?: boolean;
   options?: string[];
 }
@@ -85,7 +85,7 @@ export const CatalogResourcePage: React.FC<{ config: CatalogConfig }> = ({ confi
   const openForm = (row?: CatalogRow) => {
     setEditing(row ?? null);
     setForm(Object.fromEntries(config.fields.map(field => [field.key,
-      row?.[field.key] ?? (field.key === 'enabled' ? true : field.type === 'boolean' ? false : field.type === 'array' ? [] : '')
+      row?.[field.key] ?? (field.key === 'enabled' ? true : field.type === 'boolean' ? false : field.type === 'array' ? [] : field.type === 'integer' ? 0 : '')
     ])));
     save.reset();
   };
@@ -181,10 +181,11 @@ export const CatalogResourcePage: React.FC<{ config: CatalogConfig }> = ({ confi
             onChange={event => setForm(prev => ({ ...prev, [field.key]: event.target.value }))}>
             <option value="">请选择</option>{field.options?.map(option => <option key={option}>{option}</option>)}
           </select>
-          : <input type={field.type === 'date' ? 'date' : 'text'} className="h-10 rounded-lg border border-[#D9DDD4] px-3"
+          : <input type={field.type === 'date' ? 'date' : field.type === 'integer' ? 'number' : 'text'} min={field.type === 'integer' ? 0 : undefined} className="h-10 rounded-lg border border-[#D9DDD4] px-3"
             value={field.type === 'array' ? display(form?.[field.key]) === '—' ? '' : display(form?.[field.key]) : String(form?.[field.key] ?? '')}
             onChange={event => setForm(prev => ({ ...prev, [field.key]: field.type === 'array'
-              ? event.target.value.split(/[、,，]/).map(x => x.trim()).filter(Boolean) : event.target.value }))} />}
+              ? event.target.value.split(/[、,，]/).map(x => x.trim()).filter(Boolean)
+              : field.type === 'integer' ? Number(event.target.value) : event.target.value }))} />}
         </label>)}
       </div>
       {save.error && <p role="alert" className="mt-3 text-sm text-[#9C3232]">{save.error.message}</p>}
