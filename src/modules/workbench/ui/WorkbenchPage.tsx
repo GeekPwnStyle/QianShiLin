@@ -53,7 +53,7 @@ export const WorkbenchPage: React.FC = () => {
         <div>
           <div className="flex items-center gap-2.5">
             <h1 className="text-[34px] sm:text-[38px] font-semibold tracking-tight text-[#171916] leading-tight">
-              {data.greetingName}
+              {session.displayName ? `上午好，${session.displayName}` : data.greetingName}
             </h1>
             <HelpTooltip
               title="工作台范围说明"
@@ -140,7 +140,7 @@ export const WorkbenchPage: React.FC = () => {
                   {data.brandRankingTitle}
                 </h2>
                 <HelpTooltip
-                  content="荧光黄绿色柱体表示本期贡献最高品牌"
+                  content="主题高亮柱体表示本期贡献最高品牌"
                   ariaLabel="查看品牌排行说明"
                 />
               </div>
@@ -219,8 +219,8 @@ export const WorkbenchPage: React.FC = () => {
 
         {/* Right ~1/3 Column */}
         <div className="xl:col-span-4 space-y-5">
-          {/* Lime-Yellow Focus Metric Card */}
-          <div className="bg-[#D7FF00] text-[#171916] rounded-[22px] p-6 border border-[#C2E600]">
+          {/* Theme Focus Metric Card */}
+          <div className="bg-[var(--qsl-accent)] text-[var(--qsl-accent-ink)] rounded-[22px] p-6 border border-[var(--qsl-accent-border)]">
             <div className="text-[14px] font-medium opacity-80">
               {data.focusHighlightCard.kicker}
             </div>
@@ -230,9 +230,10 @@ export const WorkbenchPage: React.FC = () => {
             <div className="mt-4 text-[44px] leading-none font-semibold tracking-tight tabular-nums">
               {data.focusHighlightCard.metricValue}
             </div>
-            <div className="mt-4 h-2 w-full rounded-full bg-[#171916]/15 overflow-hidden">
+            <div className="relative mt-4 h-2 w-full rounded-full overflow-hidden">
+              <div className="absolute inset-0 bg-[var(--qsl-accent-ink)] opacity-20" />
               <div
-                className="h-full rounded-full bg-[#171916]"
+                className="relative h-full rounded-full bg-[var(--qsl-accent-ink)]"
                 style={{ width: `${data.focusHighlightCard.progressPercent}%` }}
               />
             </div>
@@ -242,14 +243,14 @@ export const WorkbenchPage: React.FC = () => {
           </div>
 
           {/* Secondary Dark Metric Card */}
-          <div className="bg-[#171916] text-white rounded-[22px] p-6">
+          <div className="bg-[var(--qsl-brand-dark)] text-white rounded-[22px] p-6">
             <div className="text-[14px] text-[#A8B0A0]">
               {data.secondaryDarkCard.kicker}
             </div>
             <div className="mt-1 text-[17px] font-medium">
               {data.secondaryDarkCard.title}
             </div>
-            <div className="mt-3 text-[34px] leading-none font-semibold tracking-tight tabular-nums text-[#D7FF00]">
+            <div className="mt-3 text-[34px] leading-none font-semibold tracking-tight tabular-nums text-[var(--qsl-accent-on-dark)]">
               {data.secondaryDarkCard.metricValue}
             </div>
             <div className="mt-5 pt-4 border-t border-white/15 space-y-2.5 text-[15px]">

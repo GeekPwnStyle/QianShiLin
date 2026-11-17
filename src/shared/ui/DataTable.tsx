@@ -224,7 +224,7 @@ export function DataTable<T extends { id: string }>({
                 <tr
                   key={row.id}
                   className={`h-[50px] transition-colors ${
-                    checked ? 'bg-[#ECF9A8]/35' : 'hover:bg-[#F8F9F5]'
+                    checked ? 'bg-[var(--qsl-accent-soft-35)]' : 'hover:bg-[#F8F9F5]'
                   }`}
                 >
                   {selectable && (

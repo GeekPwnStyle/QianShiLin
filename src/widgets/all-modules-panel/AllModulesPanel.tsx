@@ -157,9 +157,9 @@ export const AllModulesPanel: React.FC = () => {
                   className={`group text-left px-3.5 py-2.5 h-[54px] rounded-2xl border transition-colors flex items-center justify-between gap-2.5 select-none focus-visible:outline-2 focus-visible:outline-[#171916] cursor-grab active:cursor-grabbing ${
                     isDeveloped
                       ? isSelected
-                        ? 'bg-[#ECF9A8]/85 border-[#171916] ring-2 ring-[#D7FF00]'
+                        ? 'bg-[var(--qsl-accent-soft-85)] border-[#171916] ring-2 ring-[var(--qsl-accent)]'
                         : isActive
-                          ? 'bg-[#ECF9A8]/80 border-[#171916]'
+                          ? 'bg-[var(--qsl-accent-soft-85)] border-[#171916]'
                           : 'bg-white/80 border-[#171916]/15 hover:bg-white hover:border-[#171916]/55'
                       : isSelected
                         ? 'bg-[#E2E5DE] border-[#9EA49A] opacity-85 grayscale'
@@ -173,7 +173,7 @@ export const AllModulesPanel: React.FC = () => {
                       className={`w-8 h-8 rounded-xl inline-flex items-center justify-center shrink-0 ${
                         isDeveloped
                           ? isActive || isSelected
-                            ? 'bg-[#171916] text-[#D7FF00]'
+                            ? 'bg-[var(--qsl-brand-dark)] text-[var(--qsl-accent-on-dark)]'
                             : 'bg-white border border-[#E5E8E0] text-[#171916]'
                           : isActive || isSelected
                             ? 'bg-[#9EA49A] text-white'

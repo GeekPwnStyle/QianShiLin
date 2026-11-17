@@ -17,6 +17,8 @@ docker exec -i qianshilin-db psql -U qianshilin -d qianshilin -v ON_ERROR_STOP=1
 docker exec -i qianshilin-db psql -U qianshilin -d qianshilin -v ON_ERROR_STOP=1 < apps/api/db/migrations/004_purchase_orders.sql
 ```
 
-Web 使用 `/qian/api/login`、`/qian/api/session`、`/qian/api/logout` 及 `/qian/api/catalog/*`。API 在数据库验证密码，生成随机会话令牌，数据库只保存令牌哈希；浏览器持有 HttpOnly、Secure Cookie。用户 UUID 用于目录权限映射。其他业务角色和业务数据仍为前端演示模型，尚未迁至数据库。
+`011_user_profile_theme.sql` 建立 `identity.user_profiles`（保存用户岗位头衔、文字头像、自定义头像图片、头像配色与个人系统主题色 `theme_key`），回填 `identity.users.email` 并为所有现有账号补齐默认配置；API 启动时也会自动幂等检查该表，现有数据卷可直接执行该迁移文件升级。
+
+Web 使用 `/qian/api/login`、`/qian/api/session`、`/qian/api/logout`、`/qian/api/account/profile` 及 `/qian/api/catalog/*`。API 在数据库验证密码，生成随机会话令牌，数据库只保存令牌哈希；浏览器持有 HttpOnly、Secure Cookie。所有已登录用户均可通过 `/qian/api/account/profile` 修改并持久化个人主题色与头像配置。
 
 这些初始密码是公开演示凭据，不适合正式业务使用。接入真实人员前必须更换密码、取消页面中的演示账号提示，并加入权限服务端校验、登录限速和密码重置流程。

@@ -320,7 +320,7 @@ export const MemberProfilePage: React.FC<{ defaultOpenCreate?: boolean }> = ({
 
             {detailTab === 'wallet' && (
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="p-4 rounded-2xl bg-[#D7FF00] text-[#171916]">
+                <div className="p-4 rounded-2xl bg-[var(--qsl-accent)] text-[var(--qsl-accent-ink)]">
                   <div className="text-[14px]">当前可用积分</div>
                   <div className="text-[30px] font-semibold tabular-nums mt-1">
                     {detailMember.pointsBalance.toLocaleString('zh-CN')}

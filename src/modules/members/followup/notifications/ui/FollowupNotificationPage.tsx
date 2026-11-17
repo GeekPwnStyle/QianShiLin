@@ -290,7 +290,7 @@ export const FollowupNotificationPage: React.FC<Props> = ({ category }) => {
             <button
               type="button"
               onClick={() => openBatchNotify([row.id], row.channel)}
-              className="text-[14px] font-medium text-[#171916] bg-[#D7FF00] px-3 py-1 rounded-full hover:bg-[#CCF200] inline-flex items-center gap-1 cursor-pointer"
+              className="text-[14px] font-medium text-[var(--qsl-accent-ink)] bg-[var(--qsl-accent)] px-3 py-1 rounded-full hover:bg-[var(--qsl-accent-hover)] inline-flex items-center gap-1 cursor-pointer transition-colors"
             >
               <Send className="w-3.5 h-3.5" />
               <span>发送通知</span>

@@ -340,7 +340,7 @@ export const Select: React.FC<SelectProps> = ({
                       }}
                       className={`w-full px-3 py-2 rounded-[10px] text-left flex items-center justify-between gap-2.5 text-[14px] transition-colors cursor-pointer select-none disabled:opacity-45 disabled:cursor-not-allowed ${
                         isSelected
-                          ? 'bg-[#ECF9A8]/85 text-[#171916] font-semibold'
+                          ? 'bg-[var(--qsl-accent-soft-85)] text-[#171916] font-semibold'
                           : isHighlighted
                           ? 'bg-[#171916]/[0.06] text-[#171916]'
                           : 'text-[#171916] hover:bg-[#171916]/[0.05]'

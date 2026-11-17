@@ -553,7 +553,7 @@ export const ProductListPage: React.FC = () => {
             style={{ paddingLeft: `${12 + depth * 14}px` }}
             className={`w-full text-left pr-3 py-2 rounded-xl text-[15px] transition-colors cursor-pointer ${
               active
-                ? 'bg-[#ECF9A8] text-[#171916] font-medium'
+                ? 'bg-[var(--qsl-accent-soft)] text-[#171916] font-medium'
                 : 'text-[#5F645D] hover:text-[#171916] hover:bg-[#F8F9F5]'
             }`}
           >

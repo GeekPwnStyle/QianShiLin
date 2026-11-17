@@ -22,17 +22,17 @@ export const BrandLogoMark: React.FC<BrandLogoMarkProps> = ({
     >
       <defs>
         <linearGradient id={gradId} x1="14" y1="17" x2="18" y2="17" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#D7FF00" />
+          <stop offset="0%" stopColor="var(--qsl-accent-on-dark)" />
           <stop offset="100%" stopColor="#FFFFFF" />
         </linearGradient>
       </defs>
 
-      <rect width="32" height="32" rx="9" fill="#171916" />
+      <rect width="32" height="32" rx="9" fill="var(--qsl-brand-dark)" />
 
       {/* Left temple arm & hinge lug */}
       <path
         d="M7.2 17.5L5.6 17.1L6.9 10.8C7.2 9.5 8.2 9.1 9.2 9.6"
-        stroke="#D7FF00"
+        stroke="var(--qsl-accent-on-dark)"
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -52,9 +52,9 @@ export const BrandLogoMark: React.FC<BrandLogoMarkProps> = ({
         cx="10.8"
         cy="18.6"
         r="3.75"
-        fill="#D7FF00"
-        fillOpacity="0.12"
-        stroke="#D7FF00"
+        fill="var(--qsl-accent-on-dark)"
+        fillOpacity="0.14"
+        stroke="var(--qsl-accent-on-dark)"
         strokeWidth="2.1"
       />
 
@@ -80,7 +80,7 @@ export const BrandLogoMark: React.FC<BrandLogoMarkProps> = ({
       {/* Subtle optical lens glints */}
       <path
         d="M9.3 17.4A2 2 0 0 1 11 16.6"
-        stroke="#D7FF00"
+        stroke="var(--qsl-accent-on-dark)"
         strokeWidth="1.2"
         strokeLinecap="round"
         opacity="0.7"

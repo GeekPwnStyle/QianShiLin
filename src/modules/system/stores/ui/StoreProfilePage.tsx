@@ -269,7 +269,7 @@ const STORE_TYPE_STYLE: Record<StoreType, string> = {
   总店: 'bg-[#EFF6FF] text-[#1D4ED8] border-[#BFDBFE]',
   分店: 'bg-[#F5F3FF] text-[#6D28D9] border-[#DDD6FE]',
   加盟店: 'bg-[#FEF7EC] text-[#B45309] border-[#FDE68A]',
-  视光中心: 'bg-[#ECF9A8]/85 text-[#171916] border-[#C2E600]',
+  视光中心: 'bg-[var(--qsl-accent-soft-85)] text-[#171916] border-[var(--qsl-accent-soft-border)]',
 };
 
 const PERMISSION_FIELDS: Array<{
@@ -982,7 +982,7 @@ export const StoreProfilePage: React.FC = () => {
     <span
       className={`inline-flex items-center justify-center min-w-[40px] px-2.5 py-0.5 rounded-[7px] text-[13px] font-medium border ${
         yes
-          ? 'bg-[#ECF9A8]/70 text-[#166534] border-[#B7DF74]'
+          ? 'bg-[#ECFDF3] text-[#166534] border-[#86EFAC]'
           : 'bg-[#FEF2F2] text-[#DC2626] border-[#FECACA]'
       }`}
     >
@@ -1062,7 +1062,7 @@ export const StoreProfilePage: React.FC = () => {
                 type="button"
                 disabled={!canManageStores}
                 onClick={() => openEditModal(store)}
-                className="px-2 py-0.5 rounded-[6px] text-[12px] font-medium bg-[#ECF9A8] text-[#171916] border border-[#C2E600] hover:bg-[#D7FF00] disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed transition-colors"
+                className="px-2 py-0.5 rounded-[6px] text-[12px] font-medium bg-[var(--qsl-accent-soft)] text-[#171916] border border-[var(--qsl-accent-soft-border)] hover:bg-[var(--qsl-accent)] hover:text-[var(--qsl-accent-ink)] disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed transition-colors"
               >
                 编辑
               </button>
@@ -1237,7 +1237,7 @@ export const StoreProfilePage: React.FC = () => {
       {notice && (
         <div
           role="status"
-          className="px-4 py-3 rounded-2xl bg-[#ECF9A8] border border-[#C2E600] text-[#171916] text-[14px] font-medium flex items-center justify-between gap-3"
+          className="px-4 py-3 rounded-2xl bg-[var(--qsl-accent-soft)] border border-[var(--qsl-accent-soft-border)] text-[#171916] text-[14px] font-medium flex items-center justify-between gap-3"
         >
           <span className="inline-flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 text-[#166534] shrink-0" />
@@ -1491,7 +1491,7 @@ export const StoreProfilePage: React.FC = () => {
                               aria-label={`筛选 ${col.label}`}
                               className={`p-0.5 rounded cursor-pointer transition-colors ${
                                 filterActive
-                                  ? 'bg-[#ECF9A8] text-[#171916]'
+                                  ? 'bg-[var(--qsl-accent-soft)] text-[#171916]'
                                   : 'text-[#8C9288] hover:bg-[#EAECE6] hover:text-[#171916]'
                               }`}
                             >
@@ -1509,12 +1509,12 @@ export const StoreProfilePage: React.FC = () => {
                 {pagedStores.map((store, idx) => {
                   const checked = selectedIds.includes(store.id);
                   const rowBg = checked
-                    ? 'bg-[#ECF9A8]/30'
+                    ? 'bg-[var(--qsl-accent-soft-35)]'
                     : idx % 2 === 1
                       ? 'bg-[#FAFBF8]'
                       : 'bg-white';
                   const stickyCellBg = checked
-                    ? 'bg-[#F6FCD8]'
+                    ? 'bg-[var(--qsl-accent-soft)]'
                     : idx % 2 === 1
                       ? 'bg-[#FAFBF8]'
                       : 'bg-white';
@@ -1631,7 +1631,7 @@ export const StoreProfilePage: React.FC = () => {
                       onClick={() => applyFilter(activeFilterCol.filterKey!, opt.value)}
                       className={`w-full px-2.5 py-1.5 rounded-lg text-left text-[13px] cursor-pointer transition-colors ${
                         isActive
-                          ? 'bg-[#ECF9A8]/85 text-[#171916] font-semibold'
+                          ? 'bg-[var(--qsl-accent-soft-85)] text-[#171916] font-semibold'
                           : 'text-[#171916] hover:bg-[#171916]/[0.05]'
                       }`}
                     >
@@ -1936,7 +1936,7 @@ export const StoreProfilePage: React.FC = () => {
                     key={field.key}
                     className={`flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl border cursor-pointer transition-colors ${
                       enabled
-                        ? 'bg-[#ECF9A8]/45 border-[#C2E600]'
+                        ? 'bg-[var(--qsl-accent-soft-45)] border-[var(--qsl-accent-soft-border)]'
                         : 'bg-white/70 border-[#D9DDD4]'
                     }`}
                   >
@@ -2102,7 +2102,7 @@ export const StoreProfilePage: React.FC = () => {
                     }
                     className={`px-3 py-1.5 rounded-lg border text-[13px] font-semibold shrink-0 cursor-pointer transition-colors ${
                       active
-                        ? 'bg-[#ECF9A8] border-[#C2E600] text-[#171916]'
+                        ? 'bg-[var(--qsl-accent-soft)] border-[var(--qsl-accent-soft-border)] text-[#171916]'
                         : 'bg-[#F8F9F5] border-[#D9DDD4] text-[#5F645D]'
                     }`}
                   >

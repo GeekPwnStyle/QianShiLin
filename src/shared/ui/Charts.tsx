@@ -79,7 +79,7 @@ export const ThinLineChart: React.FC<ThinLineChartProps> = ({
           )}
         </div>
         {hovered ? (
-          <div className="tabular-nums text-[14px] text-[#171916] bg-[#D7FF00] px-3 py-0.5 rounded-full font-medium">
+          <div className="tabular-nums text-[14px] text-[var(--qsl-accent-ink)] bg-[var(--qsl-accent)] px-3 py-0.5 rounded-full font-medium">
             {hovered.label} · {primaryLabel}: {valueFormatter(hovered.primary)}
             {hovered.secondary !== undefined && secondaryLabel
               ? ` · ${secondaryLabel}: ${valueFormatter(hovered.secondary)}`
@@ -157,8 +157,8 @@ export const ThinLineChart: React.FC<ThinLineChartProps> = ({
                 cx={cx}
                 cy={cy}
                 r={isActive ? 5.5 : 3}
-                fill={isActive ? '#D7FF00' : '#171916'}
-                stroke="#171916"
+                fill={isActive ? 'var(--qsl-accent)' : 'var(--qsl-brand-dark)'}
+                stroke="var(--qsl-brand-dark)"
                 strokeWidth={isActive ? 1.5 : 0}
               />
               {showLabel && (
@@ -214,11 +214,11 @@ export const RoundedBarChart: React.FC<{
       <div className="flex items-center justify-between text-[14px] text-[#5F645D] mb-3">
         <div className="flex items-center gap-4">
           <span className="inline-flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-sm bg-[#D7FF00] border border-[#171916]/25" />
+            <span className="w-2.5 h-2.5 rounded-sm bg-[var(--qsl-accent)] border border-[var(--qsl-accent-border)]" />
             <span className="text-[#171916]">重点项</span>
           </span>
           <span className="inline-flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-sm bg-[#171916]" />
+            <span className="w-2.5 h-2.5 rounded-sm bg-[var(--qsl-brand-dark)]" />
             <span>常规项</span>
           </span>
         </div>
@@ -251,10 +251,10 @@ export const RoundedBarChart: React.FC<{
                   style={{ height: `${pct}%` }}
                   className={`w-full max-w-[26px] rounded-t-full transition-opacity ${
                     item.highlight
-                      ? 'bg-[#D7FF00] border border-[#171916]/30'
+                      ? 'bg-[var(--qsl-accent)] border border-[var(--qsl-accent-border)]'
                       : active
-                        ? 'bg-[#3E423B]'
-                        : 'bg-[#171916]'
+                        ? 'bg-[var(--qsl-brand-dark-hover)]'
+                        : 'bg-[var(--qsl-brand-dark)]'
                   }`}
                 />
               </div>
@@ -308,9 +308,9 @@ export const DotMatrixChart: React.FC<{
                     className={`w-2 h-2 rounded-full transition-colors ${
                       on
                         ? item.highlight
-                          ? 'bg-[#D7FF00] ring-1 ring-[#171916]/30'
+                          ? 'bg-[var(--qsl-accent)] ring-1 ring-[var(--qsl-accent-border)]'
                           : isHovered
-                            ? 'bg-[#171916]'
+                            ? 'bg-[var(--qsl-brand-dark)]'
                             : 'bg-[#3A3E37]'
                         : 'bg-[#E5E8E0]'
                     }`}

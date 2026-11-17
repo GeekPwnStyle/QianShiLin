@@ -1,4 +1,10 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  DEFAULT_THEME_KEY,
+  SYSTEM_THEME_MAP,
+  resolveThemeKey,
+  type ThemeKey,
+} from '@/src/shared/theme/themes';
 
 interface TwinklePoint {
   x: number;
@@ -10,33 +16,17 @@ interface TwinklePoint {
   phase: number;
   speed: number;
   maxAlpha: number;
-  color: 'lime' | 'ivory' | 'sage' | 'sunlit';
+  color: 'primary' | 'ivory' | 'tertiary' | 'secondary';
 }
 
-const POINT_COLORS: Record<TwinklePoint['color'], { core: string; mid: string; outer: string }> = {
-  lime: {
-    core: 'rgba(255, 255, 255, 0.85)',
-    mid: 'rgba(215, 255, 0, 0.42)',
-    outer: 'rgba(215, 255, 0, 0)',
-  },
-  sunlit: {
-    core: 'rgba(255, 255, 255, 0.85)',
-    mid: 'rgba(236, 249, 168, 0.50)',
-    outer: 'rgba(236, 249, 168, 0)',
-  },
-  sage: {
-    core: 'rgba(255, 255, 255, 0.82)',
-    mid: 'rgba(194, 232, 116, 0.36)',
-    outer: 'rgba(194, 232, 116, 0)',
-  },
-  ivory: {
-    core: 'rgba(255, 255, 255, 0.90)',
-    mid: 'rgba(255, 255, 255, 0.45)',
-    outer: 'rgba(255, 255, 255, 0)',
-  },
-};
-
-const COLOR_KEYS: TwinklePoint['color'][] = ['lime', 'sunlit', 'ivory', 'sage', 'sunlit', 'ivory'];
+const COLOR_KEYS: TwinklePoint['color'][] = [
+  'primary',
+  'secondary',
+  'ivory',
+  'tertiary',
+  'secondary',
+  'ivory',
+];
 
 function createPoint(width: number, height: number, randomPhase = false): TwinklePoint {
   const radius = 0.55 + Math.random() * 0.75;
@@ -56,6 +46,36 @@ function createPoint(width: number, height: number, randomPhase = false): Twinkl
 
 export const AmbientBackdrop: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [themeKey, setThemeKey] = useState<ThemeKey>(() =>
+    typeof document !== 'undefined'
+      ? resolveThemeKey(document.documentElement.dataset.theme)
+      : DEFAULT_THEME_KEY
+  );
+  const themeKeyRef = useRef<ThemeKey>(themeKey);
+
+  useEffect(() => {
+    themeKeyRef.current = themeKey;
+  }, [themeKey]);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const syncTheme = () => {
+      setThemeKey(resolveThemeKey(document.documentElement.dataset.theme));
+    };
+    syncTheme();
+    const observer = new MutationObserver((mutations) => {
+      for (const m of mutations) {
+        if (m.type === 'attributes' && m.attributeName === 'data-theme') {
+          syncTheme();
+        }
+      }
+    });
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-theme'],
+    });
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -99,14 +119,31 @@ export const AmbientBackdrop: React.FC = () => {
       }
     };
 
+    const getPalette = (color: TwinklePoint['color']) => {
+      const p = SYSTEM_THEME_MAP[themeKeyRef.current].particleColors;
+      if (color === 'primary') {
+        return { core: 'rgba(255, 255, 255, 0.85)', mid: p.primaryMid, outer: p.primaryOuter };
+      }
+      if (color === 'secondary') {
+        return { core: 'rgba(255, 255, 255, 0.85)', mid: p.secondaryMid, outer: p.secondaryOuter };
+      }
+      if (color === 'tertiary') {
+        return { core: 'rgba(255, 255, 255, 0.82)', mid: p.tertiaryMid, outer: p.tertiaryOuter };
+      }
+      return {
+        core: 'rgba(255, 255, 255, 0.90)',
+        mid: 'rgba(255, 255, 255, 0.45)',
+        outer: 'rgba(255, 255, 255, 0)',
+      };
+    };
+
     const drawPoint = (p: TwinklePoint, alpha: number) => {
       if (alpha <= 0.01) return;
-      const palette = POINT_COLORS[p.color];
+      const palette = getPalette(p.color);
 
       ctx.save();
       ctx.globalAlpha = alpha;
 
-      // Delicate micro-halo
       const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.glowRadius);
       grad.addColorStop(0, palette.core);
       grad.addColorStop(0.35, palette.mid);
@@ -116,7 +153,6 @@ export const AmbientBackdrop: React.FC = () => {
       ctx.arc(p.x, p.y, p.glowRadius, 0, Math.PI * 2);
       ctx.fill();
 
-      // Tiny soft core
       ctx.fillStyle = 'rgba(255, 255, 255, 0.78)';
       ctx.beginPath();
       ctx.arc(p.x, p.y, p.radius * 0.65, 0, Math.PI * 2);
@@ -146,7 +182,6 @@ export const AmbientBackdrop: React.FC = () => {
         p.x += p.vx;
         p.y += p.vy;
 
-        // Respawn at a new random position once one twinkle cycle completes
         if (p.phase >= Math.PI) {
           points[i] = createPoint(width, height, false);
           continue;
@@ -191,35 +226,26 @@ export const AmbientBackdrop: React.FC = () => {
     };
   }, []);
 
+  const orbs = SYSTEM_THEME_MAP[themeKey].ambientOrbs;
+
   return (
     <div
       aria-hidden="true"
       className="fixed inset-0 z-0 pointer-events-none overflow-hidden qsl-ambient-bg"
     >
-      {/* Subtle drifting bright theme gradient washes */}
       <div
         className="absolute -top-44 -left-36 w-[720px] h-[720px] rounded-full blur-[95px] qsl-drift-a"
-        style={{
-          background:
-            'radial-gradient(circle, rgba(215, 255, 0, 0.16) 0%, rgba(236, 249, 168, 0.10) 48%, transparent 74%)',
-        }}
+        style={{ background: orbs[0] }}
       />
       <div
         className="absolute top-[12%] -right-40 w-[760px] h-[760px] rounded-full blur-[110px] qsl-drift-b"
-        style={{
-          background:
-            'radial-gradient(circle, rgba(255, 255, 255, 0.85) 0%, rgba(228, 245, 192, 0.36) 52%, transparent 76%)',
-        }}
+        style={{ background: orbs[1] }}
       />
       <div
         className="absolute -bottom-48 left-[22%] w-[780px] h-[600px] rounded-full blur-[105px] qsl-drift-c"
-        style={{
-          background:
-            'radial-gradient(circle, rgba(236, 249, 168, 0.28) 0%, rgba(238, 246, 224, 0.24) 52%, transparent 76%)',
-        }}
+        style={{ background: orbs[2] }}
       />
 
-      {/* Micro random dynamic twinkling light points */}
       <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
     </div>
   );

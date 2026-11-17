@@ -349,8 +349,8 @@ export const BrandPortalView: React.FC<{ pageTitle: string }> = ({ pageTitle }) 
             ariaLabel="查看品牌采购门户说明"
           />
         </div>
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#171916] text-white text-[14px] font-medium">
-          <ShoppingCart className="w-4 h-4 text-[#D7FF00]" />
+        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[var(--qsl-brand-dark)] text-white text-[14px] font-medium">
+          <ShoppingCart className="w-4 h-4 text-[var(--qsl-accent-on-dark)]" />
           <span>品牌订货车 ({cartIds.length} 项)</span>
         </div>
       </div>

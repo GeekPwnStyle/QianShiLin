@@ -225,7 +225,7 @@ export const RolePermissionsPage: React.FC = () => {
                 onClick={() => setSelectedRoleId(role.id)}
                 className={`w-full text-left p-3.5 rounded-2xl border transition-colors cursor-pointer ${
                   active
-                    ? 'bg-[#ECF9A8] border-[#171916]'
+                    ? 'bg-[var(--qsl-accent-soft)] border-[var(--qsl-brand-dark)]'
                     : 'bg-[#F8F9F5] border-[#E5E8E0] hover:bg-white'
                 }`}
               >

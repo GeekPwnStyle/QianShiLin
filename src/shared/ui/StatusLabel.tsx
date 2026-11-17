@@ -13,7 +13,7 @@ const TONE_STYLES: Record<SemanticTone, string> = {
   error: 'bg-[#FEF2F2] text-[#DC2626] border-[#FECACA]',
   processing: 'bg-[#F1F5F9] text-[#475569] border-[#CBD5E1]',
   neutral: 'bg-[#F1F2EE] text-[#5F645D] border-[#D9DDD4]',
-  accent: 'bg-[#D7FF00] text-[#171916] border-[#C4EA00]',
+  accent: 'bg-[var(--qsl-accent)] text-[var(--qsl-accent-ink)] border-[var(--qsl-accent-border)]',
 };
 
 const TONE_PREFIX: Record<SemanticTone, string> = {

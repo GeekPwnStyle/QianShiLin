@@ -145,7 +145,7 @@ export const VisionRecordPage: React.FC<{ isOrtho?: boolean; pageTitle: string }
                   type="button"
                   onClick={() => setSelected(r)}
                   className={`w-full text-left p-3.5 rounded-2xl border transition-colors cursor-pointer ${
-                    active ? 'bg-[#ECF9A8] border-[#171916]' : 'bg-[#F8F9F5] border-[#E5E8E0] hover:bg-white'
+                    active ? 'bg-[var(--qsl-accent-soft)] border-[var(--qsl-brand-dark)]' : 'bg-[#F8F9F5] border-[#E5E8E0] hover:bg-white'
                   }`}
                 >
                   <div className="flex items-center justify-between gap-2">

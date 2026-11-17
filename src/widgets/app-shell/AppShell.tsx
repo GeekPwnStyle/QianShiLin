@@ -133,7 +133,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
                           title={isFavorited ? '取消收藏' : '收藏到常用菜单'}
                           className={`w-9 h-9 rounded-full inline-flex items-center justify-center border transition-colors cursor-pointer ${
                             isFavorited
-                              ? 'bg-[#D7FF00] border-[#171916]/30 text-[#171916]'
+                              ? 'bg-[var(--qsl-accent)] border-[var(--qsl-accent-border)] text-[var(--qsl-accent-ink)]'
                               : 'bg-white border-[#D9DDD4] text-[#73796F] hover:text-[#171916]'
                           }`}
                         >
@@ -163,7 +163,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
                           className={`h-10 px-5 rounded-full text-[15px] font-medium whitespace-nowrap transition-colors cursor-pointer ${
                             tabDeveloped
                               ? active
-                                ? 'bg-[#171916] text-white'
+                                ? 'bg-[var(--qsl-nav-active-bg)] text-[var(--qsl-nav-active-ink)]'
                                 : 'bg-white text-[#171916] border border-[#D9DDD4] hover:border-[#171916]'
                               : active
                                 ? 'bg-[#D9DDD4] text-[#5F645D] grayscale'

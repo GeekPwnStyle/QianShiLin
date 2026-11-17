@@ -251,7 +251,7 @@ export const SystemParametersPage: React.FC = () => {
             <HelpTooltip content={field.helpText} ariaLabel={`查看${field.label}说明`} />
           </div>
           {isModified && (
-            <span className="text-[12px] font-medium text-[#5A7500] shrink-0 whitespace-nowrap">
+            <span className="text-[12px] font-medium text-[var(--qsl-accent-soft-ink)] shrink-0 whitespace-nowrap">
               已修改
             </span>
           )}
@@ -309,7 +309,7 @@ export const SystemParametersPage: React.FC = () => {
             <HelpTooltip content={field.helpText} ariaLabel={`查看${field.label}说明`} />
           </div>
           {isModified && (
-            <span className="text-[12px] font-medium text-[#5A7500] shrink-0">已修改</span>
+            <span className="text-[12px] font-medium text-[var(--qsl-accent-soft-ink)] shrink-0">已修改</span>
           )}
         </div>
         <div className="relative flex items-center">
@@ -328,7 +328,7 @@ export const SystemParametersPage: React.FC = () => {
               updateField(field.key, clamped as SystemParametersConfig[typeof field.key]);
             }}
             className={`w-full h-10 pl-3.5 pr-10 rounded-xl border bg-[#FAFBF8] text-[14px] font-medium text-[#171916] tabular-nums outline-none transition-colors focus:bg-white focus:border-[#171916] ${
-              isModified ? 'border-[#A2C600]' : 'border-[#D9DDD4]'
+              isModified ? 'border-[var(--qsl-accent-border)]' : 'border-[#D9DDD4]'
             }`}
           />
           {field.unit && (
@@ -359,7 +359,7 @@ export const SystemParametersPage: React.FC = () => {
                   <HelpTooltip content={field.helpText} ariaLabel="查看授权码说明" />
                 </div>
                 {isModified && (
-                  <span className="text-[12px] font-medium text-[#5A7500]">已修改</span>
+                  <span className="text-[12px] font-medium text-[var(--qsl-accent-soft-ink)]">已修改</span>
                 )}
               </div>
               <div className="flex items-center gap-2">
@@ -371,7 +371,7 @@ export const SystemParametersPage: React.FC = () => {
                     onChange={(e) => updateField('adminAuthCode', e.target.value)}
                     placeholder="输入数字/字母授权码"
                     className={`w-full h-10 pl-3.5 pr-8 rounded-xl border bg-[#FAFBF8] font-mono text-[14px] font-medium text-[#171916] tabular-nums outline-none focus:bg-white focus:border-[#171916] ${
-                      isModified ? 'border-[#A2C600]' : 'border-[#D9DDD4]'
+                      isModified ? 'border-[var(--qsl-accent-border)]' : 'border-[#D9DDD4]'
                     }`}
                   />
                   {draftConfig.adminAuthCode && (
@@ -413,7 +413,7 @@ export const SystemParametersPage: React.FC = () => {
                   <HelpTooltip content={field.helpText} ariaLabel="查看授权码过期时间说明" />
                 </div>
                 {isModified && (
-                  <span className="text-[12px] font-medium text-[#5A7500]">已修改</span>
+                  <span className="text-[12px] font-medium text-[var(--qsl-accent-soft-ink)]">已修改</span>
                 )}
               </div>
               <div className="flex items-center gap-2">
@@ -424,7 +424,7 @@ export const SystemParametersPage: React.FC = () => {
                   onChange={(e) => updateField('adminAuthCodeExpiry', e.target.value)}
                   placeholder="YYYY-MM-DD HH:mm:ss"
                   className={`flex-1 min-w-0 h-10 px-3.5 rounded-xl border bg-[#FAFBF8] font-mono text-[14px] text-[#171916] tabular-nums outline-none focus:bg-white focus:border-[#171916] ${
-                    isModified ? 'border-[#A2C600]' : 'border-[#D9DDD4]'
+                    isModified ? 'border-[var(--qsl-accent-border)]' : 'border-[#D9DDD4]'
                   }`}
                 />
                 <button
@@ -452,13 +452,13 @@ export const SystemParametersPage: React.FC = () => {
                 <HelpTooltip content={field.helpText} ariaLabel="查看管理员手机说明" />
               </div>
               {isModified && (
-                <span className="text-[12px] font-medium text-[#5A7500]">已修改</span>
+                <span className="text-[12px] font-medium text-[var(--qsl-accent-soft-ink)]">已修改</span>
               )}
             </div>
             <div className="flex items-center gap-2">
               <div
                 className={`flex-1 min-w-0 h-10 px-3.5 rounded-xl border bg-[#F3F5F0] flex items-center gap-2 text-[14px] font-mono tabular-nums ${
-                  isModified ? 'border-[#A2C600] text-[#171916]' : 'border-[#D9DDD4] text-[#5F645D]'
+                  isModified ? 'border-[var(--qsl-accent-border)] text-[#171916]' : 'border-[#D9DDD4] text-[#5F645D]'
                 }`}
               >
                 <Smartphone className="w-4 h-4 text-[#73796F] shrink-0" />
@@ -547,7 +547,7 @@ export const SystemParametersPage: React.FC = () => {
       {noticeText && (
         <div
           role="status"
-          className="px-4 py-3 rounded-2xl bg-[#ECF9A8] border border-[#C2E600] text-[#171916] text-[14px] font-medium flex items-center justify-between gap-3"
+          className="px-4 py-3 rounded-2xl bg-[var(--qsl-accent-soft)] border border-[var(--qsl-accent-soft-border)] text-[#171916] text-[14px] font-medium flex items-center justify-between gap-3"
         >
           <span className="inline-flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 text-[#171916] shrink-0" />
@@ -714,7 +714,7 @@ export const SystemParametersPage: React.FC = () => {
                       onClick={() => scrollToSection(sec.id)}
                       className={`w-full text-left px-3 py-2.5 rounded-xl flex items-center justify-between gap-2 transition-colors cursor-pointer ${
                         active
-                          ? 'bg-[#ECF9A8] text-[#171916] font-semibold'
+                          ? 'bg-[var(--qsl-accent-soft)] text-[#171916] font-semibold'
                           : 'text-[#5F645D] hover:text-[#171916] hover:bg-[#F5F6F2]'
                       }`}
                     >
@@ -731,7 +731,7 @@ export const SystemParametersPage: React.FC = () => {
 
                       <span className="flex items-center gap-1.5 shrink-0 text-[12px] tabular-nums">
                         {modifiedCount > 0 && (
-                          <span className="text-[#5A7500] font-medium">
+                          <span className="text-[var(--qsl-accent-soft-ink)] font-medium">
                             *{modifiedCount}
                           </span>
                         )}
@@ -807,7 +807,7 @@ export const SystemParametersPage: React.FC = () => {
                     <div className="text-[13px] text-[#73796F] tabular-nums shrink-0 whitespace-nowrap">
                       <span>共 {sec.fields.length} 项</span>
                       {modifiedInSection > 0 && (
-                        <span className="text-[#5A7500] font-medium">
+                        <span className="text-[var(--qsl-accent-soft-ink)] font-medium">
                           {' '}
                           · {modifiedInSection} 项待保存
                         </span>
@@ -859,7 +859,7 @@ export const SystemParametersPage: React.FC = () => {
                 onClick={() => setSyncScope('all')}
                 className={`p-3 rounded-xl border text-left transition-colors cursor-pointer ${
                   syncScope === 'all'
-                    ? 'bg-[#ECF9A8]/85 border-[#171916] text-[#171916]'
+                    ? 'bg-[var(--qsl-accent-soft-85)] border-[var(--qsl-brand-dark)] text-[#171916]'
                     : 'bg-white/70 border-[#D9DDD4] text-[#5F645D] hover:border-[#171916]/50'
                 }`}
               >
@@ -879,7 +879,7 @@ export const SystemParametersPage: React.FC = () => {
                   unsavedKeys.length === 0
                     ? 'bg-[#F3F5F0]/70 border-[#E5E8E0] text-[#A8ADA4] cursor-not-allowed'
                     : syncScope === 'changed'
-                      ? 'bg-[#ECF9A8]/85 border-[#171916] text-[#171916] cursor-pointer'
+                      ? 'bg-[var(--qsl-accent-soft-85)] border-[var(--qsl-brand-dark)] text-[#171916] cursor-pointer'
                       : 'bg-white/70 border-[#D9DDD4] text-[#5F645D] hover:border-[#171916]/50 cursor-pointer'
                 }`}
               >

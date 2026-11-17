@@ -1,3 +1,5 @@
+import { ensureAccountSchema } from './account.js';
+
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const roleId = /^role_[a-z0-9_]{1,80}$/;
 const permission = /^[a-z][a-z0-9_.]{1,100}$/;
@@ -58,9 +60,19 @@ export async function handleSystemAccess({ req, res, url, user, pool, send, read
   }
   if (path === '/system/users' && req.method === 'GET') {
     if (!canUser) { send(res,403,{ error: 'Forbidden' }); return true; }
-    const { rows } = await pool.query(`SELECT u.id,u.username,u.display_name,u.status,a.role_id,a.store_ids,a.permission_denies,
-      a.updated_at,r.name AS role_name,r.identity_type,r.permissions
-      FROM identity.users u JOIN identity.user_access a ON a.user_id=u.id JOIN identity.roles r ON r.id=a.role_id
+    await ensureAccountSchema(pool);
+    const { rows } = await pool.query(`SELECT u.id,u.username,u.display_name,u.email,u.status,a.role_id,a.store_ids,a.permission_denies,
+      a.updated_at,r.name AS role_name,r.identity_type,r.permissions,
+      COALESCE(NULLIF(up.title,''), r.name, '系统成员') AS title,
+      COALESCE(up.theme_key, 'lime_charcoal') AS theme_key,
+      COALESCE(up.avatar_color_preset, 'charcoal') AS avatar_color_preset,
+      uca.supplier_id, sup.name AS supplier_name
+      FROM identity.users u
+      JOIN identity.user_access a ON a.user_id=u.id
+      JOIN identity.roles r ON r.id=a.role_id
+      LEFT JOIN identity.user_profiles up ON up.user_id=u.id
+      LEFT JOIN identity.user_catalog_access uca ON uca.user_id=u.id
+      LEFT JOIN catalog.suppliers sup ON sup.id=uca.supplier_id
       ORDER BY u.username`);
     send(res,200,rows); return true;
   }

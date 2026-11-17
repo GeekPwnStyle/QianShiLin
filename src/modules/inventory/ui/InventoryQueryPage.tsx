@@ -101,7 +101,7 @@ export const InventoryQueryPage: React.FC<{ isCrosstab?: boolean; pageTitle: str
                 tone="warning"
                 title="库存口径与矩阵说明"
                 content={
-    '示例品种：蔡司新清锐 1.67 铂金膜；高亮黄绿格代表低库存预警（<3片）。\n\n账面库存与可用库存差异（加工预占、店间在途锁定）需由业务最终定义；库存数量严禁在列表中直接手改，必须通过「库存调整」「盘点任务」或「店间协同」留痕调整。'
+    '示例品种：蔡司新清锐 1.67 铂金膜；主题高亮格代表低库存预警（<3片）。\n\n账面库存与可用库存差异（加工预占、店间在途锁定）需由业务最终定义；库存数量严禁在列表中直接手改，必须通过「库存调整」「盘点任务」或「店间协同」留痕调整。'
                 }
                 ariaLabel="查看库存口径与矩阵说明"
               />
@@ -134,7 +134,7 @@ export const InventoryQueryPage: React.FC<{ isCrosstab?: boolean; pageTitle: str
                         <td
                           key={c}
                           className={`p-3 font-mono border-l border-[#E5E8E0] ${
-                            low ? 'bg-[#ECF9A8] font-semibold text-[#171916]' : 'text-[#5F645D]'
+                            low ? 'bg-[var(--qsl-accent-soft)] font-semibold text-[#171916]' : 'text-[#5F645D]'
                           }`}
                         >
                           {val} 片

@@ -1,18 +1,29 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  DEFAULT_ROLES,
   LOGIN_ACCOUNTS,
   PRESET_SESSIONS,
   STORE_CATALOG,
+  SUPPLIER_CATALOG,
   checkPermission,
   type AuthSession,
   type AvatarColorPreset,
+  type IdentityType,
   type RoleDefinition,
+  type StoreSubRole,
 } from '@/src/modules/auth/domain/identity';
 import { appRepositories } from '@/src/app/composition/container';
+import {
+  DEFAULT_THEME_KEY,
+  applyThemeToDocument,
+  resolveThemeKey,
+  type ThemeKey,
+} from '@/src/shared/theme/themes';
 import type { DataScopeContext } from '@/src/shared/types/common';
 
 const AVATAR_STORAGE_KEY = 'qsl_user_avatars_v1';
+const LAST_THEME_STORAGE_KEY = 'qsl_last_theme_v1';
 const DEBUG_MODE_STORAGE_KEY = 'qsl_auth_debug_mode_v1';
 const DEBUG_SESSION_KEY = 'qsl_debug_auth_preset_v1';
 
@@ -28,46 +39,170 @@ function loadInitialDebugMode(): boolean {
   return import.meta.env.BASE_URL === '/';
 }
 
-interface SavedAvatarPref {
+function loadLastTheme(): ThemeKey {
+  if (typeof window === 'undefined') return DEFAULT_THEME_KEY;
+  try {
+    return resolveThemeKey(window.localStorage.getItem(LAST_THEME_STORAGE_KEY));
+  } catch {
+    return DEFAULT_THEME_KEY;
+  }
+}
+
+function saveLastTheme(themeKey: ThemeKey): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(LAST_THEME_STORAGE_KEY, themeKey);
+  } catch {
+    // Ignore storage write errors
+  }
+}
+
+interface SavedUserPref {
   avatarUrl?: string;
   avatarInitials?: string;
   avatarColorPreset?: AvatarColorPreset;
+  themeKey?: ThemeKey;
 }
 
-function readAvatarMap(): Record<string, SavedAvatarPref> {
+function readUserPrefMap(): Record<string, SavedUserPref> {
   if (typeof window === 'undefined') return {};
   try {
     const raw = window.localStorage.getItem(AVATAR_STORAGE_KEY);
     if (!raw) return {};
     const parsed = JSON.parse(raw);
-    return parsed && typeof parsed === 'object' ? (parsed as Record<string, SavedAvatarPref>) : {};
+    return parsed && typeof parsed === 'object' ? (parsed as Record<string, SavedUserPref>) : {};
   } catch {
     return {};
   }
 }
 
-function applySavedAvatar(base: AuthSession): AuthSession {
-  const saved = readAvatarMap()[base.username];
+function writeUserPref(username: string, patch: Partial<SavedUserPref> & { resetAvatar?: boolean }): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const map = readUserPrefMap();
+    const prev = map[username] ?? {};
+    const next: SavedUserPref = patch.resetAvatar
+      ? { ...(prev.themeKey ? { themeKey: prev.themeKey } : {}) }
+      : {
+          ...prev,
+          ...patch,
+        };
+    if (!patch.resetAvatar && patch.avatarUrl === undefined && 'avatarUrl' in patch) {
+      delete next.avatarUrl;
+    }
+    map[username] = next;
+    window.localStorage.setItem(AVATAR_STORAGE_KEY, JSON.stringify(map));
+  } catch {
+    // Ignore storage quota errors
+  }
+}
+
+function applySavedDebugPrefs(base: AuthSession): AuthSession {
+  const saved = readUserPrefMap()[base.username];
   if (!saved) return base;
   return {
     ...base,
     avatarUrl: saved.avatarUrl ?? base.avatarUrl,
     avatarInitials: saved.avatarInitials?.trim() || base.avatarInitials,
     avatarColorPreset: saved.avatarColorPreset ?? base.avatarColorPreset,
+    themeKey: resolveThemeKey(saved.themeKey ?? base.themeKey),
   };
 }
 
-type ServerUser = { id: string; username: string; role_id?: string | null;
-  store_ids?: string[] | null; permission_denies?: string[] | null };
+export interface ServerUser {
+  id: string;
+  username: string;
+  display_name?: string | null;
+  email?: string | null;
+  title?: string | null;
+  avatar_initials?: string | null;
+  avatar_url?: string | null;
+  avatar_color_preset?: AvatarColorPreset | null;
+  theme_key?: string | null;
+  role_id?: string | null;
+  role_name?: string | null;
+  identity_type?: IdentityType | null;
+  sub_role?: StoreSubRole | null;
+  store_ids?: string[] | null;
+  permission_denies?: string[] | null;
+  supplier_id?: string | null;
+  supplier_name?: string | null;
+}
 
-function applyServerAccess(preset: AuthSession, user: ServerUser): AuthSession {
-  const allowedStores = (user.store_ids ?? preset.authorizedStores.map(store => store.id))
-    .map(id => STORE_CATALOG.find(store => store.id === id)).filter((store): store is (typeof STORE_CATALOG)[number] => Boolean(store));
-  const isAll = preset.identityType === 'admin';
-  return applySavedAvatar({ ...preset, userId: user.id, roleId: user.role_id ?? preset.roleId,
-    authorizedStores: allowedStores, permissionDenies: user.permission_denies ?? [],
-    currentStoreId: isAll ? 'all' : allowedStores[0]?.id ?? preset.currentStoreId,
-    currentStoreName: isAll ? `全部授权门店 (${allowedStores.length}家)` : allowedStores[0]?.name ?? preset.currentStoreName });
+function resolveAuthorizedStores(storeIds: string[] | null | undefined) {
+  if (!Array.isArray(storeIds)) return [];
+  return storeIds.map((id) => {
+    const found = STORE_CATALOG.find((store) => store.id === id);
+    if (found) return found;
+    return { id, name: id, code: id, region: '系统授权门店' };
+  });
+}
+
+function buildSessionFromServerUser(user: ServerUser): AuthSession {
+  const fallbackPreset = Object.values(PRESET_SESSIONS).find((s) => s.username === user.username);
+  const roleId = user.role_id ?? fallbackPreset?.roleId ?? 'role_store_guide';
+  const defaultRoleMeta = DEFAULT_ROLES.find((r) => r.id === roleId);
+  const identityType: IdentityType =
+    user.identity_type ?? defaultRoleMeta?.identityType ?? fallbackPreset?.identityType ?? 'store';
+  const roleName = user.role_name ?? defaultRoleMeta?.name ?? fallbackPreset?.roleName ?? '门店员工';
+  const subRole = user.sub_role ?? defaultRoleMeta?.subRole ?? fallbackPreset?.subRole;
+
+  const displayName = user.display_name?.trim() || fallbackPreset?.displayName || user.username;
+  const title = user.title?.trim() || fallbackPreset?.title || roleName;
+  const avatarInitials =
+    user.avatar_initials?.trim() ||
+    fallbackPreset?.avatarInitials ||
+    displayName.slice(0, 1) ||
+    user.username.slice(0, 1).toUpperCase();
+
+  const allowedStores =
+    user.store_ids !== null && user.store_ids !== undefined
+      ? resolveAuthorizedStores(user.store_ids)
+      : fallbackPreset?.authorizedStores ?? [];
+
+  const supplierId = user.supplier_id ?? (identityType === 'supplier' ? fallbackPreset?.supplierId ?? SUPPLIER_CATALOG[0].id : undefined);
+  const supplierName =
+    user.supplier_name ??
+    (identityType === 'supplier'
+      ? fallbackPreset?.supplierName ?? SUPPLIER_CATALOG[0].name
+      : undefined);
+
+  const isAdmin = identityType === 'admin';
+  const isSupplier = identityType === 'supplier';
+
+  const currentStoreId = isAdmin
+    ? 'all'
+    : isSupplier
+      ? 'supplier_scope'
+      : allowedStores[0]?.id ?? fallbackPreset?.currentStoreId ?? 'store_hq_01';
+
+  const currentStoreName = isAdmin
+    ? `全部授权门店 (${allowedStores.length}家)`
+    : isSupplier
+      ? supplierName ?? '合作供应商'
+      : allowedStores[0]?.name ?? fallbackPreset?.currentStoreName ?? '未分配门店';
+
+  return {
+    userId: user.id,
+    username: user.username,
+    displayName,
+    email: user.email ?? fallbackPreset?.email,
+    title,
+    avatarInitials,
+    avatarUrl: user.avatar_url ?? undefined,
+    avatarColorPreset: user.avatar_color_preset ?? 'charcoal',
+    themeKey: resolveThemeKey(user.theme_key),
+    identityType,
+    roleId,
+    roleName,
+    subRole,
+    currentStoreId,
+    currentStoreName,
+    authorizedStores: isSupplier ? [] : allowedStores,
+    permissionDenies: user.permission_denies ?? [],
+    supplierId,
+    supplierName,
+  };
 }
 
 interface LoginResult {
@@ -81,6 +216,11 @@ interface AvatarUpdatePatch {
   avatarColorPreset?: AvatarColorPreset;
 }
 
+interface ProfileSaveResult {
+  ok: boolean;
+  error?: string;
+}
+
 interface AuthContextValue {
   isAuthenticated: boolean;
   authLoading: boolean;
@@ -90,10 +230,14 @@ interface AuthContextValue {
   currentRole: RoleDefinition | undefined;
   allRoles: RoleDefinition[];
   dataScope: DataScopeContext;
+  themeSaving: boolean;
+  profileSaving: boolean;
+  profileError: string | null;
   loginWithCredentials: (username: string, password: string) => Promise<LoginResult>;
   logout: () => void;
-  updateAvatar: (patch: AvatarUpdatePatch) => void;
-  resetAvatar: () => void;
+  updateTheme: (themeKey: ThemeKey) => Promise<ProfileSaveResult>;
+  updateAvatar: (patch: AvatarUpdatePatch) => Promise<ProfileSaveResult>;
+  resetAvatar: () => Promise<ProfileSaveResult>;
   switchPresetIdentity: (presetKey: string) => void;
   switchStore: (storeId: string) => void;
   hasPermission: (permissionCode?: string) => boolean;
@@ -108,7 +252,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [debugMode, setDebugModeState] = useState<boolean>(() => loadInitialDebugMode());
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
-  const [session, setSession] = useState<AuthSession>(PRESET_SESSIONS.admin);
+  const [session, setSession] = useState<AuthSession>(() => ({
+    ...PRESET_SESSIONS.admin,
+    themeKey: loadLastTheme(),
+  }));
+  const [themeSaving, setThemeSaving] = useState(false);
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const activeTheme = resolveThemeKey(session.themeKey);
+    applyThemeToDocument(activeTheme);
+    saveLastTheme(activeTheme);
+  }, [session.themeKey]);
 
   const setDebugMode = (enabled: boolean) => {
     setDebugModeState(enabled);
@@ -126,7 +282,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         const savedPreset = window.sessionStorage.getItem(DEBUG_SESSION_KEY);
         if (savedPreset && savedPreset in PRESET_SESSIONS) {
-          setSession(applySavedAvatar(PRESET_SESSIONS[savedPreset]));
+          setSession(applySavedDebugPrefs(PRESET_SESSIONS[savedPreset]));
           setIsAuthenticated(true);
         }
       } catch {
@@ -142,9 +298,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       .then(async (r) => {
         if (!r.ok) return;
         const { user }: { user: ServerUser } = await r.json();
-        const preset = Object.values(PRESET_SESSIONS).find((s) => s.username === user.username);
-        if (active && preset) {
-          setSession(applyServerAccess(preset,user));
+        if (active && user?.id) {
+          setSession(buildSessionFromServerUser(user));
           setIsAuthenticated(true);
         }
       })
@@ -165,7 +320,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const currentRole = useMemo(() => {
     const role = allRoles.find((r) => r.id === session.roleId) ?? allRoles[0];
-    return role ? { ...role, permissions: role.permissions.filter(code => !session.permissionDenies?.includes(code)) } : undefined;
+    return role
+      ? {
+          ...role,
+          permissions: role.permissions.filter(
+            (code) => !session.permissionDenies?.includes(code)
+          ),
+        }
+      : undefined;
   }, [allRoles, session.roleId, session.permissionDenies]);
 
   const dataScope: DataScopeContext = useMemo(
@@ -180,6 +342,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }),
     [session]
   );
+
+  const persistServerProfile = async (payload: {
+    themeKey?: ThemeKey;
+    avatarUrl?: string | null;
+    avatarInitials?: string;
+    avatarColorPreset?: AvatarColorPreset;
+  }): Promise<ProfileSaveResult> => {
+    try {
+      const response = await fetch(`${import.meta.env.BASE_URL}api/account/profile`, {
+        method: 'PUT',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        return {
+          ok: false,
+          error: typeof data?.error === 'string' ? data.error : `保存失败（${response.status}）`,
+        };
+      }
+      if (data?.profile) {
+        setSession((prev) => ({
+          ...prev,
+          title: data.profile.title ?? prev.title,
+          avatarInitials: data.profile.avatar_initials ?? prev.avatarInitials,
+          avatarUrl: data.profile.avatar_url ?? undefined,
+          avatarColorPreset: data.profile.avatar_color_preset ?? prev.avatarColorPreset,
+          themeKey: resolveThemeKey(data.profile.theme_key ?? prev.themeKey),
+        }));
+      }
+      return { ok: true };
+    } catch {
+      return { ok: false, error: '无法连接服务器保存个人偏好，请稍后重试。' };
+    }
+  };
 
   const loginWithCredentials = async (username: string, password: string): Promise<LoginResult> => {
     const usernameInput = username.trim();
@@ -208,7 +406,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         };
       }
 
-      setSession(applySavedAvatar(PRESET_SESSIONS[matched.presetKey]));
+      setSession(applySavedDebugPrefs(PRESET_SESSIONS[matched.presetKey]));
       setIsAuthenticated(true);
       try {
         window.sessionStorage.setItem(DEBUG_SESSION_KEY, matched.presetKey);
@@ -228,13 +426,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!response.ok) {
         return {
           ok: false,
-          error: response.status === 401 ? '用户名或密码错误。' : '登录服务暂不可用，可开启右侧 debug 开关以本地模式进入。',
+          error:
+            response.status === 401
+              ? '用户名或密码错误。'
+              : '登录服务暂不可用，可开启右侧 debug 开关以本地模式进入。',
         };
       }
-      const { user } = await response.json();
-      const preset = Object.values(PRESET_SESSIONS).find((s) => s.username === user.username);
-      if (!preset) return { ok: false, error: '账号角色尚未配置。' };
-      setSession(applyServerAccess(preset,user));
+      const { user }: { user?: ServerUser } = await response.json();
+      if (!user?.id) return { ok: false, error: '登录返回用户信息异常。' };
+      if (!user.role_id) return { ok: false, error: '账号角色尚未在数据库中配置。' };
+      setSession(buildSessionFromServerUser(user));
       setIsAuthenticated(true);
       try {
         window.sessionStorage.removeItem(DEBUG_SESSION_KEY);
@@ -252,6 +453,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = () => {
     setIsAuthenticated(false);
+    setProfileError(null);
     try {
       window.sessionStorage.removeItem(DEBUG_SESSION_KEY);
     } catch {
@@ -265,66 +467,113 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const updateAvatar = (patch: AvatarUpdatePatch) => {
-    setSession((prev) => {
-      const nextUrl =
-        patch.avatarUrl === null
-          ? undefined
-          : patch.avatarUrl !== undefined
-            ? patch.avatarUrl
-            : prev.avatarUrl;
-      const nextInitials =
-        patch.avatarInitials !== undefined
-          ? patch.avatarInitials.trim().slice(0, 2) ||
-            PRESET_SESSIONS[
-              Object.keys(PRESET_SESSIONS).find(
-                (k) => PRESET_SESSIONS[k].username === prev.username
-              ) ?? 'admin'
-            ]?.avatarInitials ||
-            prev.avatarInitials
-          : prev.avatarInitials;
-      const nextPreset = patch.avatarColorPreset ?? prev.avatarColorPreset;
+  const updateTheme = async (themeKey: ThemeKey): Promise<ProfileSaveResult> => {
+    const previousTheme = session.themeKey;
+    setProfileError(null);
+    setSession((prev) => ({ ...prev, themeKey }));
 
-      try {
-        const map = readAvatarMap();
-        map[prev.username] = {
-          ...(nextUrl ? { avatarUrl: nextUrl } : {}),
-          avatarInitials: nextInitials,
-          ...(nextPreset ? { avatarColorPreset: nextPreset } : {}),
-        };
-        window.localStorage.setItem(AVATAR_STORAGE_KEY, JSON.stringify(map));
-      } catch {
-        // Ignore storage quota errors
-      }
+    if (debugMode) {
+      writeUserPref(session.username, { themeKey });
+      return { ok: true };
+    }
 
-      return {
-        ...prev,
+    setThemeSaving(true);
+    const result = await persistServerProfile({ themeKey });
+    setThemeSaving(false);
+    if (!result.ok) {
+      setSession((prev) => ({ ...prev, themeKey: previousTheme }));
+      setProfileError(result.error ?? '主题保存失败');
+    }
+    return result;
+  };
+
+  const updateAvatar = async (patch: AvatarUpdatePatch): Promise<ProfileSaveResult> => {
+    setProfileError(null);
+    const prevSnapshot = {
+      avatarUrl: session.avatarUrl,
+      avatarInitials: session.avatarInitials,
+      avatarColorPreset: session.avatarColorPreset,
+    };
+
+    const nextUrl =
+      patch.avatarUrl === null
+        ? undefined
+        : patch.avatarUrl !== undefined
+          ? patch.avatarUrl
+          : session.avatarUrl;
+    const defaultInitials =
+      session.displayName.slice(0, 1) || session.username.slice(0, 1).toUpperCase();
+    const nextInitials =
+      patch.avatarInitials !== undefined
+        ? patch.avatarInitials.trim().slice(0, 2) || defaultInitials
+        : session.avatarInitials;
+    const nextPreset = patch.avatarColorPreset ?? session.avatarColorPreset ?? 'charcoal';
+
+    setSession((prev) => ({
+      ...prev,
+      avatarUrl: nextUrl,
+      avatarInitials: nextInitials,
+      avatarColorPreset: nextPreset,
+    }));
+
+    if (debugMode) {
+      writeUserPref(session.username, {
         avatarUrl: nextUrl,
         avatarInitials: nextInitials,
         avatarColorPreset: nextPreset,
-      };
+      });
+      return { ok: true };
+    }
+
+    setProfileSaving(true);
+    const result = await persistServerProfile({
+      avatarUrl: patch.avatarUrl === null ? null : nextUrl,
+      avatarInitials: nextInitials,
+      avatarColorPreset: nextPreset,
     });
+    setProfileSaving(false);
+    if (!result.ok) {
+      setSession((prev) => ({ ...prev, ...prevSnapshot }));
+      setProfileError(result.error ?? '头像保存失败');
+    }
+    return result;
   };
 
-  const resetAvatar = () => {
-    setSession((prev) => {
-      const base =
-        Object.values(PRESET_SESSIONS).find((s) => s.username === prev.username) ??
-        PRESET_SESSIONS.admin;
-      try {
-        const map = readAvatarMap();
-        delete map[prev.username];
-        window.localStorage.setItem(AVATAR_STORAGE_KEY, JSON.stringify(map));
-      } catch {
-        // Ignore storage errors
-      }
-      return {
-        ...prev,
-        avatarUrl: undefined,
-        avatarInitials: base.avatarInitials,
-        avatarColorPreset: undefined,
-      };
+  const resetAvatar = async (): Promise<ProfileSaveResult> => {
+    setProfileError(null);
+    const defaultInitials =
+      Object.values(PRESET_SESSIONS).find((s) => s.username === session.username)?.avatarInitials ??
+      (session.displayName.slice(0, 1) || session.username.slice(0, 1).toUpperCase());
+    const prevSnapshot = {
+      avatarUrl: session.avatarUrl,
+      avatarInitials: session.avatarInitials,
+      avatarColorPreset: session.avatarColorPreset,
+    };
+
+    setSession((prev) => ({
+      ...prev,
+      avatarUrl: undefined,
+      avatarInitials: defaultInitials,
+      avatarColorPreset: 'charcoal',
+    }));
+
+    if (debugMode) {
+      writeUserPref(session.username, { resetAvatar: true });
+      return { ok: true };
+    }
+
+    setProfileSaving(true);
+    const result = await persistServerProfile({
+      avatarUrl: null,
+      avatarInitials: defaultInitials,
+      avatarColorPreset: 'charcoal',
     });
+    setProfileSaving(false);
+    if (!result.ok) {
+      setSession((prev) => ({ ...prev, ...prevSnapshot }));
+      setProfileError(result.error ?? '重置头像失败');
+    }
+    return result;
   };
 
   // Identity switching is disabled once credentials are verified by the API.
@@ -364,8 +613,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     currentRole,
     allRoles,
     dataScope,
+    themeSaving,
+    profileSaving,
+    profileError,
     loginWithCredentials,
     logout,
+    updateTheme,
     updateAvatar,
     resetAvatar,
     switchPresetIdentity,

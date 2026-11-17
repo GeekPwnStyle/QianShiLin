@@ -424,7 +424,7 @@ export const SalesPosPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="p-4 rounded-2xl bg-[#171916] text-white space-y-2 text-[15px]">
+            <div className="p-4 rounded-2xl bg-[var(--qsl-brand-dark)] text-white space-y-2 text-[15px]">
               <div className="flex justify-between text-white/75">
                 <span>吊牌原价合计</span>
                 <span className="tabular-nums">{formatCurrency(totals.subtotal)}</span>
@@ -435,7 +435,7 @@ export const SalesPosPage: React.FC = () => {
               </div>
               <div className="pt-2 border-t border-white/15 flex items-baseline justify-between">
                 <span className="font-medium">应收参考金额（草稿）</span>
-                <span className="text-[26px] font-semibold text-[#D7FF00] tabular-nums">
+                <span className="text-[26px] font-semibold text-[var(--qsl-accent-on-dark)] tabular-nums">
                   {formatCurrency(totals.payable)}
                 </span>
               </div>

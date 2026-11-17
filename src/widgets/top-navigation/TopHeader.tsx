@@ -3,11 +3,13 @@ import {
   ArrowRight,
   Bell,
   Camera,
+  Check,
   ChevronDown,
   HelpCircle,
   LayoutGrid,
   LogOut,
   Menu,
+  Palette,
   RotateCcw,
   Search,
   Shield,
@@ -21,6 +23,7 @@ import {
   AVATAR_PRESET_STYLES,
   type AvatarColorPreset,
 } from '@/src/modules/auth/domain/identity';
+import { SYSTEM_THEMES, SYSTEM_THEME_MAP } from '@/src/shared/theme/themes';
 import { UserAvatar } from '@/src/modules/auth/ui/UserAvatar';
 import {
   MAX_TOP_MODULE_SLOTS,
@@ -64,8 +67,13 @@ export const TopHeader: React.FC = () => {
   const {
     session,
     currentRole,
+    debugMode,
     hasPermission,
     logout,
+    themeSaving,
+    profileSaving,
+    profileError,
+    updateTheme,
     updateAvatar,
     resetAvatar,
     switchStore,
@@ -91,6 +99,7 @@ export const TopHeader: React.FC = () => {
   const [messagesOpen, setMessagesOpen] = useState(false);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [avatarError, setAvatarError] = useState<string | null>(null);
+  const [themeSavedHint, setThemeSavedHint] = useState(false);
   const [initialsDraft, setInitialsDraft] = useState(session.avatarInitials);
   const [dragOverModuleId, setDragOverModuleId] = useState<string | null>(null);
 
@@ -345,7 +354,7 @@ export const TopHeader: React.FC = () => {
               className={`h-9 px-3 xl:px-3.5 rounded-full text-[14px] 2xl:text-[15px] leading-none inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 select-none border border-transparent transition-colors duration-150 cursor-pointer ${
                 workbenchDeveloped
                   ? activeNode.id === 'workbench'
-                    ? 'font-bold bg-[#171916] text-white'
+                    ? 'font-bold bg-[var(--qsl-nav-active-bg)] text-[var(--qsl-nav-active-ink)]'
                     : 'font-bold bg-transparent text-[#5F645D] hover:text-[#171916] hover:bg-[#F1F2EE]'
                   : activeNode.id === 'workbench'
                     ? 'font-medium bg-[#E4E7E0] text-[#5F645D] grayscale'
@@ -409,12 +418,12 @@ export const TopHeader: React.FC = () => {
                   }
                   className={`h-9 px-3 xl:px-3.5 rounded-full text-[14px] 2xl:text-[15px] leading-none inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 select-none border transition-colors duration-150 cursor-grab active:cursor-grabbing ${
                     isDropTarget
-                      ? 'font-bold bg-[#D7FF00] text-[#171916] border-[#171916] ring-2 ring-[#171916]/25'
+                      ? 'font-bold bg-[var(--qsl-accent)] text-[var(--qsl-accent-ink)] border-[var(--qsl-accent-border)] ring-2 ring-[#171916]/25'
                       : isBeingDragged
                         ? 'font-bold opacity-50 border-dashed border-[#171916] bg-[#F1F2EE] text-[#171916]'
                         : isDeveloped
                           ? isActive
-                            ? 'font-bold bg-[#171916] text-white border-transparent'
+                            ? 'font-bold bg-[var(--qsl-nav-active-bg)] text-[var(--qsl-nav-active-ink)] border-transparent'
                             : showDropHint
                               ? 'font-bold bg-[#F8F9F5] text-[#171916] border-dashed border-[#171916]/40'
                               : 'font-bold bg-transparent text-[#5F645D] border-transparent hover:text-[#171916] hover:bg-[#F1F2EE]'
@@ -438,10 +447,10 @@ export const TopHeader: React.FC = () => {
                 aria-expanded={allModulesOpen}
                 className={`h-9 px-2.5 xl:px-3 rounded-full text-[13px] xl:text-[14px] font-bold leading-none whitespace-nowrap shrink-0 select-none inline-flex items-center justify-center gap-1.5 border transition-colors duration-150 cursor-pointer ml-0.5 ${
                   allModulesOpen
-                    ? 'bg-[#D7FF00] text-[#171916] border-[#171916]'
+                    ? 'bg-[var(--qsl-accent)] text-[var(--qsl-accent-ink)] border-[var(--qsl-accent-border)]'
                     : activeOutsideTopBar
                       ? activeModuleDeveloped
-                        ? 'bg-[#ECF9A8] text-[#171916] border-[#171916]'
+                        ? 'bg-[var(--qsl-accent-soft)] text-[#171916] border-[#171916]'
                         : 'bg-[#EAECE6] text-[#5F645D] border-[#C5CAC0]'
                       : 'bg-[#F8F9F5] text-[#171916] border-[#D9DDD4] hover:border-[#171916]'
                 }`}
@@ -623,7 +632,7 @@ export const TopHeader: React.FC = () => {
                           setMessagesOpen(false);
                           navigateToRoute('/modules/members/followup/notifications/review-reminder');
                         }}
-                        className="w-full text-left p-3 rounded-xl bg-white/55 hover:bg-[#ECF9A8]/65 transition-colors cursor-pointer"
+                        className="w-full text-left p-3 rounded-xl bg-white/55 hover:bg-[var(--qsl-accent-soft-65)] transition-colors cursor-pointer"
                       >
                   <div className="font-medium text-[#171916]">今日待安排复查邀约</div>
                         <div className="text-[13px] text-[#5F645D] mt-0.5">点击进入推送列表处理</div>
@@ -634,7 +643,7 @@ export const TopHeader: React.FC = () => {
                           setMessagesOpen(false);
                           navigateToRoute('/modules/contact-lenses/near-expiry');
                         }}
-                        className="w-full text-left p-3 rounded-xl bg-white/55 hover:bg-[#ECF9A8]/65 transition-colors cursor-pointer"
+                        className="w-full text-left p-3 rounded-xl bg-white/55 hover:bg-[var(--qsl-accent-soft-65)] transition-colors cursor-pointer"
                       >
                         <div className="font-medium text-[#171916]">资质与商品近效期预警</div>
                         <div className="text-[13px] text-[#5F645D] mt-0.5">三类医疗器械许可证距到期剩22天</div>
@@ -673,7 +682,7 @@ export const TopHeader: React.FC = () => {
                 </button>
 
                 {accountMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-60 qsl-glass-popover rounded-2xl p-2 z-50">
+                  <div className="absolute right-0 mt-2 w-68 qsl-glass-popover rounded-2xl p-2 z-50">
                     <div className="px-3 py-2 border-b border-[#171916]/[0.08] mb-1 flex items-center gap-2.5">
                       <UserAvatar session={session} size="md" />
                       <div className="min-w-0">
@@ -686,6 +695,56 @@ export const TopHeader: React.FC = () => {
                       </div>
                     </div>
 
+                    {/* Quick Theme Swatch Switcher (available to every logged-in user) */}
+                    <div className="px-3 py-2 border-b border-[#171916]/[0.08] mb-1">
+                      <div className="flex items-center justify-between text-[12px] mb-2">
+                        <span className="inline-flex items-center gap-1.5 font-medium text-[#5F645D]">
+                          <Palette className="w-3.5 h-3.5" />
+                          <span>系统主题色</span>
+                        </span>
+                        <span className="text-[#171916] font-semibold">
+                          {themeSaving
+                            ? '保存中...'
+                            : SYSTEM_THEME_MAP[session.themeKey].name}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between gap-1.5" role="group" aria-label="快速切换系统主题色">
+                        {SYSTEM_THEMES.map((theme) => {
+                          const active = session.themeKey === theme.key;
+                          return (
+                            <button
+                              key={theme.key}
+                              type="button"
+                              disabled={themeSaving}
+                              title={`${theme.name}：${theme.subtitle}`}
+                              aria-label={`切换为${theme.name}主题`}
+                              onClick={() => {
+                                void updateTheme(theme.key).then((res) => {
+                                  if (res.ok) {
+                                    setThemeSavedHint(true);
+                                    window.setTimeout(() => setThemeSavedHint(false), 1800);
+                                  }
+                                });
+                              }}
+                              style={{ backgroundColor: theme.accentHex }}
+                              className={`w-7 h-7 rounded-full inline-flex items-center justify-center border transition-transform cursor-pointer disabled:opacity-60 ${
+                                active
+                                  ? 'ring-2 ring-[#171916] ring-offset-2 scale-105 border-white'
+                                  : 'border-[#171916]/20 hover:scale-110'
+                              }`}
+                            >
+                              {active && (
+                                <Check
+                                  className="w-3.5 h-3.5"
+                                  style={{ color: theme.accentInkHex }}
+                                />
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
                     <button
                       type="button"
                       onClick={() => {
@@ -695,7 +754,7 @@ export const TopHeader: React.FC = () => {
                       className="w-full text-left px-3 py-2.5 rounded-xl text-[14px] font-medium text-[#171916] hover:bg-white/60 flex items-center gap-2.5 cursor-pointer"
                     >
                       <User className="w-4 h-4 text-[#5F645D]" />
-                      <span>个人信息</span>
+                      <span>个人信息与主题偏好</span>
                     </button>
 
                     <button
@@ -726,6 +785,15 @@ export const TopHeader: React.FC = () => {
         maxWidthClass="max-w-5xl"
       >
         <div className="space-y-5 text-[15px]">
+          {profileError && (
+            <div
+              role="alert"
+              className="px-4 py-2.5 rounded-xl bg-[#FEF2F2] border border-[#FECACA] text-[13px] text-[#DC2626]"
+            >
+              {profileError}
+            </div>
+          )}
+
           {/* Avatar Editor + Basic Account Details */}
           <div className="p-4 rounded-2xl bg-white/65 border border-[#171916]/[0.08] flex flex-col lg:flex-row gap-5 lg:items-center">
             {/* Avatar Editor Section */}
@@ -734,10 +802,11 @@ export const TopHeader: React.FC = () => {
                 <UserAvatar session={session} size="xl" />
                 <button
                   type="button"
+                  disabled={profileSaving}
                   onClick={() => avatarFileInputRef.current?.click()}
                   aria-label="更换头像图片"
                   title="点击上传自定义头像"
-                  className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-[#171916] text-[#D7FF00] border-2 border-white inline-flex items-center justify-center cursor-pointer hover:scale-105 transition-transform"
+                  className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-[var(--qsl-brand-dark)] text-[var(--qsl-accent-on-dark)] border-2 border-white inline-flex items-center justify-center cursor-pointer hover:scale-105 transition-transform disabled:opacity-60"
                 >
                   <Camera className="w-3.5 h-3.5" />
                 </button>
@@ -754,20 +823,22 @@ export const TopHeader: React.FC = () => {
                 <div className="flex flex-wrap items-center gap-1.5">
                   <button
                     type="button"
+                    disabled={profileSaving}
                     onClick={() => avatarFileInputRef.current?.click()}
-                    className="h-8 px-3 rounded-full bg-[#171916] text-white text-[13px] font-medium inline-flex items-center gap-1.5 hover:bg-[#2F332D] transition-colors cursor-pointer"
+                    className="h-8 px-3 rounded-full bg-[var(--qsl-brand-dark)] text-white text-[13px] font-medium inline-flex items-center gap-1.5 hover:bg-[var(--qsl-brand-dark-hover)] transition-colors cursor-pointer disabled:opacity-60"
                   >
                     <Upload className="w-3.5 h-3.5" />
-                    <span>上传图片</span>
+                    <span>{profileSaving ? '保存中...' : '上传图片'}</span>
                   </button>
                   <button
                     type="button"
+                    disabled={profileSaving}
                     onClick={() => {
                       setAvatarError(null);
-                      resetAvatar();
+                      void resetAvatar();
                     }}
                     title="恢复默认文字头像"
-                    className="h-8 px-2.5 rounded-full bg-white/80 border border-[#171916]/12 text-[#5F645D] hover:text-[#171916] text-[13px] inline-flex items-center gap-1 transition-colors cursor-pointer"
+                    className="h-8 px-2.5 rounded-full bg-white/80 border border-[#171916]/12 text-[#5F645D] hover:text-[#171916] text-[13px] inline-flex items-center gap-1 transition-colors cursor-pointer disabled:opacity-60"
                   >
                     <RotateCcw className="w-3 h-3" />
                     <span>恢复默认</span>
@@ -786,16 +857,17 @@ export const TopHeader: React.FC = () => {
                         <button
                           key={presetKey}
                           type="button"
+                          disabled={profileSaving}
                           title={`使用「${preset.label}」风格`}
                           aria-label={`使用${preset.label}头像配色`}
                           onClick={() => {
                             setAvatarError(null);
-                            updateAvatar({
+                            void updateAvatar({
                               avatarUrl: null,
                               avatarColorPreset: presetKey,
                             });
                           }}
-                          style={{ backgroundColor: preset.swatchHex }}
+                          style={{ backgroundColor: preset.swatchCss }}
                           className={`w-5 h-5 rounded-full border transition-transform cursor-pointer ${
                             active
                               ? 'ring-2 ring-[#171916] ring-offset-1 scale-110 border-white'
@@ -815,8 +887,15 @@ export const TopHeader: React.FC = () => {
                     onChange={(e) => {
                       const val = e.target.value;
                       setInitialsDraft(val);
-                      if (val.trim()) {
-                        updateAvatar({ avatarInitials: val.trim() });
+                    }}
+                    onBlur={() => {
+                      if (initialsDraft.trim() && initialsDraft.trim() !== session.avatarInitials) {
+                        void updateAvatar({ avatarInitials: initialsDraft.trim() });
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && initialsDraft.trim()) {
+                        void updateAvatar({ avatarInitials: initialsDraft.trim() });
                       }
                     }}
                     className="w-14 h-7 px-2 rounded-lg bg-white/85 border border-[#171916]/12 text-[13px] text-center font-semibold text-[#171916] outline-none focus:border-[#171916]"
@@ -858,15 +937,99 @@ export const TopHeader: React.FC = () => {
                   />
                 </div>
               </div>
-              <div className="col-span-2 sm:col-span-4 pt-2.5 border-t border-[#171916]/[0.07] flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                <span className="text-[13px] text-[#73796F] shrink-0">当前数据范围与门店</span>
-                <span className="font-medium text-[#171916]">{session.currentStoreName}</span>
-                {session.authorizedStores.length > 0 && (
-                  <span className="text-[13px] text-[#5F645D]">
-                    （授权门店：{session.authorizedStores.map((s) => s.name).join('、')}）
-                  </span>
+              <div className="col-span-2 sm:col-span-4 pt-2.5 border-t border-[#171916]/[0.07] flex flex-wrap items-baseline gap-x-4 gap-y-1">
+                <div>
+                  <span className="text-[13px] text-[#73796F]">当前数据范围与门店：</span>
+                  <span className="font-medium text-[#171916]">{session.currentStoreName}</span>
+                  {session.authorizedStores.length > 0 && (
+                    <span className="text-[13px] text-[#5F645D]">
+                      （授权门店：{session.authorizedStores.map((s) => s.name).join('、')}）
+                    </span>
+                  )}
+                </div>
+                {session.email && (
+                  <div className="text-[13px] text-[#5F645D]">
+                    账号邮箱：<span className="font-mono text-[#171916]">{session.email}</span>
+                  </div>
                 )}
               </div>
+            </div>
+          </div>
+
+          {/* System Theme Color Picker (All authenticated users can modify & persist to DB) */}
+          <div className="p-4 rounded-2xl bg-white/65 border border-[#171916]/[0.08] space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <Palette className="w-4 h-4 text-[#171916]" />
+                <h3 className="text-[16px] font-bold text-[#171916]">个人系统主题色</h3>
+              </div>
+              <span className="text-[12px] text-[#5F645D]">
+                {themeSaving
+                  ? '正在写入数据库...'
+                  : themeSavedHint
+                    ? '已保存到当前用户档案'
+                    : debugMode
+                      ? '本地调试模式保存，全岗位账号均可自由修改'
+                      : '已绑定当前用户并同步入库，全员均可自由切换'}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+              {SYSTEM_THEMES.map((theme) => {
+                const active = session.themeKey === theme.key;
+                return (
+                  <button
+                    key={theme.key}
+                    type="button"
+                    disabled={themeSaving}
+                    onClick={() => {
+                      void updateTheme(theme.key).then((res) => {
+                        if (res.ok) {
+                          setThemeSavedHint(true);
+                          window.setTimeout(() => setThemeSavedHint(false), 2000);
+                        }
+                      });
+                    }}
+                    className={`p-3 rounded-xl border text-left flex items-center justify-between gap-3 transition-all cursor-pointer disabled:opacity-60 ${
+                      active
+                        ? 'bg-[var(--qsl-accent-soft-85)] border-[#171916] ring-1 ring-[#171916]'
+                        : 'bg-white/80 border-[#171916]/10 hover:bg-white hover:border-[#171916]/40'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div
+                        className="w-9 h-9 rounded-xl shrink-0 border border-[#171916]/15 overflow-hidden grid grid-cols-2"
+                        aria-hidden="true"
+                      >
+                        <span style={{ backgroundColor: theme.accentHex }} />
+                        <div className="grid grid-rows-2">
+                          <span style={{ backgroundColor: theme.brandDarkHex }} />
+                          <span style={{ backgroundColor: theme.accentSoftHex }} />
+                        </div>
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-[14px] font-bold text-[#171916] truncate">
+                          {theme.name}
+                        </div>
+                        <div className="text-[12px] text-[#5F645D] truncate">
+                          {theme.subtitle}
+                        </div>
+                      </div>
+                    </div>
+                    {active && (
+                      <span
+                        className="w-6 h-6 rounded-full inline-flex items-center justify-center shrink-0"
+                        style={{
+                          backgroundColor: theme.accentHex,
+                          color: theme.accentInkHex,
+                        }}
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </div>
 

@@ -77,7 +77,7 @@ export const LoginView: React.FC = () => {
       {/* Centered Editorial Login Section */}
       <div className="max-w-5xl w-full mx-auto my-auto py-10 grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
         <div className="lg:col-span-6 space-y-5">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#ECF9A8] border border-[#C2E600] text-[13px] font-bold text-[#171916]">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--qsl-accent-soft)] border border-[var(--qsl-accent-soft-border)] text-[13px] font-bold text-[#171916]">
             <span>Qianshilink RBAC</span>
           </div>
           <h1 className="text-[36px] sm:text-[40px] font-bold leading-tight tracking-tight text-[#171916]">
@@ -221,18 +221,18 @@ export const LoginView: React.FC = () => {
                   }
                   className={`h-11 px-3 rounded-[10px] border inline-flex items-center gap-2 shrink-0 transition-colors cursor-pointer select-none ${
                     debugMode
-                      ? 'bg-[#ECF9A8]/85 border-[#171916] text-[#171916]'
+                      ? 'bg-[var(--qsl-accent-soft-85)] border-[#171916] text-[#171916]'
                       : 'bg-[#F8F9F5] border-[#D9DDD4] text-[#5F645D] hover:border-[#171916]/45 hover:text-[#171916]'
                   }`}
                 >
                   <span
                     className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors ${
-                      debugMode ? 'bg-[#171916]' : 'bg-[#CFD4C8]'
+                      debugMode ? 'bg-[var(--qsl-brand-dark)]' : 'bg-[#CFD4C8]'
                     }`}
                   >
                     <span
                       className={`inline-block h-3.5 w-3.5 transform rounded-full transition-transform ${
-                        debugMode ? 'translate-x-[18px] bg-[#D7FF00]' : 'translate-x-[3px] bg-white'
+                        debugMode ? 'translate-x-[18px] bg-[var(--qsl-accent-on-dark)]' : 'translate-x-[3px] bg-white'
                       }`}
                     />
                   </span>

@@ -1,3 +1,5 @@
+import { DEFAULT_THEME_KEY, type ThemeKey } from '@/src/shared/theme/themes';
+
 export type IdentityType = 'admin' | 'store' | 'supplier';
 
 export type StoreSubRole = 'store_manager' | 'store_guide' | 'store_optometrist' | 'store_staff';
@@ -41,37 +43,37 @@ export type AvatarColorPreset = 'charcoal' | 'lime' | 'forest' | 'amber' | 'slat
 
 export const AVATAR_PRESET_STYLES: Record<
   AvatarColorPreset,
-  { label: string; bgClass: string; textClass: string; swatchHex: string }
+  { label: string; bgClass: string; textClass: string; swatchCss: string }
 > = {
   charcoal: {
-    label: '炭黑黄绿',
-    bgClass: 'bg-[#171916]',
-    textClass: 'text-[#D7FF00]',
-    swatchHex: '#171916',
+    label: '深色主题',
+    bgClass: 'bg-[var(--qsl-brand-dark)]',
+    textClass: 'text-[var(--qsl-accent-on-dark)]',
+    swatchCss: 'var(--qsl-brand-dark)',
   },
   lime: {
-    label: '荧光黄绿',
-    bgClass: 'bg-[#D7FF00] border border-[#171916]/25',
-    textClass: 'text-[#171916]',
-    swatchHex: '#D7FF00',
+    label: '亮色主题',
+    bgClass: 'bg-[var(--qsl-accent)] border border-[var(--qsl-accent-border)]',
+    textClass: 'text-[var(--qsl-accent-ink)]',
+    swatchCss: 'var(--qsl-accent)',
   },
   forest: {
     label: '深森绿',
     bgClass: 'bg-[#166534]',
     textClass: 'text-[#FFFFFF]',
-    swatchHex: '#166534',
+    swatchCss: '#166534',
   },
   amber: {
     label: '暖琥珀',
     bgClass: 'bg-[#B45309]',
     textClass: 'text-[#FFFFFF]',
-    swatchHex: '#B45309',
+    swatchCss: '#B45309',
   },
   slate: {
     label: '静谧灰',
     bgClass: 'bg-[#475569]',
     textClass: 'text-[#FFFFFF]',
-    swatchHex: '#475569',
+    swatchCss: '#475569',
   },
 };
 
@@ -79,10 +81,12 @@ export interface AuthSession {
   userId: string;
   username: string;
   displayName: string;
+  email?: string;
   title: string;
   avatarInitials: string;
   avatarUrl?: string;
   avatarColorPreset?: AvatarColorPreset;
+  themeKey: ThemeKey;
   identityType: IdentityType;
   roleId: string;
   roleName: string;
@@ -354,8 +358,10 @@ export const PRESET_SESSIONS: Record<string, AuthSession> = {
     userId: 'user_admin_01',
     username: 'admin',
     displayName: '林致远',
+    email: 'admin@qianshilink.demo',
     title: '营运总监 · 管理员',
     avatarInitials: '林',
+    themeKey: DEFAULT_THEME_KEY,
     identityType: 'admin',
     roleId: 'role_hq_admin',
     roleName: '总部运营管理员',
@@ -367,8 +373,10 @@ export const PRESET_SESSIONS: Record<string, AuthSession> = {
     userId: 'user_store_01',
     username: 'manager',
     displayName: '周婉宁',
+    email: 'store.xihu@qianshilink.demo',
     title: '店长 · 杭州西湖旗舰店',
     avatarInitials: '周',
+    themeKey: DEFAULT_THEME_KEY,
     identityType: 'store',
     roleId: 'role_store_manager',
     roleName: '门店店长',
@@ -381,8 +389,10 @@ export const PRESET_SESSIONS: Record<string, AuthSession> = {
     userId: 'user_store_02',
     username: 'guide',
     displayName: '陈明轩',
+    email: 'guide.binjiang@qianshilink.demo',
     title: '导购员 · 杭州滨江天街店',
     avatarInitials: '陈',
+    themeKey: DEFAULT_THEME_KEY,
     identityType: 'store',
     roleId: 'role_store_guide',
     roleName: '门店导购员',
@@ -395,8 +405,10 @@ export const PRESET_SESSIONS: Record<string, AuthSession> = {
     userId: 'user_store_03',
     username: 'optometrist',
     displayName: '许文博',
+    email: 'optom.xihu@qianshilink.demo',
     title: '高级验光师 · 杭州西湖旗舰店',
     avatarInitials: '许',
+    themeKey: DEFAULT_THEME_KEY,
     identityType: 'store',
     roleId: 'role_store_optometrist',
     roleName: '门店高级验光师',
@@ -409,8 +421,10 @@ export const PRESET_SESSIONS: Record<string, AuthSession> = {
     userId: 'user_sup_01',
     username: 'supplier',
     displayName: '顾承泽',
+    email: 'supplier.zeiss@qianshilink.demo',
     title: '供应链协调人 · 卡尔蔡司光学华东代理',
     avatarInitials: '顾',
+    themeKey: DEFAULT_THEME_KEY,
     identityType: 'supplier',
     roleId: 'role_supplier_partner',
     roleName: '合作供应商账号',

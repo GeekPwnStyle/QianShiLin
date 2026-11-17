@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
-:root {
+:root,
+:root[data-theme="lime_charcoal"] {
   --qsl-bg-page: #F1F2EE;
   --qsl-bg-workspace: #F8F9F5;
   --qsl-bg-card: #FFFFFF;
@@ -11,10 +12,28 @@
   --qsl-border: #D9DDD4;
   --qsl-border-subtle: #E5E8E0;
   --qsl-accent: #D7FF00;
+  --qsl-accent-hover: #CCF200;
+  --qsl-accent-border: #C2E600;
   --qsl-accent-soft: #ECF9A8;
+  --qsl-accent-soft-border: #C2E600;
+  --qsl-accent-soft-85: rgba(236, 249, 168, 0.85);
+  --qsl-accent-soft-65: rgba(236, 249, 168, 0.65);
+  --qsl-accent-soft-45: rgba(236, 249, 168, 0.45);
+  --qsl-accent-soft-35: rgba(236, 249, 168, 0.35);
+  --qsl-accent-soft-ink: #5A7500;
   --qsl-accent-ink: #171916;
+  --qsl-accent-on-dark: #D7FF00;
+  --qsl-brand-dark: #171916;
+  --qsl-brand-dark-hover: #2C302A;
   --qsl-nav-active-bg: #171916;
   --qsl-nav-active-ink: #FFFFFF;
+  --qsl-ambient-base: #FAFDF6;
+  --qsl-ambient-grad: linear-gradient(135deg, #FFFFFF 0%, #FAFDF5 48%, #F2F7E7 100%);
+  --qsl-ambient-bg:
+    radial-gradient(circle at 14% 16%, rgba(240, 252, 184, 0.45) 0%, transparent 45%),
+    radial-gradient(circle at 86% 20%, rgba(255, 255, 255, 0.90) 0%, transparent 45%),
+    radial-gradient(circle at 52% 88%, rgba(232, 244, 210, 0.42) 0%, transparent 52%),
+    linear-gradient(140deg, #FFFFFF 0%, #FAFDF5 46%, #F2F7E6 100%);
 
   --qsl-status-success: #166534;
   --qsl-status-success-bg: #ECFDF3;
@@ -29,6 +48,136 @@
   --qsl-font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 }
 
+:root[data-theme="emerald_mint"] {
+  --qsl-accent: #10B981;
+  --qsl-accent-hover: #059669;
+  --qsl-accent-border: #059669;
+  --qsl-accent-soft: #D1FAE5;
+  --qsl-accent-soft-border: #6EE7B7;
+  --qsl-accent-soft-85: rgba(209, 250, 229, 0.85);
+  --qsl-accent-soft-65: rgba(209, 250, 229, 0.65);
+  --qsl-accent-soft-45: rgba(209, 250, 229, 0.45);
+  --qsl-accent-soft-35: rgba(209, 250, 229, 0.35);
+  --qsl-accent-soft-ink: #047857;
+  --qsl-accent-ink: #FFFFFF;
+  --qsl-accent-on-dark: #34D399;
+  --qsl-brand-dark: #0F241D;
+  --qsl-brand-dark-hover: #1B3B30;
+  --qsl-nav-active-bg: #0F241D;
+  --qsl-nav-active-ink: #FFFFFF;
+  --qsl-ambient-base: #F5FCF9;
+  --qsl-ambient-grad: linear-gradient(135deg, #FFFFFF 0%, #F5FCF9 48%, #EBF7F1 100%);
+  --qsl-ambient-bg:
+    radial-gradient(circle at 14% 16%, rgba(209, 250, 229, 0.50) 0%, transparent 45%),
+    radial-gradient(circle at 86% 20%, rgba(255, 255, 255, 0.90) 0%, transparent 45%),
+    radial-gradient(circle at 52% 88%, rgba(220, 252, 231, 0.45) 0%, transparent 52%),
+    linear-gradient(140deg, #FFFFFF 0%, #F5FCF9 46%, #EBF7F1 100%);
+}
+
+:root[data-theme="azure_cobalt"] {
+  --qsl-accent: #2563EB;
+  --qsl-accent-hover: #1D4ED8;
+  --qsl-accent-border: #1D4ED8;
+  --qsl-accent-soft: #DBEAFE;
+  --qsl-accent-soft-border: #93C5FD;
+  --qsl-accent-soft-85: rgba(219, 234, 254, 0.85);
+  --qsl-accent-soft-65: rgba(219, 234, 254, 0.65);
+  --qsl-accent-soft-45: rgba(219, 234, 254, 0.45);
+  --qsl-accent-soft-35: rgba(219, 234, 254, 0.35);
+  --qsl-accent-soft-ink: #1D4ED8;
+  --qsl-accent-ink: #FFFFFF;
+  --qsl-accent-on-dark: #60A5FA;
+  --qsl-brand-dark: #101D33;
+  --qsl-brand-dark-hover: #1B2F52;
+  --qsl-nav-active-bg: #101D33;
+  --qsl-nav-active-ink: #FFFFFF;
+  --qsl-ambient-base: #F6F9FE;
+  --qsl-ambient-grad: linear-gradient(135deg, #FFFFFF 0%, #F6F9FE 48%, #EDF3FC 100%);
+  --qsl-ambient-bg:
+    radial-gradient(circle at 14% 16%, rgba(219, 234, 254, 0.52) 0%, transparent 45%),
+    radial-gradient(circle at 86% 20%, rgba(255, 255, 255, 0.90) 0%, transparent 45%),
+    radial-gradient(circle at 52% 88%, rgba(224, 242, 254, 0.45) 0%, transparent 52%),
+    linear-gradient(140deg, #FFFFFF 0%, #F6F9FE 46%, #EDF3FC 100%);
+}
+
+:root[data-theme="amber_bronze"] {
+  --qsl-accent: #F59E0B;
+  --qsl-accent-hover: #D97706;
+  --qsl-accent-border: #D97706;
+  --qsl-accent-soft: #FEF3C7;
+  --qsl-accent-soft-border: #FCD34D;
+  --qsl-accent-soft-85: rgba(254, 243, 199, 0.85);
+  --qsl-accent-soft-65: rgba(254, 243, 199, 0.65);
+  --qsl-accent-soft-45: rgba(254, 243, 199, 0.45);
+  --qsl-accent-soft-35: rgba(254, 243, 199, 0.35);
+  --qsl-accent-soft-ink: #B45309;
+  --qsl-accent-ink: #171916;
+  --qsl-accent-on-dark: #FBBF24;
+  --qsl-brand-dark: #231910;
+  --qsl-brand-dark-hover: #382819;
+  --qsl-nav-active-bg: #231910;
+  --qsl-nav-active-ink: #FFFFFF;
+  --qsl-ambient-base: #FEFCF6;
+  --qsl-ambient-grad: linear-gradient(135deg, #FFFFFF 0%, #FEFCF6 48%, #FAF3E6 100%);
+  --qsl-ambient-bg:
+    radial-gradient(circle at 14% 16%, rgba(254, 243, 199, 0.55) 0%, transparent 45%),
+    radial-gradient(circle at 86% 20%, rgba(255, 255, 255, 0.90) 0%, transparent 45%),
+    radial-gradient(circle at 52% 88%, rgba(254, 240, 199, 0.44) 0%, transparent 52%),
+    linear-gradient(140deg, #FFFFFF 0%, #FEFCF6 46%, #FAF3E6 100%);
+}
+
+:root[data-theme="violet_plum"] {
+  --qsl-accent: #7C3AED;
+  --qsl-accent-hover: #6D28D9;
+  --qsl-accent-border: #6D28D9;
+  --qsl-accent-soft: #EDE9FE;
+  --qsl-accent-soft-border: #C4B5FD;
+  --qsl-accent-soft-85: rgba(237, 233, 254, 0.85);
+  --qsl-accent-soft-65: rgba(237, 233, 254, 0.65);
+  --qsl-accent-soft-45: rgba(237, 233, 254, 0.45);
+  --qsl-accent-soft-35: rgba(237, 233, 254, 0.35);
+  --qsl-accent-soft-ink: #6D28D9;
+  --qsl-accent-ink: #FFFFFF;
+  --qsl-accent-on-dark: #A78BFA;
+  --qsl-brand-dark: #1B142B;
+  --qsl-brand-dark-hover: #2C2047;
+  --qsl-nav-active-bg: #1B142B;
+  --qsl-nav-active-ink: #FFFFFF;
+  --qsl-ambient-base: #FAF8FE;
+  --qsl-ambient-grad: linear-gradient(135deg, #FFFFFF 0%, #FAF8FE 48%, #F2EEFC 100%);
+  --qsl-ambient-bg:
+    radial-gradient(circle at 14% 16%, rgba(237, 233, 254, 0.55) 0%, transparent 45%),
+    radial-gradient(circle at 86% 20%, rgba(255, 255, 255, 0.90) 0%, transparent 45%),
+    radial-gradient(circle at 52% 88%, rgba(243, 232, 255, 0.44) 0%, transparent 52%),
+    linear-gradient(140deg, #FFFFFF 0%, #FAF8FE 46%, #F2EEFC 100%);
+}
+
+:root[data-theme="rose_coral"] {
+  --qsl-accent: #E11D48;
+  --qsl-accent-hover: #BE123C;
+  --qsl-accent-border: #BE123C;
+  --qsl-accent-soft: #FFE4E6;
+  --qsl-accent-soft-border: #FDA4AF;
+  --qsl-accent-soft-85: rgba(255, 228, 230, 0.85);
+  --qsl-accent-soft-65: rgba(255, 228, 230, 0.65);
+  --qsl-accent-soft-45: rgba(255, 228, 230, 0.45);
+  --qsl-accent-soft-35: rgba(255, 228, 230, 0.35);
+  --qsl-accent-soft-ink: #BE123C;
+  --qsl-accent-ink: #FFFFFF;
+  --qsl-accent-on-dark: #FB7185;
+  --qsl-brand-dark: #261218;
+  --qsl-brand-dark-hover: #3D1C26;
+  --qsl-nav-active-bg: #261218;
+  --qsl-nav-active-ink: #FFFFFF;
+  --qsl-ambient-base: #FFF8F9;
+  --qsl-ambient-grad: linear-gradient(135deg, #FFFFFF 0%, #FFF8F9 48%, #FCEEF1 100%);
+  --qsl-ambient-bg:
+    radial-gradient(circle at 14% 16%, rgba(255, 228, 230, 0.52) 0%, transparent 45%),
+    radial-gradient(circle at 86% 20%, rgba(255, 255, 255, 0.90) 0%, transparent 45%),
+    radial-gradient(circle at 52% 88%, rgba(255, 241, 242, 0.46) 0%, transparent 52%),
+    linear-gradient(140deg, #FFFFFF 0%, #FFF8F9 46%, #FCEEF1 100%);
+}
+
 @theme {
   --font-sans: "DengXian", "等线", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
 }
@@ -40,8 +189,8 @@
 
   html,
   body {
-    background-color: #FAFDF6;
-    background-image: linear-gradient(135deg, #FFFFFF 0%, #FAFDF5 48%, #F2F7E7 100%);
+    background-color: var(--qsl-ambient-base);
+    background-image: var(--qsl-ambient-grad);
     background-attachment: fixed;
     color: var(--qsl-ink-primary);
     font-family: var(--qsl-font-sans);
@@ -64,11 +213,7 @@
 }
 
 .qsl-ambient-bg {
-  background:
-    radial-gradient(circle at 14% 16%, rgba(240, 252, 184, 0.45) 0%, transparent 45%),
-    radial-gradient(circle at 86% 20%, rgba(255, 255, 255, 0.90) 0%, transparent 45%),
-    radial-gradient(circle at 52% 88%, rgba(232, 244, 210, 0.42) 0%, transparent 52%),
-    linear-gradient(140deg, #FFFFFF 0%, #FAFDF5 46%, #F2F7E6 100%);
+  background: var(--qsl-ambient-bg);
 }
 
 @keyframes qsl-drift-a {

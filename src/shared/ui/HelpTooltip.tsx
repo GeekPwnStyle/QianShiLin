@@ -62,7 +62,7 @@ export const HelpTooltip: React.FC<HelpTooltipProps> = ({
   const buttonToneClass = pinned
     ? tone === 'warning'
       ? 'bg-[#B45309] border-[#B45309] text-white'
-      : 'bg-[#171916] border-[#171916] text-[#D7FF00]'
+      : 'bg-[var(--qsl-brand-dark)] border-[var(--qsl-brand-dark)] text-[var(--qsl-accent-on-dark)]'
     : tone === 'warning'
       ? 'bg-[#FEF7EC] border-[#F59E0B] text-[#B45309] hover:bg-[#FDE68A]/60'
       : 'bg-white border-[#C8CEC0] text-[#5F645D] hover:border-[#171916] hover:text-[#171916]';
