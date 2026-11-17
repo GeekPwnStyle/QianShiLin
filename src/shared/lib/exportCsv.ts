@@ -7,7 +7,8 @@ export interface CsvColumn<T> {
 export function downloadCsv<T>(filename: string, rows: T[], columns: CsvColumn<T>[]): void {
   const escapeCell = (val: string | number | boolean | null | undefined): string => {
     if (val === null || val === undefined) return '';
-    const str = String(val);
+    const raw = String(val);
+    const str = /^[=+\-@\t\r]/.test(raw) ? `'${raw}` : raw;
     if (/[",\n\r]/.test(str)) {
       return `"${str.replace(/"/g, '""')}"`;
     }

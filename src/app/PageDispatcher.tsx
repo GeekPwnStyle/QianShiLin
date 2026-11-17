@@ -4,6 +4,7 @@ import { ProductListPage } from '@/src/modules/basic/products/ui/ProductListPage
 import { BrandPage } from '@/src/modules/basic/brands/ui/BrandPage';
 import { SupplierPage } from '@/src/modules/basic/suppliers/ui/SupplierPage';
 import { WarehousePage } from '@/src/modules/system/warehouses/ui/WarehousePage';
+import { PurchaseOrdersPage } from '@/src/modules/purchase/orders/ui/PurchaseOrdersPage';
 import { ContactLensCompliancePage } from '@/src/modules/contact-lenses/ui/ContactLensCompliancePage';
 import { FinanceLedgerPage } from '@/src/modules/finance/ui/FinanceLedgerPage';
 import { InventoryQueryPage } from '@/src/modules/inventory/ui/InventoryQueryPage';
@@ -38,6 +39,7 @@ export const PageDispatcher: React.FC = () => {
     case 'catalog_brand': return <BrandPage />;
     case 'catalog_supplier': return <SupplierPage />;
     case 'catalog_warehouse': return <WarehousePage />;
+    case 'purchase_orders': return <PurchaseOrdersPage />;
     case 'product_list':
       return <ProductListPage />;
 

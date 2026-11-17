@@ -2,6 +2,7 @@ import http from 'node:http';
 import { randomBytes, createHash } from 'node:crypto';
 import { Pool } from 'pg';
 import { handleCatalog } from './catalog.js';
+import { handlePurchase } from './purchase.js';
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL, max: 10 });
 const cookieName = 'qsl_session';
@@ -14,7 +15,7 @@ const readJson = async req => {
   let body = '';
   for await (const chunk of req) {
     body += chunk;
-    if (body.length > 8192) throw new Error('Request too large');
+    if (body.length > 65536) throw new Error('Request too large');
   }
   return JSON.parse(body);
 };
@@ -58,6 +59,10 @@ const server = http.createServer(async (req, res) => {
     if (path.startsWith('/catalog/')) {
       const user = await sessionUser(getToken(req));
       if (await handleCatalog({ req, res, url, user, pool, send, readJson })) return;
+    }
+    if (path.startsWith('/purchase/')) {
+      const user = await sessionUser(getToken(req));
+      if (await handlePurchase({ req, res, url, user, pool, send, readJson })) return;
     }
     send(res, 404, { error: 'Not found' });
   } catch (error) {
