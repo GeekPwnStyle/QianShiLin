@@ -18,6 +18,9 @@ export type PageKind =
   | 'orthokeratology'
   | 'analytics'
   | 'master_data'
+  | 'catalog_brand'
+  | 'catalog_supplier'
+  | 'catalog_warehouse'
   | 'document_list'
   | 'brand_portal'
   | 'help_docs'
@@ -179,7 +182,8 @@ const RAW_MODULES: RawNodeInput[] = [
         description: '合作镜片厂商、镜架代理商及资质效期主数据管理。',
         permission: 'basic.supplier.read',
         nodeType: 'page',
-        pageKind: 'master_data',
+        pageKind: 'catalog_supplier',
+        implemented: true,
       },
       {
         id: 'basic.brands',
@@ -187,7 +191,8 @@ const RAW_MODULES: RawNodeInput[] = [
         description: '代理品牌与自有品牌档案、授权等级与折扣基线配置。',
         permission: 'basic.brand.read',
         nodeType: 'page',
-        pageKind: 'master_data',
+        pageKind: 'catalog_brand',
+        implemented: true,
       },
       {
         id: 'basic.fees',
@@ -750,7 +755,7 @@ const RAW_MODULES: RawNodeInput[] = [
       { id: 'system.notices_history', label: '站内信发布记录', description: '查看历史站内公告已读人数与下发范围。', permission: 'system.read', nodeType: 'page', pageKind: 'document_list' },
       { id: 'system.product_maintenance', label: '商品维护管理', description: '批量校准商品条码、默认归属门店及停用清洗规则。', permission: 'basic.product.update', nodeType: 'page', pageKind: 'product_list' },
       { id: 'system.stores', label: '门店资料', description: '维护直营/加盟门店编码、营业地址、医疗器械资质、小程序显示与跨店查看权限。', permission: 'system.store.manage', nodeType: 'page', favoritable: true, pageKind: 'store_profiles', implemented: true },
-      { id: 'system.processing_warehouses', label: '加工仓库设置', description: '配置门店对应的中央加工仓与毛坯片默认调出仓。', permission: 'system.store.manage', nodeType: 'page', pageKind: 'master_data' },
+      { id: 'system.processing_warehouses', label: '加工仓库设置', description: '配置门店对应的中央加工仓与毛坯片默认调出仓。', permission: 'system.store.manage', nodeType: 'page', pageKind: 'catalog_warehouse', implemented: true },
       { id: 'system.banks', label: '银行资料', description: '公司收付款对公账户与POS结算账户档案。', permission: 'system.read', nodeType: 'page', pageKind: 'master_data' },
       { id: 'system.audit_logs', label: '操作日志', description: '记录关键数据导出、权限变更与敏感操作审计追踪。', permission: 'system.read', nodeType: 'page', pageKind: 'document_list' },
       { id: 'system.onboarding', label: '新手指引', description: '新上线门店初始化操作清单与岗位培训指引。', permission: 'system.read', nodeType: 'page', pageKind: 'help_docs' },

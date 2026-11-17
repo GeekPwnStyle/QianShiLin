@@ -1,6 +1,7 @@
 import http from 'node:http';
 import { randomBytes, createHash } from 'node:crypto';
 import { Pool } from 'pg';
+import { handleCatalog } from './catalog.js';
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL, max: 10 });
 const cookieName = 'qsl_session';
@@ -25,7 +26,8 @@ const sessionUser = async token => {
 };
 const server = http.createServer(async (req, res) => {
   try {
-    const path = new URL(req.url, 'http://localhost').pathname;
+    const url = new URL(req.url, 'http://localhost');
+    const path = url.pathname;
     if (path === '/healthz') {
       await pool.query('SELECT 1');
       return send(res, 200, { ok: true });
@@ -53,8 +55,15 @@ const server = http.createServer(async (req, res) => {
       if (token) await pool.query('DELETE FROM identity.sessions WHERE token_hash=$1', [hash(token)]);
       return send(res, 200, { ok: true }, { 'Set-Cookie': `${cookieName}=; HttpOnly; Secure; SameSite=Lax; Path=/qian/api; Max-Age=0` });
     }
+    if (path.startsWith('/catalog/')) {
+      const user = await sessionUser(getToken(req));
+      if (await handleCatalog({ req, res, url, user, pool, send, readJson })) return;
+    }
     send(res, 404, { error: 'Not found' });
   } catch (error) {
+    if (error instanceof SyntaxError || error.message === 'Request too large') {
+      return send(res, 400, { error: 'Invalid JSON request' });
+    }
     console.error(error);
     send(res, 500, { error: 'Server error' });
   }

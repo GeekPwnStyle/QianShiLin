@@ -11,6 +11,8 @@ services:
       - qianshilin_pgdata:/var/lib/postgresql/data
       - ./apps/api/db/migrations/001_identity.sql:/docker-entrypoint-initdb.d/001_identity.sql:ro
       - ./apps/api/db/seed_demo.sql:/docker-entrypoint-initdb.d/002_seed_demo.sql:ro
+      - ./apps/api/db/migrations/002_reference_catalog.sql:/docker-entrypoint-initdb.d/003_reference_catalog.sql:ro
+      - ./apps/api/db/migrations/003_catalog_access.sql:/docker-entrypoint-initdb.d/004_catalog_access.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U qianshilin -d qianshilin"]
       interval: 10s
