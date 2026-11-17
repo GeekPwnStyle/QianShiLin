@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 
 interface ModalProps {
@@ -82,9 +83,9 @@ export const Modal: React.FC<ModalProps> = ({
 
   if (!open) return null;
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#171916]/16 backdrop-blur-[5px]"
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[#171916]/35 backdrop-blur-[5px]"
       role="dialog"
       aria-modal="true"
       aria-labelledby="qsl-modal-title"
@@ -95,9 +96,9 @@ export const Modal: React.FC<ModalProps> = ({
       <div
         ref={containerRef}
         tabIndex={-1}
-        className={`w-full ${maxWidthClass} qsl-glass-panel rounded-[24px] flex flex-col max-h-[90vh] overflow-hidden outline-none`}
+        className={`w-full ${maxWidthClass} qsl-modal-panel rounded-[24px] flex flex-col max-h-[calc(100dvh-2rem)] overflow-hidden outline-none`}
       >
-        <div className="flex items-start justify-between gap-4 px-6 py-5 border-b border-[#171916]/[0.08]">
+        <div className="flex items-start justify-between gap-4 px-6 py-5 shrink-0 border-b border-[#171916]/[0.08]">
           <div className="min-w-0">
             <h2 id="qsl-modal-title" className="text-[20px] font-semibold text-[#171916] leading-snug">
               {title}
@@ -115,13 +116,14 @@ export const Modal: React.FC<ModalProps> = ({
             <X className="w-4 h-4" />
           </button>
         </div>
-        <div className="px-6 py-5 overflow-y-auto qsl-scroll flex-1">{children}</div>
+        <div className="px-6 py-5 min-h-0 overflow-y-auto qsl-scroll flex-1">{children}</div>
         {footer && (
-          <div className="px-6 py-4 border-t border-[#171916]/[0.08] bg-white/45 backdrop-blur-md flex items-center justify-end gap-3">
+          <div className="px-6 py-4 border-t border-[#171916]/[0.08] bg-[#F8F9F5] backdrop-blur-md flex items-center justify-end gap-3">
             {footer}
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

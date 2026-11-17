@@ -308,6 +308,12 @@
   will-change: transform, opacity;
 }
 
+.qsl-modal-panel {
+  background: #FFFFFF;
+  border: 1px solid rgba(23, 25, 22, 0.10);
+  box-shadow: 0 24px 60px rgba(23, 25, 22, 0.20);
+}
+
 .qsl-glass-panel {
   background: linear-gradient(
     145deg,
@@ -323,8 +329,8 @@
 .qsl-glass-popover {
   background: linear-gradient(
     145deg,
-    rgba(255, 255, 255, 0.90) 0%,
-    rgba(248, 249, 245, 0.82) 100%
+    rgba(255, 255, 255, 1) 0%,
+    rgba(248, 249, 245, 1) 100%
   );
   backdrop-filter: blur(18px) saturate(145%);
   -webkit-backdrop-filter: blur(18px) saturate(145%);
