@@ -1,3 +1,4 @@
+import { OperationStatus } from '@/src/shared/ui/OperationStatus';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   CheckCircle2,
@@ -545,23 +546,7 @@ export const SystemParametersPage: React.FC = () => {
     <div className="space-y-5">
       {/* Inline Notice Banner */}
       {noticeText && (
-        <div
-          role="status"
-          className="px-4 py-3 rounded-2xl bg-[var(--qsl-accent-soft)] border border-[var(--qsl-accent-soft-border)] text-[#171916] text-[14px] font-medium flex items-center justify-between gap-3"
-        >
-          <span className="inline-flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-[#171916] shrink-0" />
-            <span>{noticeText}</span>
-          </span>
-          <button
-            type="button"
-            onClick={() => setNoticeText(null)}
-            aria-label="关闭提示"
-            className="w-6 h-6 rounded-full hover:bg-black/10 inline-flex items-center justify-center cursor-pointer shrink-0"
-          >
-            <X className="w-3.5 h-3.5" />
-          </button>
-        </div>
+        <OperationStatus>{noticeText}</OperationStatus>
       )}
 
       {/* Top Toolbar: Store Scope + Search + Save / Sync Actions */}

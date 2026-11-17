@@ -1,3 +1,4 @@
+import { OperationStatus } from '@/src/shared/ui/OperationStatus';
 import React, { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Download, Plus, Search } from 'lucide-react';
@@ -132,7 +133,7 @@ export const PurchaseOrdersPage: React.FC = () => {
           accessor: row => String((row as unknown as Record<string, unknown>)[column.key] ?? '') })));
       }}>导出当前页</Button>
     </div>
-    {notice && <p role="status" className="text-sm text-[#35653D]">{notice}</p>}
+    {notice && <OperationStatus role="status">{notice}</OperationStatus>}
     {list.isLoading ? <LoadingSkeleton /> : list.isError ? <ErrorState message={list.error.message} onRetry={() => list.refetch()} />
       : list.data?.items.length ? <DataTable columns={columns} rows={list.data.items} total={list.data.total}
         page={page} pageSize={20} onPageChange={setPage} /> : <EmptyState mode={search ? 'filtered' : 'initial'} />}
@@ -163,7 +164,7 @@ export const PurchaseOrdersPage: React.FC = () => {
           {!lines.length && <tr><td colSpan={9} className="p-8 text-center text-[#73796F]">暂无商品，请手选商品</td></tr>}
         </tbody></table></div>
         <p className="text-right text-sm">总计订货数量：<strong>{lines.reduce((sum, line) => sum + (line.orderedQty || 0), 0)}</strong></p>
-        {error && <p role="alert" className="text-[#9C3232]">{error}</p>}
+        {error && <OperationStatus role="alert">{error}</OperationStatus>}
       </div>
     </Modal>
     <Modal open={pickerOpen} onClose={() => setPickerOpen(false)} title="选择商品" maxWidthClass="max-w-4xl">

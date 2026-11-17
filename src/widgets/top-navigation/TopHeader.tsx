@@ -1,3 +1,4 @@
+import { OperationStatus } from '@/src/shared/ui/OperationStatus';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowRight,
@@ -771,7 +772,7 @@ export const TopHeader: React.FC = () => {
                 </div>
 
                 {avatarError && (
-                  <p className="text-[12px] text-[#DC2626]">{avatarError}</p>
+                  <OperationStatus role="alert">{avatarError}</OperationStatus>
                 )}
               </div>
             </div>
@@ -827,8 +828,8 @@ export const TopHeader: React.FC = () => {
                 {session.themeKey === theme.key && <span className="ml-auto text-xs shrink-0">已选</span>}
               </button>)}
             </div>
-            {themeSaving && <p role="status" className="text-sm">正在保存主题…</p>}
-            {profileError && <p role="alert" className="text-sm text-red-700">{profileError}</p>}
+            {themeSaving && <OperationStatus role="status" loading>正在保存主题…</OperationStatus>}
+            {profileError && <OperationStatus role="alert">{profileError}</OperationStatus>}
           </section>
 
           {/* Role Details - Balanced Wide 2-Column Layout */}

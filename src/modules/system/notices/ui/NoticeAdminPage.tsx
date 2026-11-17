@@ -1,3 +1,4 @@
+import { OperationStatus } from '@/src/shared/ui/OperationStatus';
 import React, { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Megaphone, Search, Send } from 'lucide-react';
@@ -50,8 +51,8 @@ export const NoticeAdminPage: React.FC = () => {
   if (debugMode) return <div className="rounded-[22px] border border-[#D9DDD4] bg-white p-8 text-sm text-[#6D736A]">演示登录不连接公告服务。请使用真实管理员账号登录，发布公告并查看阅读情况。</div>;
   if (!allowed) return <NoPermissionState moduleLabel="内部公告" requiredPermission="system.notice.publish" />;
   return <div className="space-y-6"><div><h2 className="text-[26px] font-semibold text-[#171916]">内部公告</h2><p className="mt-1 text-sm text-[#6D736A]">发布给指定用户、角色或全部成员；每位接收人独立保留历史与已读状态。</p></div>
-    {notice && <p role="status" className="rounded-xl border border-[#BBF7D0] bg-[#ECFDF3] p-3 text-sm text-[#166534]">{notice}</p>}
-    {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+    {notice && <OperationStatus role="status">{notice}</OperationStatus>}
+    {error && <OperationStatus role="alert">{error}</OperationStatus>}
     <section className="rounded-[22px] border border-[#D9DDD4] bg-white p-5 sm:p-6"><div className="flex items-center gap-2 border-b border-[#E5E8E0] pb-4"><Megaphone size={20} /><h3 className="text-lg font-semibold">发布公告</h3></div>
       <div className="mt-5 grid gap-4 md:grid-cols-3"><label className="text-sm">公告类型<select value={category} onChange={e=>setCategory(e.target.value as NoticeCategory)} className="mt-2 block w-full rounded-xl border border-[#D9DDD4] bg-white px-3 py-2.5">{Object.entries(categoryNames).map(([key,label])=><option key={key} value={key}>{label}</option>)}</select></label>
         <label className="text-sm">消息级别<select value={severity} onChange={e=>setSeverity(e.target.value as NoticeSeverity)} className="mt-2 block w-full rounded-xl border border-[#D9DDD4] bg-white px-3 py-2.5">{Object.entries(severityNames).map(([key,label])=><option key={key} value={key}>{label}</option>)}</select></label>

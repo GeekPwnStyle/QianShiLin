@@ -1,3 +1,4 @@
+import { OperationStatus } from '@/src/shared/ui/OperationStatus';
 import React, { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Download, Plus, Search } from 'lucide-react';
@@ -115,7 +116,7 @@ export const ManualInboundPage: React.FC = () => {
         columns.slice(0,8).map(column => ({ key: column.key,header: column.header,
           accessor: row => String((row as unknown as Record<string,unknown>)[column.key] ?? '') })))}>导出当前页</Button>
     </div>
-    {notice && <p role="status" className="text-sm text-[#35653D]">{notice}</p>}
+    {notice && <OperationStatus role="status">{notice}</OperationStatus>}
     {list.isLoading ? <LoadingSkeleton /> : list.isError ? <ErrorState message={list.error.message} onRetry={() => list.refetch()} />
       : list.data?.items.length ? <DataTable columns={columns} rows={list.data.items} total={list.data.total} page={page} pageSize={20} onPageChange={setPage} />
       : <EmptyState mode={search ? 'filtered' : 'initial'} />}
@@ -152,7 +153,7 @@ export const ManualInboundPage: React.FC = () => {
           {!lines.length && <tr><td colSpan={11} className="p-8 text-center text-[#73796F]">暂无商品，请手选商品</td></tr>}
         </tbody></table></div>
         <div className="flex justify-end gap-5 font-medium">商品总数：{quantity}　商品金额：{money(goodsAmount)}　总金额：{money(goodsAmount + freight)}</div>
-        {error && <p role="alert" className="text-[#9C3232]">{error}</p>}
+        {error && <OperationStatus role="alert">{error}</OperationStatus>}
       </div>
     </Modal>
     <Modal open={pickerOpen} onClose={() => setPickerOpen(false)} title="选择商品" maxWidthClass="max-w-4xl">

@@ -1,3 +1,4 @@
+import { OperationStatus } from '@/src/shared/ui/OperationStatus';
 import React, { useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Download, Plus, Search, Upload } from 'lucide-react';
@@ -157,8 +158,8 @@ export const CatalogResourcePage: React.FC<{ config: CatalogConfig }> = ({ confi
         placeholder={`搜索${config.title}名称`} className="h-10 min-w-0 flex-1 rounded-lg border border-[#D9DDD4] px-3 outline-none focus:border-[#171916]" />
       <Button icon={<Search className="w-4 h-4" />} onClick={() => { setPage(1); setSearch(keyword.trim()); }}>查询</Button>
     </div>
-    {message && <p role="status" className="text-sm text-[#35653D]">{message}</p>}
-    {remove.error && <p role="alert" className="text-sm text-[#9C3232]">{remove.error.message}</p>}
+    {message && <OperationStatus role="status">{message}</OperationStatus>}
+    {remove.error && <OperationStatus role="alert">{remove.error.message}</OperationStatus>}
     {query.isLoading ? <LoadingSkeleton /> : query.isError ? <ErrorState message={query.error.message} onRetry={() => query.refetch()} />
       : query.data?.items.length ? <DataTable columns={columns} rows={query.data.items} total={query.data.total}
           page={page} pageSize={20} onPageChange={setPage} /> : <EmptyState mode={search ? 'filtered' : 'initial'} />}
@@ -188,7 +189,7 @@ export const CatalogResourcePage: React.FC<{ config: CatalogConfig }> = ({ confi
               : field.type === 'integer' ? Number(event.target.value) : event.target.value }))} />}
         </label>)}
       </div>
-      {save.error && <p role="alert" className="mt-3 text-sm text-[#9C3232]">{save.error.message}</p>}
+      {save.error && <OperationStatus role="alert">{save.error.message}</OperationStatus>}
     </Modal>
   </div>;
 };

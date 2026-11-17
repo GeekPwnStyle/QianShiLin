@@ -1,3 +1,4 @@
+import { OperationStatus } from '@/src/shared/ui/OperationStatus';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
@@ -1235,23 +1236,7 @@ export const StoreProfilePage: React.FC = () => {
   return (
     <div className="space-y-4">
       {notice && (
-        <div
-          role="status"
-          className="px-4 py-3 rounded-2xl bg-[var(--qsl-accent-soft)] border border-[var(--qsl-accent-soft-border)] text-[#171916] text-[14px] font-medium flex items-center justify-between gap-3"
-        >
-          <span className="inline-flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-[#166534] shrink-0" />
-            <span>{notice}</span>
-          </span>
-          <button
-            type="button"
-            onClick={() => setNotice(null)}
-            aria-label="关闭提示"
-            className="text-[#5F645D] hover:text-[#171916] cursor-pointer"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
+        <OperationStatus>{notice}</OperationStatus>
       )}
 
       {/* Top Toolbar */}
