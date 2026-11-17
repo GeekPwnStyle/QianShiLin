@@ -41,6 +41,7 @@ import { BrandLogoMark } from '@/src/shared/ui/BrandLogoMark';
 import { Select } from '@/src/shared/ui/Select';
 import { StatusLabel } from '@/src/shared/ui/StatusLabel';
 import { ModuleIcon } from '@/src/widgets/top-navigation/ModuleIcon';
+import { SYSTEM_THEMES } from '@/src/shared/theme/themes';
 import { NoticeBell } from '@/src/modules/system/notices/ui/NoticeBell';
 
 interface DragNavPayload {
@@ -66,6 +67,9 @@ export const TopHeader: React.FC = () => {
     currentRole,
     hasPermission,
     logout,
+    updateTheme,
+    themeSaving,
+    profileError,
     updateAvatar,
     resetAvatar,
     switchStore,
@@ -812,6 +816,20 @@ export const TopHeader: React.FC = () => {
               </div>
             </div>
           </div>
+
+          <section className="space-y-3" aria-label="主题色设置">
+            <h3 className="text-[17px] font-bold">主题色设置</h3>
+            <p className="text-sm text-[#73796F]">选择后立即应用，并自动保存到当前账号。</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {SYSTEM_THEMES.map(theme => <button key={theme.key} type="button" disabled={themeSaving} aria-pressed={session.themeKey === theme.key} onClick={() => void updateTheme(theme.key)} className={`flex items-center gap-3 rounded-xl border p-4 text-left disabled:opacity-60 ${session.themeKey === theme.key ? 'border-[#171916] ring-1 ring-[#171916]' : 'border-[#D9DDD4]'}`}>
+                <span className="h-9 w-9 shrink-0 rounded-lg border border-black/10" style={{background: theme.accentHex}} />
+                <span><span className="block font-semibold">{theme.name}</span><span className="block text-xs text-[#73796F]">{theme.subtitle}</span></span>
+                {session.themeKey === theme.key && <span className="ml-auto text-xs shrink-0">已选</span>}
+              </button>)}
+            </div>
+            {themeSaving && <p role="status" className="text-sm">正在保存主题…</p>}
+            {profileError && <p role="alert" className="text-sm text-red-700">{profileError}</p>}
+          </section>
 
           {/* Role Details - Balanced Wide 2-Column Layout */}
           {currentRole && (
