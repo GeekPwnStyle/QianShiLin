@@ -48,6 +48,7 @@ export const PurchaseOrdersPage: React.FC = () => {
   const [detailId, setDetailId] = useState<string | null>(null);
   const [orderType, setOrderType] = useState<'single' | 'series'>('single');
   const [supplierId, setSupplierId] = useState('');
+  const [draftStoreId, setDraftStoreId] = useState('');
   const [orderDate, setOrderDate] = useState(new Date().toISOString().slice(0, 10));
   const [note, setNote] = useState('');
   const [lines, setLines] = useState<DraftLine[]>([]);
@@ -57,7 +58,7 @@ export const PurchaseOrdersPage: React.FC = () => {
   const [error, setError] = useState('');
   const currentStore = session.currentStoreId;
   const otherStores = dataScope.authorizedStoreIds.filter(id => id !== currentStore);
-  const selectedStore = view === 'mine' ? currentStore : otherStores[0] ?? currentStore;
+  const selectedStore = view === 'mine' ? (currentStore === 'all' ? '' : currentStore) : otherStores[0] ?? '';
   const list = useQuery({ queryKey: ['purchase-orders', view, selectedStore, page, search],
     queryFn: () => request<Page>(`/purchase/orders?page=${page}&pageSize=20&storeId=${encodeURIComponent(selectedStore)}&search=${encodeURIComponent(search)}`) });
   const detail = useQuery({ queryKey: ['purchase-order', detailId], enabled: Boolean(detailId),
@@ -69,6 +70,7 @@ export const PurchaseOrdersPage: React.FC = () => {
 
   const openCreate = (type: 'single' | 'series') => {
     setOrderType(type); setSupplierId(''); setNote(''); setLines([]); setError('');
+    setDraftStoreId(selectedStore || dataScope.authorizedStoreIds[0] || '');
     setOrderDate(new Date().toISOString().slice(0, 10)); setCreateOpen(true);
   };
   const addProduct = (product: ProductItem) => {
@@ -82,7 +84,7 @@ export const PurchaseOrdersPage: React.FC = () => {
     setSaving(true); setError('');
     try {
       const created = await request<Order>('/purchase/orders', 'POST', {
-        storeId: selectedStore, supplierId: supplierId || null, orderType, orderDate, note, lines,
+        storeId: draftStoreId, supplierId: supplierId || null, orderType, orderDate, note, lines,
       });
       setCreateOpen(false); setNotice(`采购订货草稿 ${created.order_no} 已保存`);
       await client.invalidateQueries({ queryKey: ['purchase-orders'] });
@@ -143,7 +145,10 @@ export const PurchaseOrdersPage: React.FC = () => {
             <option value="">暂无</option>{suppliers.data?.items.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
           <label className="text-sm">创建日期<input type="date" value={orderDate} onChange={event => setOrderDate(event.target.value)}
             className="mt-1 block h-10 w-full rounded-lg border border-[#D9DDD4] px-3" /></label>
-          <label className="text-sm">归属门店<input readOnly value={storeName(selectedStore)} className="mt-1 block h-10 w-full rounded-lg border border-[#D9DDD4] bg-[#F1F2EE] px-3" /></label>
+          <label className="text-sm">归属门店<select value={draftStoreId} onChange={event => setDraftStoreId(event.target.value)} disabled={currentStore !== 'all'}
+            className="mt-1 block h-10 w-full rounded-lg border border-[#D9DDD4] bg-white px-3">
+            {dataScope.authorizedStoreIds.map(id => <option key={id} value={id}>{storeName(id)}</option>)}
+          </select></label>
         </div>
         <label className="text-sm block">备注<textarea value={note} onChange={event => setNote(event.target.value)} rows={2}
           className="mt-1 block w-full rounded-lg border border-[#D9DDD4] p-3" /></label>

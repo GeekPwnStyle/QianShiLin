@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Download, Plus, Search } from 'lucide-react';
 import { appRepositories } from '@/src/app/composition/container';
 import { useAuth } from '@/src/modules/auth/application/AuthContext';
+import { STORE_CATALOG } from '@/src/modules/auth/domain/identity';
 import type { ProductItem } from '@/src/modules/basic/products/domain/product';
 import { downloadCsv } from '@/src/shared/lib/exportCsv';
 import { Button } from '@/src/shared/ui/Button';
@@ -41,6 +42,7 @@ export const ManualInboundPage: React.FC = () => {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [detailId, setDetailId] = useState<string | null>(null);
   const [supplierId, setSupplierId] = useState('');
+  const [draftStoreId, setDraftStoreId] = useState('');
   const [businessDate, setBusinessDate] = useState(initialDate);
   const [expectedReceiptDate, setExpectedReceiptDate] = useState('');
   const [settlementType, setSettlementType] = useState<'store' | 'headquarters'>('store');
@@ -52,8 +54,9 @@ export const ManualInboundPage: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
-  const list = useQuery({ queryKey: ['manual-inbound',session.currentStoreId,page,search],
-    queryFn: () => request<Page>(`/purchase/manual-inbound?storeId=${encodeURIComponent(session.currentStoreId)}&page=${page}&pageSize=20&search=${encodeURIComponent(search)}`) });
+  const listStoreId = session.currentStoreId === 'all' ? '' : session.currentStoreId;
+  const list = useQuery({ queryKey: ['manual-inbound',listStoreId,page,search],
+    queryFn: () => request<Page>(`/purchase/manual-inbound?storeId=${encodeURIComponent(listStoreId)}&page=${page}&pageSize=20&search=${encodeURIComponent(search)}`) });
   const detail = useQuery({ queryKey: ['manual-inbound-detail',detailId], enabled: Boolean(detailId),
     queryFn: () => request<Draft>(`/purchase/manual-inbound/${detailId}`) });
   const suppliers = useQuery({ queryKey: ['manual-inbound-suppliers'], enabled: createOpen,
@@ -63,7 +66,7 @@ export const ManualInboundPage: React.FC = () => {
   const quantity = lines.reduce((sum,line) => sum + (Number(line.quantity) || 0), 0);
   const goodsAmount = lines.reduce((sum,line) => sum + (Number(line.quantity) || 0)*(Number(line.purchasePrice) || 0), 0);
   const updateLine = (index: number, update: Partial<Line>) => setLines(previous => previous.map((line,at) => at === index ? { ...line,...update } : line));
-  const reset = () => { setSupplierId(''); setBusinessDate(initialDate()); setExpectedReceiptDate('');
+  const reset = () => { setSupplierId(''); setDraftStoreId(listStoreId || dataScope.authorizedStoreIds[0] || ''); setBusinessDate(initialDate()); setExpectedReceiptDate('');
     setSettlementType('store'); setExternalOrderNo(''); setNote(''); setSupplierNote(''); setFreight(0); setLines([]); setError(''); };
   const addProduct = (product: ProductItem) => {
     setLines(previous => [...previous,{ productName: product.name, categoryName: product.categoryName,
@@ -78,7 +81,7 @@ export const ManualInboundPage: React.FC = () => {
     }
     setSaving(true); setError('');
     try {
-      const created = await request<Draft>('/purchase/manual-inbound','POST', { storeId: session.currentStoreId,
+      const created = await request<Draft>('/purchase/manual-inbound','POST', { storeId: draftStoreId,
         supplierId,businessDate,expectedReceiptDate: expectedReceiptDate || null,settlementType,externalOrderNo,
         note,supplierNote,freight,lines });
       setCreateOpen(false); reset(); setNotice(`入库草稿 ${created.draft_no} 已保存；库存未变更。`);
@@ -120,6 +123,8 @@ export const ManualInboundPage: React.FC = () => {
       footer={<><Button onClick={reset}>重置</Button><Button variant="primary" loading={saving} onClick={save}>保存草稿</Button></>}>
       <div className="max-h-[68vh] space-y-5 overflow-y-auto pr-1 text-sm">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <label>归属门店 <span className="text-red-600">*</span><select className={field} value={draftStoreId} onChange={event => setDraftStoreId(event.target.value)} disabled={session.currentStoreId !== 'all'}>
+            {dataScope.authorizedStoreIds.map(id => <option key={id} value={id}>{STORE_CATALOG.find(store => store.id === id)?.name ?? id}</option>)}</select></label>
           <label>供应商 <span className="text-red-600">*</span><select className={field} value={supplierId} onChange={event => setSupplierId(event.target.value)}>
             <option value="">请选择供应商</option>{suppliers.data?.items.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
           <label>业务日期<input type="date" className={field} value={businessDate} onChange={event => setBusinessDate(event.target.value)} /></label>
