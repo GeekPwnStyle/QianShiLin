@@ -625,7 +625,7 @@ export const TopHeader: React.FC = () => {
                         }}
                         className="w-full text-left p-3 rounded-xl bg-white/55 hover:bg-[#ECF9A8]/65 transition-colors cursor-pointer"
                       >
-                        <div className="font-medium text-[#171916]">今日待安排视力复查提醒</div>
+                  <div className="font-medium text-[#171916]">今日待安排复查邀约</div>
                         <div className="text-[13px] text-[#5F645D] mt-0.5">点击进入推送列表处理</div>
                       </button>
                       <button
@@ -648,8 +648,8 @@ export const TopHeader: React.FC = () => {
               <button
                 type="button"
                 onClick={() => navigateToRoute('/modules/help/docs')}
-                aria-label="帮助中心"
-                title="帮助中心与原型说明"
+                aria-label="使用支持"
+                title="使用支持与系统说明"
                 className="hidden sm:inline-flex w-9 h-9 rounded-full items-center justify-center hover:bg-[#F1F2EE] text-[#171916] cursor-pointer"
               >
                 <HelpCircle className="w-[17px] h-[17px]" />

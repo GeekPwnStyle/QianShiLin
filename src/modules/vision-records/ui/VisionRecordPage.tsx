@@ -292,7 +292,7 @@ export const VisionRecordPage: React.FC<{ isOrtho?: boolean; pageTitle: string }
         footer={
           <>
             <Button variant="secondary" onClick={() => setAddOpen(false)}>取消</Button>
-            <Button variant="primary" onClick={handleAdd}>保存视光档案</Button>
+            <Button variant="primary" onClick={handleAdd}>保存屈光检查记录</Button>
           </>
         }
       >

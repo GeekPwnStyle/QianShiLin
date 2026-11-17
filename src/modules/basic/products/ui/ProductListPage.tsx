@@ -589,7 +589,7 @@ export const ProductListPage: React.FC = () => {
         <div className="lg:col-span-3 bg-white border border-[#D9DDD4] rounded-[20px] p-4">
           <div className="flex items-center gap-2 pb-3 mb-2 border-b border-[#E5E8E0]">
             <FolderTree className="w-4 h-4 text-[#171916]" />
-            <span className="text-[16px] font-semibold text-[#171916]">商品品类树</span>
+            <span className="text-[16px] font-semibold text-[#171916]">商品分类体系</span>
           </div>
           <div className="space-y-0.5">{renderCategoryTree(PRODUCT_CATEGORY_TREE)}</div>
         </div>
@@ -1070,7 +1070,7 @@ export const ProductListPage: React.FC = () => {
 
               {importDoneRecord && (
                 <div className="p-4 rounded-xl bg-[#ECFDF3] border border-[#BBF7D0] text-[15px] text-[#166534]">
-                  导入完成：{importDoneRecord}。可在下方历史记录与商品列表中查看新增数据。
+                  导入完成：{importDoneRecord}。可在下方历史记录与商品总览中查看新增数据。
                 </div>
               )}
 

@@ -189,9 +189,9 @@ export const SalesPosPage: React.FC = () => {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-[15px]">
               <div>
-                <label className="block text-[14px] text-[#5F645D] mb-1">选择顾客档案</label>
+              <label className="block text-[14px] text-[#5F645D] mb-1">选择客户档案</label>
                 <Select
-                  ariaLabel="选择顾客档案"
+                ariaLabel="选择客户档案"
                   value={selectedMemberId}
                   onChange={setSelectedMemberId}
                   options={members.map((m) => ({

@@ -36,7 +36,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
         ? activeNode
         : null;
 
-  const l4Tabs = parentL3?.children?.filter((c) => c.nodeType === 'tab') ?? [];
+  const l4Tabs = parentL3?.children?.filter((c) => c.nodeType === 'tab' && hasPermission(c.permission)) ?? [];
   const permitted = hasPermission(activeNode.permission);
 
   const favTargetId = parentL3 ? parentL3.id : activeNode.id;

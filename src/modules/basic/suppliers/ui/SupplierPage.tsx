@@ -3,7 +3,7 @@ import { CatalogResourcePage, type CatalogConfig } from '@/src/modules/catalog/u
 
 const config: CatalogConfig = {
   resource: 'suppliers', title: '供应商资料',
-  description: '维护联系人、供应品类、经营资质与证照有效期。银行资料属于敏感字段。',
+  description: '维护联系人、供应品类、经营资质与证照有效期。结算账户信息属于敏感字段。',
   columns: ['name', 'contact', 'phone', 'categories', 'province', 'device_license_expires_on', 'enabled'],
   fields: [
     { key: 'name', label: '供应商名称', required: true },

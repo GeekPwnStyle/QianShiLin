@@ -243,7 +243,7 @@ export const PARAMETER_SECTIONS: ParameterSectionDef[] = [
       },
       {
         key: 'salesOrderQuantityAlert',
-        label: '销售开单数量提醒',
+        label: '收银工作台制单数量提醒',
         helpText: '单笔开单商品数量异常或镜片单眼数量超出常规配镜套数时弹出提示。',
         kind: 'choice',
         options: [
@@ -294,7 +294,7 @@ export const PARAMETER_SECTIONS: ParameterSectionDef[] = [
       },
       {
         key: 'normalProductNeedPreOrderOnSales',
-        label: '销售开单，普通商品是否需要订货',
+        label: '收银工作台，普通商品是否需要订货',
         helpText: '当普通成品或镜架门店暂无库存时，是否允许在开单时直接转订货流程。',
         kind: 'choice',
         options: [
@@ -304,7 +304,7 @@ export const PARAMETER_SECTIONS: ParameterSectionDef[] = [
       },
       {
         key: 'showStoreStockOnSales',
-        label: '销售开单是否显示门店库存',
+        label: '收银工作台是否显示门店库存',
         helpText: '决定开单选品界面是否向导购展示当前门店实时可用库存数量。',
         kind: 'choice',
         options: [
@@ -314,7 +314,7 @@ export const PARAMETER_SECTIONS: ParameterSectionDef[] = [
       },
       {
         key: 'showProcessingStockOnSales',
-        label: '销售开单是否显示加工中心库存',
+        label: '收银工作台是否显示加工中心库存',
         helpText: '决定开单选品界面是否联动展示中央加工中心的镜片/备片库存数。',
         kind: 'choice',
         options: [
@@ -432,7 +432,7 @@ export const PARAMETER_SECTIONS: ParameterSectionDef[] = [
       },
       {
         key: 'requireProcessingCompleteBeforeReceive',
-        label: '加工单列表，加工完成才可以收货',
+        label: '配镜交付，加工完成才可以收货',
         helpText: '选择「限制」时，加工中心未登记完工出库的工单不允许门店提前点击收货。',
         kind: 'choice',
         options: [
@@ -462,7 +462,7 @@ export const PARAMETER_SECTIONS: ParameterSectionDef[] = [
       },
       {
         key: 'customLensOnlyCustomOrderFromProcessingList',
-        label: '销售开单通过《加工单列表》加工时，定制镜片是否只能开定制单',
+        label: '收银工作台通过《配镜交付》发起加工时，定制镜片是否只能开定制单',
         helpText: '约束车房定制镜片从加工列表发起加工时必须走定制单流程，防止漏填定制参数。',
         kind: 'choice',
         options: [
@@ -535,8 +535,8 @@ export const PARAMETER_SECTIONS: ParameterSectionDef[] = [
   {
     id: 'transfer',
     code: '05',
-    title: '调拨与调货规则',
-    shortTitle: '调拨与调货',
+      title: '店间协同规则',
+      shortTitle: '店间协同',
     description: '设置门店间调拨审批路径以及镜片/非镜片品类的负库存调拨限制。',
     fields: [
       {
@@ -694,11 +694,11 @@ export const PARAMETER_SECTIONS: ParameterSectionDef[] = [
     code: '08',
     title: '工作提醒设置',
     shortTitle: '工作提醒',
-    description: '配置工作台首页展现的隐形眼镜到期、会员生日关怀以及近期视力复查提醒窗口期。',
+    description: '配置工作台首页展现的接触镜效期、客户生日关怀以及近期复查邀约提醒窗口期。',
     fields: [
       {
         key: 'homeContactLensExpiryReminder',
-        label: '首页隐形眼镜过期提醒',
+        label: '首页接触镜效期提醒',
         helpText: '开启后在工作台「工作提醒」区域高亮展示即将到期需换片复购的隐形眼镜顾客数量。',
         kind: 'choice',
         options: [
@@ -718,7 +718,7 @@ export const PARAMETER_SECTIONS: ParameterSectionDef[] = [
       },
       {
         key: 'recentVisionReviewReminderDays',
-        label: '近 X 天视力复查提醒',
+        label: '近 X 天复查邀约提醒',
         helpText: '统计未来 X 天内预约或计划到店复查的视光档案数量并推送至工作台待办。',
         kind: 'number',
         unit: '天',

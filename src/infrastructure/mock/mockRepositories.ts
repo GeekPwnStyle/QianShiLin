@@ -721,7 +721,7 @@ export class MockWorkbenchRepository implements WorkbenchRepository {
       return {
         identityType: 'supplier',
         greetingName: '上午好，顾承泽',
-        subtitle: '查看千视林品牌专区采购交付、退换货及对账动态（供应商隔离视图）。',
+        subtitle: '查看千视林品牌采购门户的交付、退换货及结算动态（供应商隔离视图）。',
         scopeLabel: scope.supplierName ?? '合作供应商',
         primaryMetrics: [
           {
@@ -737,7 +737,7 @@ export class MockWorkbenchRepository implements WorkbenchRepository {
             hint: '含车房定制镜片与常规现片',
           },
           {
-            label: `${rangeLabel}CCS退货待核对`,
+            label: `${rangeLabel}渠道退货待核对`,
             value: '3',
             deltaText: '待确认 1 笔',
             hint: '不包含门店内部零售毛利',
@@ -746,7 +746,7 @@ export class MockWorkbenchRepository implements WorkbenchRepository {
             label: '待对账往来金额',
             value: '¥142,600',
             deltaText: '账期 T+30',
-            hint: '月度对账单待财务复核',
+            hint: '月度结算记录待财务复核',
           },
         ],
         focusHighlightCard: {
@@ -795,8 +795,8 @@ export class MockWorkbenchRepository implements WorkbenchRepository {
         ],
         workReminders: [
           { id: 'wr_s1', label: '待确认采购订单', count: 6, unit: '单', targetRoute: '/modules/brands/order-list', urgent: true },
-          { id: 'wr_s2', label: 'CCS退货待收', count: 3, unit: '单', targetRoute: '/modules/brands/ccs-returns' },
-          { id: 'wr_s3', label: '本月待核对账单', count: 2, unit: '份', targetRoute: '/modules/brands/ccs-statements' },
+          { id: 'wr_s2', label: '渠道退货待收', count: 3, unit: '单', targetRoute: '/modules/brands/ccs-returns' },
+          { id: 'wr_s3', label: '本月待核对结算', count: 2, unit: '份', targetRoute: '/modules/brands/ccs-statements' },
           { id: 'wr_s4', label: '新品线上申请', count: 4, unit: '条', targetRoute: '/modules/brands/online-order-apply' },
         ],
         qualificationAlerts: [
@@ -913,11 +913,11 @@ export class MockWorkbenchRepository implements WorkbenchRepository {
         { id: 'wr_03', label: '待审核', count: isStoreOnly ? 1 : 4, unit: '笔', targetRoute: '/modules/sales/approvals' },
         { id: 'wr_04', label: '生日提醒', count: isStoreOnly ? 3 : 9, unit: '位', targetRoute: '/modules/members/profile/basic' },
         { id: 'wr_05', label: '复查提醒', count: isStoreOnly ? 4 : 12, unit: '位', targetRoute: '/modules/members/followup/notifications/review-reminder', urgent: true },
-        { id: 'wr_06', label: '隐形眼镜过期提醒', count: isStoreOnly ? 2 : 7, unit: '位', targetRoute: '/modules/members/followup/notifications/contact-lens-expiry' },
+          { id: 'wr_06', label: '接触镜效期提醒', count: isStoreOnly ? 2 : 7, unit: '位', targetRoute: '/modules/members/followup/notifications/contact-lens-expiry' },
         { id: 'wr_07', label: '到店预约', count: isStoreOnly ? 6 : 18, unit: '组', targetRoute: '/modules/members/appointments/register' },
         { id: 'wr_08', label: '采购预计到货', count: isStoreOnly ? 2 : 5, unit: '批', targetRoute: '/modules/purchase/in-transit' },
         { id: 'wr_09', label: '待回访', count: isStoreOnly ? 5 : 16, unit: '项', targetRoute: '/modules/members/followup/task-reminders' },
-        { id: 'wr_10', label: '调拨未收', count: isStoreOnly ? 1 : 3, unit: '单', targetRoute: '/modules/transfer/inbound' },
+          { id: 'wr_10', label: '店间待收货', count: isStoreOnly ? 1 : 3, unit: '单', targetRoute: '/modules/transfer/inbound' },
         { id: 'wr_11', label: '自定义提醒', count: 2, unit: '条', targetRoute: '/modules/system/notices-history' },
         { id: 'wr_12', label: '剩余短信', count: 3420, unit: '条', targetRoute: '/modules/members/marketing/sms/recharge' },
       ],

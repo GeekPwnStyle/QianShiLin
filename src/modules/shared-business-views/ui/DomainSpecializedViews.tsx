@@ -301,7 +301,7 @@ export const VisionScreeningView: React.FC<{ pageTitle: string }> = ({ pageTitle
         <HelpTooltip
           title="筛查数据说明"
           content="记录校园公益视力普查数据与转诊复查预警统计（均为虚构学校示例）。"
-          ariaLabel="查看校园视力筛查说明"
+            ariaLabel="查看校园视力项目说明"
         />
       </div>
       <DataTable
@@ -344,9 +344,9 @@ export const BrandPortalView: React.FC<{ pageTitle: string }> = ({ pageTitle }) 
         <div className="flex items-center gap-2">
           <h2 className="text-[18px] font-semibold text-[#171916]">{pageTitle}</h2>
           <HelpTooltip
-            title="品牌专区说明"
+            title="品牌采购门户说明"
             content="合作光学品牌直供订货与门店宣发素材中心。"
-            ariaLabel="查看品牌专区说明"
+            ariaLabel="查看品牌采购门户说明"
           />
         </div>
         <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#171916] text-white text-[14px] font-medium">
@@ -388,7 +388,7 @@ export const BrandPortalView: React.FC<{ pageTitle: string }> = ({ pageTitle }) 
 };
 
 /* ------------------------------------------------------------------
- * 5. Explicitly Unconfirmed Deep Page Shell (e.g. 挂号管理, 期末处理)
+ * 5. Explicitly Unconfirmed Deep Page Shell (e.g. 预约登记, 账期结转)
  * ------------------------------------------------------------------ */
 export const UnconfirmedPageShell: React.FC<{ node: NavNode }> = ({ node }) => {
   const { navigateToRoute } = useNavigation();
@@ -442,23 +442,23 @@ export const HelpDocsPage: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         <div className="bg-white border border-[#D9DDD4] rounded-[20px] p-5 space-y-2">
           <div className="text-[14px] text-[#73796F]">已完成核心交互模块</div>
-          <div className="text-[18px] font-semibold text-[#171916]">7大重点业务页面</div>
+          <div className="text-[18px] font-semibold text-[#171916]">业务页面分阶段接入</div>
           <p className="text-[15px] text-[#5F645D]">
-            登录与3种身份隔离、角色专属工作台、商品列表与导入、销售开单、会员资料详情、视力复查通知(4级标签)、角色权限管理。
+            登录与身份隔离、商品总览与导入、收银工作台、客户中心详情、复查邀约和角色权限管理。
           </p>
         </div>
         <div className="bg-white border border-[#D9DDD4] rounded-[20px] p-5 space-y-2">
           <div className="text-[14px] text-[#73796F]">原型模拟与安全边界</div>
-          <div className="text-[18px] font-semibold text-[#171916]">纯前端本地状态模拟</div>
+          <div className="text-[18px] font-semibold text-[#171916]">真实接口与示例数据并存</div>
           <p className="text-[15px] text-[#5F645D]">
-            所有数据采用虚构示例与版本化本地存储；不触发真实短信/微信推送、不收银扣款、不扣减真实仓库库存、不执行真实财务核销。
+            部分未完成页面仍采用示例数据；不会触发真实短信或微信推送、收银扣款、库存扣减及财务核销。
           </p>
         </div>
         <div className="bg-white border border-[#D9DDD4] rounded-[20px] p-5 space-y-2">
           <div className="text-[14px] text-[#73796F]">未来后端演进契约</div>
-          <div className="text-[18px] font-semibold text-[#171916]">NestJS + PostgreSQL + Redis</div>
+          <div className="text-[18px] font-semibold text-[#171916]">Node.js API + PostgreSQL</div>
           <p className="text-[15px] text-[#5F645D]">
-            已通过 Ports 仓储接口与 Composition 容器解耦基础设施，后续仅需在 Composition 中替换 HTTP 适配器。
+            当前已接入角色权限、采购及部分主数据接口，其他模块仍按菜单边界逐步建设。
           </p>
         </div>
       </div>

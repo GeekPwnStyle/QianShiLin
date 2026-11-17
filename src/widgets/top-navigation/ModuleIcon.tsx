@@ -93,10 +93,10 @@ export const L2MenuIcon: React.FC<{ nodeId: string; label: string; className?: s
   const pick = (): React.ComponentType<{ className?: string }> => {
     if (nodeId.includes('product') || label.includes('商品')) return Glasses;
     if (nodeId.includes('customer') || label.includes('顾客')) return Users;
-    if (nodeId.includes('staff') || label.includes('店员')) return UserCheck;
+    if (nodeId.includes('staff') || label.includes('员工')) return UserCheck;
     if (nodeId.includes('supplier') || label.includes('供应商')) return Truck;
     if (nodeId.includes('brand') || label.includes('品牌')) return Award;
-    if (nodeId.includes('fee') || label.includes('收费')) return Coins;
+    if (nodeId.includes('fee') || label.includes('定价')) return Coins;
     if (nodeId.includes('pos') || label.includes('开单')) return ShoppingCart;
     if (nodeId.includes('processing') || label.includes('加工')) return Sliders;
     if (nodeId.includes('approval') || label.includes('审核') || label.includes('审批')) return ClipboardCheck;
@@ -107,7 +107,7 @@ export const L2MenuIcon: React.FC<{ nodeId: string; label: string; className?: s
     if (nodeId.includes('return') || label.includes('退货')) return RotateCcw;
     if (nodeId.includes('in_transit') || label.includes('在途')) return Truck;
     if (nodeId.includes('replenish') || label.includes('补货')) return RefreshCw;
-    if (nodeId.includes('outbound') || nodeId.includes('inbound') || label.includes('调拨')) return ArrowLeftRight;
+    if (nodeId.includes('outbound') || nodeId.includes('inbound') || label.includes('协同')) return ArrowLeftRight;
     if (nodeId.includes('stocktake') || label.includes('盘点')) return CheckSquare;
     if (nodeId.includes('crosstab') || label.includes('交叉')) return FolderKanban;
     if (nodeId.includes('inventory') || label.includes('库存')) return Box;
@@ -121,7 +121,7 @@ export const L2MenuIcon: React.FC<{ nodeId: string; label: string; className?: s
     if (nodeId.includes('temp_humidity') || label.includes('温湿度')) return Thermometer;
     if (nodeId.includes('near_expiry') || label.includes('效期')) return Activity;
     if (nodeId.includes('udi') || label.includes('首营')) return FileSpreadsheet;
-    if (nodeId.includes('profile') || label.includes('会员资料')) return UserPlus;
+    if (nodeId.includes('profile') || label.includes('客户中心')) return UserPlus;
     if (nodeId.includes('followup') || label.includes('回访')) return PhoneCall;
     if (nodeId.includes('points') || label.includes('积分')) return BadgePercent;
     if (nodeId.includes('recharge') || label.includes('充值')) return Wallet;

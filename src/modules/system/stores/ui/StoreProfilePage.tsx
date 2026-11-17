@@ -256,7 +256,7 @@ const ALL_COLUMNS: ColumnDef[] = [
   },
   {
     key: 'viewInventoryCount',
-    label: '盘点单查看权限',
+    label: '盘点任务查看权限',
     minWidth: '148px',
     defaultVisible: true,
     sortField: 'viewInventoryCount',
@@ -309,8 +309,8 @@ const PERMISSION_FIELDS: Array<{
   },
   {
     key: 'viewInventoryCount',
-    label: '盘点单查看权限',
-    desc: '允许门店查看与核对历史库存盘点单盈亏明细及差异原因。',
+    label: '盘点任务查看权限',
+    desc: '允许门店查看与核对历史盘点任务的盈亏明细及差异原因。',
     yesLabel: '有',
     noLabel: '无',
   },
@@ -971,7 +971,7 @@ export const StoreProfilePage: React.FC = () => {
       },
       {
         key: 'viewInventoryCount',
-        header: '盘点单查看权限',
+        header: '盘点任务查看权限',
         accessor: (r) => (r.permissions.viewInventoryCount ? '有' : '无'),
       },
     ]);

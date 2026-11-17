@@ -101,7 +101,7 @@ export const InventoryQueryPage: React.FC<{ isCrosstab?: boolean; pageTitle: str
                 tone="warning"
                 title="库存口径与矩阵说明"
                 content={
-                  '示例品种：蔡司新清锐 1.67 铂金膜；高亮黄绿格代表低库存预警（<3片）。\n\n账面库存与可用库存差异（加工预占、调拨在途锁定）需由业务最终定义；库存数量严禁在列表中直接手改，必须通过「报损报溢单」「盘点单」或「调拨单」留痕调整。'
+    '示例品种：蔡司新清锐 1.67 铂金膜；高亮黄绿格代表低库存预警（<3片）。\n\n账面库存与可用库存差异（加工预占、店间在途锁定）需由业务最终定义；库存数量严禁在列表中直接手改，必须通过「库存调整」「盘点任务」或「店间协同」留痕调整。'
                 }
                 ariaLabel="查看库存口径与矩阵说明"
               />
@@ -166,19 +166,19 @@ export const InventoryQueryPage: React.FC<{ isCrosstab?: boolean; pageTitle: str
                 icon={<ArrowRight className="w-3.5 h-3.5" />}
                 onClick={() => navigateToRoute('/modules/inventory/stocktake')}
               >
-                前往盘点单调整
+                    前往盘点任务调整
               </Button>
               <Button
                 variant="secondary"
                 icon={<ArrowRight className="w-3.5 h-3.5" />}
                 onClick={() => navigateToRoute('/modules/inventory/loss-overflow')}
               >
-                新建报损报溢单
+                    新建库存调整单
               </Button>
               <HelpTooltip
                 tone="warning"
                 title="库存口径与调整原则"
-                content="账面库存与可用库存差异（加工预占、调拨在途锁定）需由业务最终定义；库存数量严禁在列表中直接手改，必须通过「报损报溢单」「盘点单」或「调拨单」留痕调整。"
+            content="账面库存与可用库存差异（加工预占、店间在途锁定）需由业务最终定义；库存数量严禁在列表中直接手改，必须通过「库存调整」「盘点任务」或「店间协同」留痕调整。"
                 placement="bottom-end"
                 ariaLabel="查看库存口径与调整原则"
               />

@@ -893,7 +893,7 @@ export const SEED_AUDIT_ENTRIES: PermissionAuditEntry[] = [
     roleId: 'role_supplier_partner',
     roleName: '合作供应商账号',
     operator: '系统安全基线',
-    actionSummary: '启用供应商数据范围强隔离：仅限自身供货商品与CCS对账单。',
+    actionSummary: '启用供应商数据范围强隔离：仅限自身供货商品与渠道结算记录。',
     changedPermissions: ['dataScope: own_supplier', 'members.*: denied', 'vision_records.*: denied'],
     createdAt: '2026-11-11T11:10:00Z',
   },

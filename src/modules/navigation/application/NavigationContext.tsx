@@ -207,8 +207,8 @@ export const NavigationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const navigateToNode = useCallback(
     (node: NavNode) => {
       if (node.nodeType === 'page' && node.children && node.children.length > 0) {
-        const firstTab = node.children[0];
-        pushHistory(firstTab.route);
+        const firstTab = node.children.find((child) => hasPermission(child.permission));
+        pushHistory(firstTab?.route ?? node.route);
         return;
       }
       if (node.nodeType === 'module' || node.nodeType === 'group') {

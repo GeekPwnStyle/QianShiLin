@@ -181,7 +181,7 @@ export const DEFAULT_ROLES: RoleDefinition[] = [
     id: 'role_hq_admin',
     name: '总部运营管理员',
     identityType: 'admin',
-    description: '可管理全部18个授权业务模块与跨门店范围；成本价与期末处理需单独开启。',
+    description: '可管理全部18个授权业务模块与跨门店范围；成本价与账期结转需单独开启。',
     dataScope: 'all_stores',
     permissions: ALL_MODULE_BASE_PERMISSIONS.filter((p) => p !== 'system.period_close.execute'),
     sensitiveFields: {
@@ -199,7 +199,7 @@ export const DEFAULT_ROLES: RoleDefinition[] = [
     name: '门店店长',
     identityType: 'store',
     subRole: 'store_manager',
-    description: '仅访问所辖门店的销售、库存、会员、视光、加工与门店报表，无系统全局设置权。',
+    description: '仅访问所辖门店的门店交易、库存运营、客户经营、视力健康档案、交付加工与经营分析，无系统全局设置权。',
     dataScope: 'assigned_stores',
     permissions: [
       'workbench.read',
@@ -255,7 +255,7 @@ export const DEFAULT_ROLES: RoleDefinition[] = [
     name: '门店导购员',
     identityType: 'store',
     subRole: 'store_guide',
-    description: '聚焦门店开单、商品查询、会员接待与复查提醒，受限查看采购成本与财务台账。',
+    description: '聚焦门店收银工作台、商品查询、客户接待与复查邀约，受限查看采购成本与资金往来。',
     dataScope: 'assigned_stores',
     permissions: [
       'workbench.read',
@@ -289,7 +289,7 @@ export const DEFAULT_ROLES: RoleDefinition[] = [
     name: '门店高级验光师',
     identityType: 'store',
     subRole: 'store_optometrist',
-    description: '负责视光档案、角膜塑形检查、视力筛查与复查通知，不接触成本及财务审批。',
+    description: '负责屈光检查记录、塑形镜随访、校园视力项目与复查邀约，不接触成本及财务审批。',
     dataScope: 'assigned_stores',
     permissions: [
       'workbench.read',
@@ -324,7 +324,7 @@ export const DEFAULT_ROLES: RoleDefinition[] = [
     id: 'role_supplier_partner',
     name: '合作供应商账号',
     identityType: 'supplier',
-    description: '供应商专属工作台与品牌专区：仅查看自身供货商品、采购交付、退货及往来对账，严格隔离顾客、会员、视光与内部利润。',
+    description: '供应商专属工作台与品牌采购门户：仅查看自身供货商品、采购交付、退货及供应链对账，严格隔离客户、视力健康与内部利润。',
     dataScope: 'own_supplier',
     permissions: [
       'workbench.read',
@@ -445,7 +445,7 @@ export const LOGIN_ACCOUNTS: LoginAccountDescriptor[] = [
     presetKey: 'store_guide',
     displayName: '陈明轩',
     roleName: '门店导购员',
-    roleSummary: '门店一线权限：限滨江天街店，聚焦销售开单、商品查询与会员接待，隔离成本价、导出与财务台账。',
+    roleSummary: '门店一线权限：限滨江天街店，聚焦收银工作台、商品查询与客户接待，隔离成本价、导出与资金往来。',
   },
   {
     username: 'optometrist',
@@ -453,7 +453,7 @@ export const LOGIN_ACCOUNTS: LoginAccountDescriptor[] = [
     presetKey: 'store_optometrist',
     displayName: '许文博',
     roleName: '门店高级验光师',
-    roleSummary: '视光专业权限：限西湖旗舰店，负责医学验光档案、角膜塑形镜与视力筛查，隔离成本与财务审批。',
+    roleSummary: '视力健康专业权限：限西湖旗舰店，负责屈光检查、塑形镜随访与校园视力项目，隔离成本与财务审批。',
   },
   {
     username: 'supplier',
@@ -461,7 +461,7 @@ export const LOGIN_ACCOUNTS: LoginAccountDescriptor[] = [
     presetKey: 'supplier',
     displayName: '顾承泽',
     roleName: '合作供应商账号',
-    roleSummary: '外部协同权限：仅查看自身供货商品、采购交付、品牌专区与对账单，严格隔离顾客与门店利润。',
+    roleSummary: '外部协同权限：仅查看自身供货商品、采购交付、品牌采购门户与结算记录，严格隔离客户与门店利润。',
   },
 ];
 
