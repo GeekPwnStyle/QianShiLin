@@ -25,6 +25,8 @@ import {
 } from '@/src/modules/shared-business-views/ui/DomainSpecializedViews';
 import { SystemParametersPage } from '@/src/modules/system/parameters/ui/SystemParametersPage';
 import { RolePermissionsPage } from '@/src/modules/system/roles/ui/RolePermissionsPage';
+import { UserAssignmentsPage } from '@/src/modules/system/user-assignments/ui/UserAssignmentsPage';
+import { OperationLogsPage } from '@/src/modules/system/audit/ui/OperationLogsPage';
 import { StoreProfilePage } from '@/src/modules/system/stores/ui/StoreProfilePage';
 import { VisionRecordPage } from '@/src/modules/vision-records/ui/VisionRecordPage';
 import { WorkbenchPage } from '@/src/modules/workbench/ui/WorkbenchPage';
@@ -67,6 +69,12 @@ export const PageDispatcher: React.FC = () => {
 
     case 'role_permissions':
       return <RolePermissionsPage />;
+
+    case 'user_assignments':
+      return <UserAssignmentsPage />;
+
+    case 'operation_logs':
+      return <OperationLogsPage />;
 
     case 'store_profiles':
       return <StoreProfilePage />;

@@ -8,11 +8,11 @@ import {
   MockMemberRepository,
   MockNotificationRepository,
   MockProductRepository,
-  MockRoleRepository,
   MockSalesOrderRepository,
   MockWorkbenchRepository,
 } from '@/src/infrastructure/mock/mockRepositories';
 import { versionedStorage } from '@/src/infrastructure/storage/versionedStorage';
+import { ApiRoleRepository } from '@/src/modules/system/roles/infrastructure/ApiRoleRepository';
 
 export interface AppRepositories {
   products: ProductRepository;
@@ -29,7 +29,7 @@ export const appRepositories: AppRepositories = {
   salesOrders: new MockSalesOrderRepository(),
   members: new MockMemberRepository(),
   notifications: new MockNotificationRepository(),
-  roles: new MockRoleRepository(),
+  roles: new ApiRoleRepository(),
   workbench: new MockWorkbenchRepository(),
   resetDemoData: () => versionedStorage.resetAll(),
 };

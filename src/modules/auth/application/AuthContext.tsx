@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   LOGIN_ACCOUNTS,
   PRESET_SESSIONS,
+  STORE_CATALOG,
   checkPermission,
   type AuthSession,
   type AvatarColorPreset,
@@ -54,6 +55,19 @@ function applySavedAvatar(base: AuthSession): AuthSession {
     avatarInitials: saved.avatarInitials?.trim() || base.avatarInitials,
     avatarColorPreset: saved.avatarColorPreset ?? base.avatarColorPreset,
   };
+}
+
+type ServerUser = { id: string; username: string; role_id?: string | null;
+  store_ids?: string[] | null; permission_denies?: string[] | null };
+
+function applyServerAccess(preset: AuthSession, user: ServerUser): AuthSession {
+  const allowedStores = (user.store_ids ?? preset.authorizedStores.map(store => store.id))
+    .map(id => STORE_CATALOG.find(store => store.id === id)).filter((store): store is (typeof STORE_CATALOG)[number] => Boolean(store));
+  const isAll = preset.identityType === 'admin';
+  return applySavedAvatar({ ...preset, userId: user.id, roleId: user.role_id ?? preset.roleId,
+    authorizedStores: allowedStores, permissionDenies: user.permission_denies ?? [],
+    currentStoreId: isAll ? 'all' : allowedStores[0]?.id ?? preset.currentStoreId,
+    currentStoreName: isAll ? `全部授权门店 (${allowedStores.length}家)` : allowedStores[0]?.name ?? preset.currentStoreName });
 }
 
 interface LoginResult {
@@ -127,10 +141,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     fetch(`${import.meta.env.BASE_URL}api/session`, { credentials: 'same-origin' })
       .then(async (r) => {
         if (!r.ok) return;
-        const { user } = await r.json();
+        const { user }: { user: ServerUser } = await r.json();
         const preset = Object.values(PRESET_SESSIONS).find((s) => s.username === user.username);
         if (active && preset) {
-          setSession(applySavedAvatar({ ...preset, userId: user.id }));
+          setSession(applyServerAccess(preset,user));
           setIsAuthenticated(true);
         }
       })
@@ -144,13 +158,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const { data: allRoles = [], refetch } = useQuery({
-    queryKey: ['rbac', 'roles'],
+    queryKey: ['rbac', 'roles', debugMode, isAuthenticated],
     queryFn: () => appRepositories.roles.listRoles(),
+    enabled: debugMode || isAuthenticated,
   });
 
   const currentRole = useMemo(() => {
-    return allRoles.find((r) => r.id === session.roleId) ?? allRoles[0];
-  }, [allRoles, session.roleId]);
+    const role = allRoles.find((r) => r.id === session.roleId) ?? allRoles[0];
+    return role ? { ...role, permissions: role.permissions.filter(code => !session.permissionDenies?.includes(code)) } : undefined;
+  }, [allRoles, session.roleId, session.permissionDenies]);
 
   const dataScope: DataScopeContext = useMemo(
     () => ({
@@ -218,7 +234,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { user } = await response.json();
       const preset = Object.values(PRESET_SESSIONS).find((s) => s.username === user.username);
       if (!preset) return { ok: false, error: '账号角色尚未配置。' };
-      setSession(applySavedAvatar({ ...preset, userId: user.id }));
+      setSession(applyServerAccess(preset,user));
       setIsAuthenticated(true);
       try {
         window.sessionStorage.removeItem(DEBUG_SESSION_KEY);

@@ -90,6 +90,7 @@ export interface AuthSession {
   currentStoreId: string;
   currentStoreName: string;
   authorizedStores: Array<{ id: string; name: string; code: string }>;
+  permissionDenies?: string[];
   supplierId?: string;
   supplierName?: string;
 }

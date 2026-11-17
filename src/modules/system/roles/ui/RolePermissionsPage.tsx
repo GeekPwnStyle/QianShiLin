@@ -108,6 +108,7 @@ export const RolePermissionsPage: React.FC = () => {
   const [selectedRoleId, setSelectedRoleId] = useState(allRoles[0]?.id ?? 'role_hq_admin');
   const [draftRole, setDraftRole] = useState<RoleDefinition | null>(null);
   const [savedBanner, setSavedBanner] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const canManageRoles =
     session.identityType === 'admin' && hasPermission('system.role.manage');
@@ -122,6 +123,7 @@ export const RolePermissionsPage: React.FC = () => {
     if (found) {
       setDraftRole(structuredClone(found));
       setSavedBanner(null);
+      setSaveError(null);
     }
   }, [selectedRoleId, allRoles]);
 
@@ -133,12 +135,14 @@ export const RolePermissionsPage: React.FC = () => {
         `更新角色「${role.name}」可操作功能配置（${role.permissions.length}项功能权，范围：${role.dataScope}）`
       ),
     onSuccess: (updated) => {
+      setSaveError(null);
       setSavedBanner(
         `角色「${updated.name}」可操作功能与数据范围已更新，顶部导航及「全部菜单」已按新权限同步生效。`
       );
       refetchRoles();
       void queryClient.invalidateQueries({ queryKey: ['rbac'] });
     },
+    onError: (cause) => setSaveError(cause instanceof Error ? cause.message : '角色权限保存失败'),
   });
 
   if (!draftRole) return null;
@@ -258,6 +262,7 @@ export const RolePermissionsPage: React.FC = () => {
               <span>{savedBanner}</span>
             </div>
           )}
+          {saveError && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{saveError}</p>}
 
           <div className="bg-white border border-[#D9DDD4] rounded-[20px] p-5 space-y-5">
             <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-[#E5E8E0]">
@@ -303,7 +308,9 @@ export const RolePermissionsPage: React.FC = () => {
                     <input
                       type="radio"
                       name="dataScope"
-                      disabled={!canManageRoles}
+                      disabled={!canManageRoles || (draftRole.identityType === 'admin' && opt.value !== 'all_stores')
+                        || (draftRole.identityType === 'supplier' && opt.value !== 'own_supplier')
+                        || (draftRole.identityType === 'store' && opt.value !== 'assigned_stores')}
                       checked={draftRole.dataScope === opt.value}
                       onChange={() =>
                         setDraftRole({ ...draftRole, dataScope: opt.value as DataScopeType })

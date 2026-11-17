@@ -9,9 +9,12 @@ export async function handleManualInbound({ req, res, url, user, pool, send, rea
   const match = /^\/purchase\/manual-inbound(?:\/([^/]+))?$/.exec(url.pathname);
   if (!match) return false;
   if (!user) { send(res, 401, { error: 'Unauthorized' }); return true; }
-  const { rows: scopes } = await pool.query('SELECT store_ids,can_create FROM identity.user_purchase_scopes WHERE user_id=$1', [user.id]);
+  const { rows: scopes } = await pool.query(`SELECT a.store_ids,
+    ('purchase.read'=ANY(r.permissions) AND NOT 'purchase.read'=ANY(a.permission_denies)) AS can_read,
+    ('purchase.create'=ANY(r.permissions) AND NOT 'purchase.create'=ANY(a.permission_denies)) AS can_create
+    FROM identity.user_access a JOIN identity.roles r ON r.id=a.role_id WHERE a.user_id=$1`, [user.id]);
   const scope = scopes[0];
-  if (!scope?.store_ids?.length) { send(res, 403, { error: 'Forbidden' }); return true; }
+  if (!scope?.store_ids?.length || !scope.can_read) { send(res, 403, { error: 'Forbidden' }); return true; }
   const id = match[1];
   if (id && !uuid.test(id)) { send(res, 400, { error: 'Invalid id' }); return true; }
   if (req.method === 'GET' && id) {

@@ -72,6 +72,16 @@ export async function handleCatalog({ req, res, url, user, pool, send, readJson 
   if (!access || (access.role === 'supplier' && (resource !== 'suppliers' || !access.supplier_id))) {
     send(res, 403, { error: 'Forbidden' }); return true;
   }
+  const { rows: roleRows } = await pool.query(`SELECT r.permissions,a.permission_denies
+    FROM identity.user_access a JOIN identity.roles r ON r.id=a.role_id WHERE a.user_id=$1`,[user.id]);
+  const role = roleRows[0];
+  const allowed = code => role?.permissions.includes(code) && !role.permission_denies.includes(code);
+  const readCode = { brands:'basic.brand.read', suppliers:'basic.supplier.read', warehouses:'system.store.manage' }[resource];
+  const canRead = allowed(readCode) || (resource === 'suppliers' && allowed('purchase.create'));
+  if (!canRead) { send(res, 403, { error: 'Forbidden' }); return true; }
+  if (req.method !== 'GET' && !allowed(readCode)) {
+    send(res, 403, { error: 'Forbidden' }); return true;
+  }
   if (req.method !== 'GET' && access.role !== 'admin') {
     send(res, 403, { error: 'Forbidden' }); return true;
   }

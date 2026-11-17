@@ -7,6 +7,8 @@ export type PageKind =
   | 'member_profile'
   | 'followup_notification'
   | 'role_permissions'
+  | 'user_assignments'
+  | 'operation_logs'
   | 'store_profiles'
   | 'system_parameters'
   | 'vision_record'
@@ -750,8 +752,8 @@ const RAW_MODULES: RawNodeInput[] = [
     permission: 'system.read',
     nodeType: 'module',
     children: [
-      { id: 'system.roles', label: '角色权限管理', description: '配置身份类型、18模块功能权限树、数据范围与敏感字段可见性及变更留痕。', permission: 'system.role.manage', nodeType: 'page', favoritable: true, pageKind: 'role_permissions' },
-      { id: 'system.user_assignments', label: '用户权限分配', description: '为员工、店长及供应商账号绑定角色及授权门店范围。', permission: 'system.user.manage', nodeType: 'page', pageKind: 'master_data' },
+      { id: 'system.roles', label: '角色权限管理', description: '配置身份类型、18模块功能权限树、数据范围与敏感字段可见性及变更留痕。', permission: 'system.role.manage', nodeType: 'page', favoritable: true, pageKind: 'role_permissions', implemented: true },
+      { id: 'system.user_assignments', label: '用户权限分配', description: '为员工、店长及供应商账号绑定角色及授权门店范围。', permission: 'system.user.manage', nodeType: 'page', pageKind: 'user_assignments', implemented: true },
       { id: 'system.parameters', label: '参数设置', description: '配置销售收银、充值验光、加工中心、采购调拨、小程序、工作提醒、近效期预警及管理员授权等全局与门店参数。', permission: 'system.read', nodeType: 'page', favoritable: true, pageKind: 'system_parameters', implemented: true },
       { id: 'system.notices_send', label: '发送站内信', description: '向指定门店或岗位发布总部运营通知与合规公告。', permission: 'system.read', nodeType: 'page', pageKind: 'document_list' },
       { id: 'system.notices_history', label: '站内信发布记录', description: '查看历史站内公告已读人数与下发范围。', permission: 'system.read', nodeType: 'page', pageKind: 'document_list' },
@@ -759,7 +761,7 @@ const RAW_MODULES: RawNodeInput[] = [
       { id: 'system.stores', label: '门店资料', description: '维护直营/加盟门店编码、营业地址、医疗器械资质、小程序显示与跨店查看权限。', permission: 'system.store.manage', nodeType: 'page', favoritable: true, pageKind: 'store_profiles', implemented: true },
       { id: 'system.processing_warehouses', label: '加工仓库设置', description: '配置门店对应的中央加工仓与毛坯片默认调出仓。', permission: 'system.store.manage', nodeType: 'page', pageKind: 'catalog_warehouse', implemented: true },
       { id: 'system.banks', label: '银行资料', description: '公司收付款对公账户与POS结算账户档案。', permission: 'system.read', nodeType: 'page', pageKind: 'master_data' },
-      { id: 'system.audit_logs', label: '操作日志', description: '记录关键数据导出、权限变更与敏感操作审计追踪。', permission: 'system.read', nodeType: 'page', pageKind: 'document_list' },
+        { id: 'system.audit_logs', label: '操作日志', description: '按月份查询登录与权限变更审计记录。', permission: 'system.read', nodeType: 'page', pageKind: 'operation_logs', implemented: true },
       { id: 'system.onboarding', label: '新手指引', description: '新上线门店初始化操作清单与岗位培训指引。', permission: 'system.read', nodeType: 'page', pageKind: 'help_docs' },
       { id: 'system.init_setup', label: '初始化设置', description: '新租户或新门店开账期初库存、应收应付导入入口。', permission: 'system.read', nodeType: 'page', pageKind: 'unconfirmed_shell', unconfirmedNote: '期初建账锁定条件与跨系统迁移校验规则待确认。' },
       { id: 'system.period_close', label: '期末处理', description: '月结/年结库存成本核算与账期锁定（规则待确认，未宣称完整还原）。', permission: 'system.period_close.execute', nodeType: 'page', pageKind: 'unconfirmed_shell', unconfirmedNote: '移动加权平均成本结转口径及反结账审批条件待财务确认。' },
