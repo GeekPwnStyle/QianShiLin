@@ -79,7 +79,7 @@ const server = http.createServer(async (req, res) => {
     }
     if (path.startsWith('/account/')) {
       const user = await sessionUser(getToken(req));
-      if (await handleAccount({ req, res, url, user, pool, send, readJson, clientIp: clientIp(req) })) return;
+      if (await handleAccount({ req, res, url, user, pool, send, readJson, clientIp })) return;
     }
     if (path.startsWith('/catalog/')) {
       const user = await sessionUser(getToken(req));
