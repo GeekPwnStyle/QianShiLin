@@ -178,6 +178,38 @@
     linear-gradient(140deg, #FFFFFF 0%, #FFF8F9 46%, #FCEEF1 100%);
 }
 
+:root[data-theme="pure_white"] {
+  --qsl-bg-page: #FFFFFF;
+  --qsl-bg-workspace: #FCFCFC;
+  --qsl-bg-card: #FFFFFF;
+  --qsl-bg-subtle: #F3F4F3;
+  --qsl-border: #E2E4E0;
+  --qsl-border-subtle: #ECEEEB;
+  --qsl-accent: #FFFFFF;
+  --qsl-accent-hover: #F5F6F5;
+  --qsl-accent-border: #C7CCC4;
+  --qsl-accent-soft: #F3F4F3;
+  --qsl-accent-soft-border: #D2D6D0;
+  --qsl-accent-soft-85: rgba(243, 244, 243, 0.85);
+  --qsl-accent-soft-65: rgba(243, 244, 243, 0.65);
+  --qsl-accent-soft-45: rgba(243, 244, 243, 0.45);
+  --qsl-accent-soft-35: rgba(243, 244, 243, 0.35);
+  --qsl-accent-soft-ink: #3F433E;
+  --qsl-accent-ink: #171916;
+  --qsl-accent-on-dark: #FFFFFF;
+  --qsl-brand-dark: #181918;
+  --qsl-brand-dark-hover: #2E302E;
+  --qsl-nav-active-bg: #181918;
+  --qsl-nav-active-ink: #FFFFFF;
+  --qsl-ambient-base: #FFFFFF;
+  --qsl-ambient-grad: linear-gradient(135deg, #FFFFFF 0%, #FFFFFF 58%, #F8F9F8 100%);
+  --qsl-ambient-bg:
+    radial-gradient(circle at 14% 16%, rgba(255, 255, 255, 0.96) 0%, transparent 45%),
+    radial-gradient(circle at 86% 20%, rgba(244, 245, 244, 0.72) 0%, transparent 45%),
+    radial-gradient(circle at 52% 88%, rgba(248, 249, 248, 0.85) 0%, transparent 52%),
+    linear-gradient(140deg, #FFFFFF 0%, #FDFDFD 52%, #F7F8F7 100%);
+}
+
 @theme {
   --font-sans: "DengXian", "等线", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
 }

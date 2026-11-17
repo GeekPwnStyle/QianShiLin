@@ -65,7 +65,7 @@ export const ProcessingOrderPage: React.FC = () => {
           <button
             type="button"
             onClick={() => advanceStage(r.id)}
-            className="text-[14px] font-medium text-[var(--qsl-accent-ink)] bg-[var(--qsl-accent)] hover:bg-[var(--qsl-accent-hover)] px-3 py-1 rounded-full cursor-pointer transition-colors"
+            className="text-[14px] font-medium text-[var(--qsl-accent-ink)] bg-[var(--qsl-accent)] hover:bg-[var(--qsl-accent-hover)] border border-[var(--qsl-accent-border)] px-3 py-1 rounded-full cursor-pointer transition-colors"
           >
             推进下一工序
           </button>

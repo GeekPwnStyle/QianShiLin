@@ -14,7 +14,8 @@ CREATE TABLE IF NOT EXISTS identity.user_profiles (
       'azure_cobalt',
       'amber_bronze',
       'violet_plum',
-      'rose_coral'
+      'rose_coral',
+      'pure_white'
     )),
   updated_at timestamptz NOT NULL DEFAULT now()
 );

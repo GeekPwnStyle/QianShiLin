@@ -708,7 +708,7 @@ export const TopHeader: React.FC = () => {
                             : SYSTEM_THEME_MAP[session.themeKey].name}
                         </span>
                       </div>
-                      <div className="flex items-center justify-between gap-1.5" role="group" aria-label="快速切换系统主题色">
+                      <div className="flex flex-wrap items-center justify-between gap-1.5" role="group" aria-label="快速切换系统主题色">
                         {SYSTEM_THEMES.map((theme) => {
                           const active = session.themeKey === theme.key;
                           return (
@@ -726,11 +726,14 @@ export const TopHeader: React.FC = () => {
                                   }
                                 });
                               }}
-                              style={{ backgroundColor: theme.accentHex }}
-                              className={`w-7 h-7 rounded-full inline-flex items-center justify-center border transition-transform cursor-pointer disabled:opacity-60 ${
+                              style={{
+                                backgroundColor: theme.accentHex,
+                                borderColor: active ? '#FFFFFF' : theme.accentBorderHex,
+                              }}
+                              className={`w-[26px] h-[26px] rounded-full inline-flex items-center justify-center border transition-transform cursor-pointer disabled:opacity-60 ${
                                 active
-                                  ? 'ring-2 ring-[#171916] ring-offset-2 scale-105 border-white'
-                                  : 'border-[#171916]/20 hover:scale-110'
+                                  ? 'ring-2 ring-[#171916] ring-offset-2 scale-105'
+                                  : 'hover:scale-110'
                               }`}
                             >
                               {active && (
@@ -1018,10 +1021,11 @@ export const TopHeader: React.FC = () => {
                     </div>
                     {active && (
                       <span
-                        className="w-6 h-6 rounded-full inline-flex items-center justify-center shrink-0"
+                        className="w-6 h-6 rounded-full inline-flex items-center justify-center shrink-0 border"
                         style={{
                           backgroundColor: theme.accentHex,
                           color: theme.accentInkHex,
+                          borderColor: theme.accentBorderHex,
                         }}
                       >
                         <Check className="w-3.5 h-3.5" />

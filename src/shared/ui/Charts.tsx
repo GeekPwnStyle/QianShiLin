@@ -79,7 +79,7 @@ export const ThinLineChart: React.FC<ThinLineChartProps> = ({
           )}
         </div>
         {hovered ? (
-          <div className="tabular-nums text-[14px] text-[var(--qsl-accent-ink)] bg-[var(--qsl-accent)] px-3 py-0.5 rounded-full font-medium">
+          <div className="tabular-nums text-[14px] text-[var(--qsl-accent-ink)] bg-[var(--qsl-accent)] border border-[var(--qsl-accent-border)] px-3 py-0.5 rounded-full font-medium">
             {hovered.label} · {primaryLabel}: {valueFormatter(hovered.primary)}
             {hovered.secondary !== undefined && secondaryLabel
               ? ` · ${secondaryLabel}: ${valueFormatter(hovered.secondary)}`

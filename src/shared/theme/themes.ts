@@ -4,7 +4,8 @@ export type ThemeKey =
   | 'azure_cobalt'
   | 'amber_bronze'
   | 'violet_plum'
-  | 'rose_coral';
+  | 'rose_coral'
+  | 'pure_white';
 
 export interface SystemThemeDefinition {
   key: ThemeKey;
@@ -172,6 +173,30 @@ export const SYSTEM_THEMES: SystemThemeDefinition[] = [
       secondaryOuter: 'rgba(254, 205, 211, 0)',
       tertiaryMid: 'rgba(251, 113, 133, 0.34)',
       tertiaryOuter: 'rgba(251, 113, 133, 0)',
+    },
+  },
+  {
+    key: 'pure_white',
+    name: '纯净极简白',
+    subtitle: '素白极简无扰黑白对比',
+    accentHex: '#FFFFFF',
+    accentInkHex: '#171916',
+    accentSoftHex: '#F3F4F3',
+    accentBorderHex: '#C7CCC4',
+    accentOnDarkHex: '#FFFFFF',
+    brandDarkHex: '#181918',
+    ambientOrbs: [
+      'radial-gradient(circle, rgba(255, 255, 255, 0.96) 0%, rgba(244, 245, 244, 0.32) 50%, transparent 74%)',
+      'radial-gradient(circle, rgba(255, 255, 255, 0.96) 0%, rgba(242, 244, 242, 0.36) 52%, transparent 76%)',
+      'radial-gradient(circle, rgba(246, 247, 246, 0.45) 0%, rgba(255, 255, 255, 0.25) 52%, transparent 76%)',
+    ],
+    particleColors: {
+      primaryMid: 'rgba(212, 216, 212, 0.34)',
+      primaryOuter: 'rgba(212, 216, 212, 0)',
+      secondaryMid: 'rgba(229, 232, 229, 0.42)',
+      secondaryOuter: 'rgba(229, 232, 229, 0)',
+      tertiaryMid: 'rgba(198, 203, 198, 0.28)',
+      tertiaryOuter: 'rgba(198, 203, 198, 0)',
     },
   },
 ];
