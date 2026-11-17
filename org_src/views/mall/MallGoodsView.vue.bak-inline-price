@@ -1,0 +1,1288 @@
+<script setup lang="ts">
+import { computed, onMounted, reactive, ref, watch } from "vue"
+import { DeleteOutlined, EllipsisOutlined, FilterOutlined, PlusOutlined, SearchOutlined } from "@ant-design/icons-vue"
+import { Modal, message } from "ant-design-vue"
+import { getProductPageAPI } from "@/api/product"
+import { tablePageSizeOptions, tableShowTotal } from "@/components/tablePagination"
+import type { ProductRow } from "@/views/product/productUi"
+import {
+  addMallGoodsIds,
+  getMallGoodsIds,
+  getMallGoodsMeta,
+  removeMallGoodsIds,
+  setMallPrice,
+  setMallShelfOn
+} from "./mallGoodsStore"
+
+const loading = ref(false)
+const allProducts = ref<ProductRow[]>([])
+const mallIds = ref<string[]>(getMallGoodsIds())
+const q = ref("")
+const page = ref(1)
+const pageSize = ref(20)
+const selectedKeys = ref<string[]>([])
+const currentRowKey = ref("")
+const rowMenuOpenKey = ref("")
+const pricePopKey = ref("")
+const metaTick = ref(0)
+const priceModalOpen = ref(false)
+const priceModalLoading = ref(false)
+const priceDraft = ref<number | null>(null)
+const priceTargetId = ref("")
+const priceBatchIds = ref<string[]>([])
+const priceTargetName = ref("")
+
+function refreshMeta() {
+  metaTick.value += 1
+}
+
+function mallMeta(id: string) {
+  void metaTick.value
+  return getMallGoodsMeta(id)
+}
+
+function isShelfOn(id: string) {
+  return mallMeta(id).shelfOn !== false
+}
+
+function mallPriceOf(id: string) {
+  const v = mallMeta(id).mallPrice
+  return v == null || Number.isNaN(Number(v)) ? null : Number(v)
+}
+
+function formatMallPrice(id: string) {
+  const v = mallPriceOf(id)
+  return v == null ? "—" : v.toFixed(2)
+}
+
+
+type MallColumn = {
+  title: string
+  dataIndex?: string
+  key: string
+  width?: number
+  ellipsis?: boolean
+  align?: "left" | "right" | "center"
+  fixed?: "left" | "right"
+  filterable?: boolean
+}
+
+const tableColQueries = reactive<Record<string, string>>({})
+const draftColQueries = reactive<Record<string, string>>({})
+const thFilterOpen = ref("")
+const pickerColQueries = reactive<Record<string, string>>({})
+const pickerDraftColQueries = reactive<Record<string, string>>({})
+const pickerThFilterOpen = ref("")
+
+/** 品类多选：null=不过滤；string[]=所选值（空串用 __empty__） */
+const mainCatFilter = ref<string[] | null>(null)
+const pickerCatFilter = ref<string[] | null>(null)
+const draftCatValues = ref<string[] | null>(null)
+
+function catOptionRows(scope: "main" | "picker") {
+  return scope === "main" ? mallRows.value : pickerSource.value
+}
+
+function catFilterOptions(scope: "main" | "picker") {
+  const map = new Map<string, string>()
+  for (const row of catOptionRows(scope)) {
+    const raw = String(row.cat || "").trim()
+    const value = raw || "__empty__"
+    if (!map.has(value)) map.set(value, raw || "(空白)")
+  }
+  return [...map.entries()]
+    .map(([value, label]) => ({ value, label }))
+    .sort((a, b) => a.label.localeCompare(b.label, "zh", { numeric: true }))
+}
+
+function appliedCatFilter(scope: "main" | "picker") {
+  return scope === "main" ? mainCatFilter.value : pickerCatFilter.value
+}
+
+function isCatFilterActive(scope: "main" | "picker") {
+  return appliedCatFilter(scope) != null
+}
+
+function matchCatFilter(row: ProductRow, scope: "main" | "picker") {
+  const selected = appliedCatFilter(scope)
+  if (selected == null) return true
+  const raw = String(row.cat || "").trim()
+  const value = raw || "__empty__"
+  return selected.map(String).includes(value)
+}
+
+function isDraftCatValueOn(val: string) {
+  if (draftCatValues.value == null) return true
+  return draftCatValues.value.map(String).includes(val)
+}
+
+
+function toggleDraftCatValue(scope: "main" | "picker", val: string) {
+  const all = catFilterOptions(scope).map((o) => o.value)
+  const cur = draftCatValues.value == null ? all.slice() : draftCatValues.value.slice()
+  const at = cur.map(String).indexOf(val)
+  if (at >= 0) cur.splice(at, 1)
+  else cur.push(val)
+  draftCatValues.value = cur.length === all.length ? null : cur
+}
+
+function confirmCatFilter(scope: "main" | "picker") {
+  const next = draftCatValues.value == null ? null : draftCatValues.value.slice()
+  if (scope === "main") {
+    mainCatFilter.value = next
+    thFilterOpen.value = ""
+    page.value = 1
+    selectedKeys.value = []
+  } else {
+    pickerCatFilter.value = next
+    pickerThFilterOpen.value = ""
+    pickerPage.value = 1
+  }
+}
+
+function cancelCatFilter(scope: "main" | "picker") {
+  if (scope === "main") thFilterOpen.value = ""
+  else pickerThFilterOpen.value = ""
+}
+
+function thKey(scope: "main" | "picker", colKey: string) {
+  return `${scope}:${colKey}`
+}
+
+function cellText(row: ProductRow, colKey: string) {
+  if (colKey === "price") return Number(row.price || 0).toFixed(2)
+  if (colKey === "mallPrice") {
+    const v = mallPriceOf(row.id)
+    return v == null ? "" : v.toFixed(2)
+  }
+  if (colKey === "shelfOn") return isShelfOn(row.id) ? "上架" : "下架"
+  if (colKey === "enabled") return row.enabled ? "是" : "否"
+  const value = (row as Record<string, unknown>)[colKey]
+  return value == null ? "" : String(value)
+}
+
+function matchColQueries(row: ProductRow, queries: Record<string, string>, scope: "main" | "picker") {
+  const prefix = `${scope}:`
+  for (const [key, raw] of Object.entries(queries)) {
+    if (!key.startsWith(prefix)) continue
+    const text = String(raw || "").trim().toLowerCase()
+    if (!text) continue
+    const colKey = key.slice(prefix.length)
+    if (!cellText(row, colKey).toLowerCase().includes(text)) return false
+  }
+  return true
+}
+
+function isThFilterActive(scope: "main" | "picker", colKey: string) {
+  if (colKey === "cat") return isCatFilterActive(scope)
+  const queries = scope === "main" ? tableColQueries : pickerColQueries
+  return !!String(queries[thKey(scope, colKey)] || "").trim()
+}
+
+function onThFilterOpen(scope: "main" | "picker", colKey: string, open: boolean) {
+  const key = thKey(scope, colKey)
+  const applied = scope === "main" ? tableColQueries : pickerColQueries
+  const draft = scope === "main" ? draftColQueries : pickerDraftColQueries
+  if (open) {
+    if (colKey === "cat") {
+      const cur = appliedCatFilter(scope)
+      draftCatValues.value = cur == null ? null : cur.slice()
+    } else {
+      draft[key] = applied[key] || ""
+    }
+    if (scope === "main") thFilterOpen.value = key
+    else pickerThFilterOpen.value = key
+    return
+  }
+  if (scope === "main") thFilterOpen.value = ""
+  else pickerThFilterOpen.value = ""
+}
+
+function applyThFilter(scope: "main" | "picker", colKey: string) {
+  const key = thKey(scope, colKey)
+  const draft = scope === "main" ? draftColQueries : pickerDraftColQueries
+  const applied = scope === "main" ? tableColQueries : pickerColQueries
+  applied[key] = String(draft[key] || "").trim()
+  if (scope === "main") {
+    thFilterOpen.value = ""
+    page.value = 1
+    selectedKeys.value = []
+  } else {
+    pickerThFilterOpen.value = ""
+    pickerPage.value = 1
+  }
+}
+
+function resetThFilter(scope: "main" | "picker", colKey: string) {
+  const key = thKey(scope, colKey)
+  const draft = scope === "main" ? draftColQueries : pickerDraftColQueries
+  const applied = scope === "main" ? tableColQueries : pickerColQueries
+  draft[key] = ""
+  applied[key] = ""
+  if (scope === "main") {
+    thFilterOpen.value = ""
+    page.value = 1
+    selectedKeys.value = []
+  } else {
+    pickerThFilterOpen.value = ""
+    pickerPage.value = 1
+  }
+}
+
+function clearScopeQueries(scope: "main" | "picker") {
+  const prefix = `${scope}:`
+  const applied = scope === "main" ? tableColQueries : pickerColQueries
+  const draft = scope === "main" ? draftColQueries : pickerDraftColQueries
+  for (const key of Object.keys(applied)) {
+    if (key.startsWith(prefix)) applied[key] = ""
+  }
+  for (const key of Object.keys(draft)) {
+    if (key.startsWith(prefix)) draft[key] = ""
+  }
+  if (scope === "main") {
+    mainCatFilter.value = null
+    thFilterOpen.value = ""
+  } else {
+    pickerCatFilter.value = null
+    pickerThFilterOpen.value = ""
+  }
+}
+
+const pickerOpen = ref(false)
+const pickerLoading = ref(false)
+const pickerQ = ref("")
+
+const pickerSelected = ref<string[]>([])
+const pickerPage = ref(1)
+const pickerPageSize = ref(10)
+
+async function loadCatalog(silent = false) {
+  if (!silent) loading.value = true
+  try {
+    const res = await getProductPageAPI({
+      cat: "all",
+      catalog: true,
+      page: 1,
+      pageSize: 9999
+    })
+    allProducts.value = res.data.list
+  } finally {
+    if (!silent) loading.value = false
+  }
+}
+
+function refreshMallIds() {
+  mallIds.value = getMallGoodsIds()
+}
+
+const productById = computed(() => {
+  const map = new Map<string, ProductRow>()
+  for (const row of allProducts.value) map.set(row.id, row)
+  return map
+})
+
+const mallRows = computed(() => {
+  const rows: ProductRow[] = []
+  for (const id of mallIds.value) {
+    const row = productById.value.get(id)
+    if (row) rows.push(row)
+  }
+  return rows
+})
+
+const filteredRows = computed(() => {
+  const keyword = q.value.trim().toLowerCase()
+  return mallRows.value.filter((row) => {
+    if (keyword) {
+      const blob = [row.cat, row.brand, row.sku, row.name, row.series, row.model, row.attr, row.spec]
+        .join(" ")
+        .toLowerCase()
+      if (!blob.includes(keyword)) return false
+    }
+    if (!matchCatFilter(row, "main")) return false
+    return matchColQueries(row, tableColQueries, "main")
+  })
+})
+
+const pagedRows = computed(() => {
+  const start = (page.value - 1) * pageSize.value
+  return filteredRows.value.slice(start, start + pageSize.value)
+})
+
+watch([q, () => filteredRows.value.length], () => {
+  page.value = 1
+  selectedKeys.value = []
+})
+
+const columns: MallColumn[] = [
+  { title: "序号", key: "seq", width: 58, align: "center" as const },
+  { title: "品类", dataIndex: "cat", key: "cat", width: 88, ellipsis: true, filterable: true },
+  { title: "产品名称", dataIndex: "name", key: "name", width: 220, ellipsis: true, filterable: true },
+  { title: "产品代号", dataIndex: "sku", key: "sku", width: 110, ellipsis: true, filterable: true },
+  { title: "品牌", dataIndex: "brand", key: "brand", width: 100, ellipsis: true, filterable: true },
+  { title: "系列", dataIndex: "series", key: "series", width: 120, ellipsis: true, filterable: true },
+  { title: "型号", dataIndex: "model", key: "model", width: 110, ellipsis: true, filterable: true },
+  { title: "产品标签", dataIndex: "attr", key: "attr", width: 110, ellipsis: true, filterable: true },
+  { title: "零售价", dataIndex: "price", key: "price", width: 90, align: "right" as const },
+  { title: "启用", dataIndex: "enabled", key: "enabled", width: 72, align: "center" as const },
+  { title: "商城价", key: "mallPrice", width: 96, align: "right" as const, filterable: true },
+  { title: "上架状态", key: "shelfOn", width: 96, align: "center" as const, filterable: true },
+  { title: "操作", key: "action", width: 64, fixed: "right" as const, align: "center" as const }
+]
+
+const scrollX = columns.reduce((sum, col) => sum + (Number(col.width) || 100), 0)
+
+const pageKeys = computed(() => pagedRows.value.map((row) => row.id))
+const allPageChecked = computed(
+  () => pageKeys.value.length > 0 && pageKeys.value.every((key) => selectedKeys.value.includes(key))
+)
+const pageIndeterminate = computed(
+  () => !allPageChecked.value && pageKeys.value.some((key) => selectedKeys.value.includes(key))
+)
+const hasPicked = computed(() => selectedKeys.value.length > 0)
+
+function toggleAllPage() {
+  if (allPageChecked.value) {
+    const drop = new Set(pageKeys.value)
+    selectedKeys.value = selectedKeys.value.filter((key) => !drop.has(key))
+    return
+  }
+  selectedKeys.value = [...new Set([...selectedKeys.value, ...pageKeys.value])]
+}
+
+function toggleCheck(id: string) {
+  if (selectedKeys.value.includes(id)) {
+    selectedKeys.value = selectedKeys.value.filter((key) => key !== id)
+    return
+  }
+  selectedKeys.value = [...selectedKeys.value, id]
+}
+
+function onPageChange(p: number, ps: number) {
+  page.value = p
+  pageSize.value = ps
+}
+
+function removeIds(ids: string[]) {
+  if (!ids.length) return
+  Modal.confirm({
+    title: "移出商城",
+    content: `确认将选中的 ${ids.length} 个商品从商城列表中移除？不会删除产品资料。`,
+    okText: "移除",
+    okType: "danger",
+    cancelText: "取消",
+    onOk: () => {
+      removeMallGoodsIds(ids)
+      refreshMallIds()
+      refreshMeta()
+      selectedKeys.value = selectedKeys.value.filter((key) => !ids.includes(key))
+      message.success("已移出商城")
+    }
+  })
+}
+
+function onBatchRemove() {
+  removeIds([...selectedKeys.value])
+}
+
+function onBatchShelfOn() {
+  const ids = [...selectedKeys.value]
+  if (!ids.length) return
+  for (const id of ids) setMallShelfOn(id, true)
+  refreshMeta()
+  message.success(`已上架 ${ids.length} 个商品`)
+}
+
+function onBatchShelfOff() {
+  const ids = [...selectedKeys.value]
+  if (!ids.length) return
+  for (const id of ids) setMallShelfOn(id, false)
+  refreshMeta()
+  message.success(`已下架 ${ids.length} 个商品`)
+}
+
+function onRemoveRow(row: ProductRow) {
+  removeIds([row.id])
+}
+
+function onRowMenuOpen(row: ProductRow, open: boolean) {
+  if (open) {
+    if (pricePopKey.value && pricePopKey.value !== row.id) pricePopKey.value = ""
+    rowMenuOpenKey.value = row.id
+    currentRowKey.value = row.id
+    return
+  }
+  if (pricePopKey.value === row.id) {
+    rowMenuOpenKey.value = row.id
+    return
+  }
+  rowMenuOpenKey.value = ""
+}
+
+function openPricePopover(row: ProductRow) {
+  currentRowKey.value = row.id
+  priceTargetId.value = row.id
+  priceTargetName.value = row.name || row.sku || row.id
+  priceDraft.value = mallPriceOf(row.id)
+  pricePopKey.value = row.id
+  rowMenuOpenKey.value = row.id
+}
+
+function cancelPricePopover() {
+  pricePopKey.value = ""
+  rowMenuOpenKey.value = ""
+}
+
+function confirmPricePopover() {
+  const id = priceTargetId.value
+  if (!id) return
+  const raw = priceDraft.value
+  let price: number | null = null
+  if (raw != null && String(raw) !== "") {
+    const n = Number(raw)
+    if (Number.isNaN(n) || n < 0) {
+      message.warning("请输入有效的商城价")
+      return
+    }
+    price = n
+  }
+  setMallPrice(id, price)
+  refreshMeta()
+  pricePopKey.value = ""
+  rowMenuOpenKey.value = ""
+  message.success("商城价已保存")
+}
+
+function onBatchSetPrice() {
+  if (!selectedKeys.value.length) {
+    message.warning("请先选择商品")
+    return
+  }
+  pricePopKey.value = ""
+  rowMenuOpenKey.value = ""
+  priceTargetId.value = ""
+  priceBatchIds.value = [...selectedKeys.value]
+  priceTargetName.value = `已选 ${priceBatchIds.value.length} 个商品`
+  priceDraft.value = null
+  priceModalOpen.value = true
+}
+
+function onPriceModalOk() {
+  const ids = priceBatchIds.value.length ? priceBatchIds.value : (priceTargetId.value ? [priceTargetId.value] : [])
+  if (!ids.length) return Promise.reject()
+  const raw = priceDraft.value
+  let price: number | null = null
+  if (raw != null && raw !== ("" as any)) {
+    const n = Number(raw)
+    if (Number.isNaN(n) || n < 0) {
+      message.warning("请输入有效的商城价")
+      return Promise.reject()
+    }
+    price = n
+  }
+  if (priceBatchIds.value.length && price == null) {
+    message.warning("请输入商城价")
+    return Promise.reject()
+  }
+  for (const id of ids) setMallPrice(id, price)
+  refreshMeta()
+  priceModalOpen.value = false
+  priceBatchIds.value = []
+  message.success(ids.length > 1 ? `已为 ${ids.length} 个商品设置商城价` : "商城价已保存")
+}
+
+function onShelfOn(row: ProductRow) {
+  if (isShelfOn(row.id)) {
+    message.info("已是上架状态")
+    return
+  }
+  setMallShelfOn(row.id, true)
+  refreshMeta()
+  message.success("已上架")
+}
+
+function onShelfOff(row: ProductRow) {
+  if (!isShelfOn(row.id)) {
+    message.info("已是下架状态")
+    return
+  }
+  setMallShelfOn(row.id, false)
+  refreshMeta()
+  message.success("已下架")
+}
+
+function onRowMenuClick(info: { key: string | number }, row: ProductRow) {
+  const key = String(info.key)
+  currentRowKey.value = row.id
+  if (key === "price") {
+    openPricePopover(row)
+    return
+  }
+  pricePopKey.value = ""
+  rowMenuOpenKey.value = ""
+  if (key === "shelfOn") onShelfOn(row)
+  else if (key === "shelfOff") onShelfOff(row)
+  else if (key === "remove") onRemoveRow(row)
+}
+
+/** 产品资料中尚未加入商城的商品 */
+const pickerSource = computed(() => {
+  const inMall = new Set(mallIds.value)
+  return allProducts.value.filter((row) => !inMall.has(row.id))
+})
+
+const pickerFiltered = computed(() => {
+  const keyword = pickerQ.value.trim().toLowerCase()
+  return pickerSource.value.filter((row) => {
+    if (keyword) {
+      const blob = [row.cat, row.brand, row.sku, row.name, row.series, row.model, row.attr]
+        .join(" ")
+        .toLowerCase()
+      if (!blob.includes(keyword)) return false
+    }
+    if (!matchCatFilter(row, "picker")) return false
+    return matchColQueries(row, pickerColQueries, "picker")
+  })
+})
+
+const pickerPaged = computed(() => {
+  const start = (pickerPage.value - 1) * pickerPageSize.value
+  return pickerFiltered.value.slice(start, start + pickerPageSize.value)
+})
+
+watch(pickerQ, () => {
+  pickerPage.value = 1
+})
+
+const pickerColumns: MallColumn[] = [
+  { title: "品类", dataIndex: "cat", key: "cat", width: 80, ellipsis: true, filterable: true },
+  { title: "产品名称", dataIndex: "name", key: "name", width: 180, ellipsis: true, filterable: true },
+  { title: "产品代号", dataIndex: "sku", key: "sku", width: 100, ellipsis: true, filterable: true },
+  { title: "品牌", dataIndex: "brand", key: "brand", width: 90, ellipsis: true, filterable: true },
+  { title: "系列", dataIndex: "series", key: "series", width: 110, ellipsis: true, filterable: true },
+  { title: "型号", dataIndex: "model", key: "model", width: 100, ellipsis: true, filterable: true },
+  { title: "产品标签", dataIndex: "attr", key: "attr", width: 100, ellipsis: true, filterable: true },
+  { title: "零售价", dataIndex: "price", key: "price", width: 80, align: "right" as const },
+  { title: "启用", dataIndex: "enabled", key: "enabled", width: 64, align: "center" as const }
+]
+
+async function openPicker() {
+  pickerOpen.value = true
+  pickerQ.value = ""
+  pickerSelected.value = []
+  pickerPage.value = 1
+  clearScopeQueries("picker")
+  pickerLoading.value = true
+  try {
+    await loadCatalog(true)
+  } finally {
+    pickerLoading.value = false
+  }
+}
+
+function onPickerOk() {
+  if (!pickerSelected.value.length) {
+    message.warning("请先选择要添加的商品")
+    return Promise.reject()
+  }
+  const mallPriceById: Record<string, number | null> = {}
+  for (const id of pickerSelected.value) {
+    const row = productById.value.get(id)
+    if (!row) {
+      mallPriceById[id] = null
+      continue
+    }
+    const n = Number(row.price)
+    mallPriceById[id] = Number.isNaN(n) ? null : n
+  }
+  const added = addMallGoodsIds(pickerSelected.value, mallPriceById)
+  refreshMallIds()
+  refreshMeta()
+  if (added > 0) message.success(`已添加 ${added} 个商品到商城`)
+  else message.info("所选商品已在商城中")
+  pickerSelected.value = []
+  pickerOpen.value = false
+}
+
+function search() {
+  page.value = 1
+}
+
+function reset() {
+  q.value = ""
+  clearScopeQueries("main")
+  page.value = 1
+  selectedKeys.value = []
+}
+
+onMounted(() => {
+  refreshMallIds()
+  refreshMeta()
+  loadCatalog()
+})
+</script>
+
+<template>
+  <div class="sg-page mall-goods">
+    <div class="mall-goods-tip">
+      添加商品后系统默认将商城价与零售价同步，如需调整商城价，可进行修改
+    </div>
+
+    <div class="sg-actbar">
+      <div class="sg-actbar-left">
+        <button type="button" class="sg-act" @click="openPicker">
+          <PlusOutlined /> 添加商品
+        </button>
+        <span class="sg-act-sep"></span>
+        <button type="button" class="sg-act" :disabled="!hasPicked" @click="onBatchShelfOn">
+          批量上架
+        </button>
+        <button type="button" class="sg-act" :disabled="!hasPicked" @click="onBatchShelfOff">
+          批量下架
+        </button>
+        <button type="button" class="sg-act" :disabled="!hasPicked" @click="onBatchSetPrice">
+          批量设置商城价
+        </button>
+        <button type="button" class="sg-act" :disabled="!hasPicked" @click="onBatchRemove">
+          <DeleteOutlined /> 批量移出
+        </button>
+      </div>
+      <div class="sg-actbar-right">
+        <a-input
+          v-model:value="q"
+          allow-clear
+          class="sg-query-input"
+          placeholder="品类/品牌/产品代号/产品名称/系列/型号/产品标签"
+          @press-enter="search"
+        >
+          <template #prefix><SearchOutlined /></template>
+        </a-input>
+        <a-button type="primary" class="sg-query-solid" @click="search">查询</a-button>
+        <a-button class="sg-ol" @click="reset">重置</a-button>
+      </div>
+    </div>
+
+    <div class="mall-goods-table-host">
+      <a-table
+        class="sg-catalog-table"
+        size="small"
+        :columns="columns"
+        :data-source="pagedRows"
+        :loading="loading"
+        row-key="id"
+        :pagination="{
+          current: page,
+          pageSize,
+          total: filteredRows.length,
+          showSizeChanger: true,
+          showQuickJumper: true,
+          pageSizeOptions: tablePageSizeOptions,
+          showTotal: tableShowTotal,
+          onChange: onPageChange
+        }"
+        :scroll="{ x: scrollX, y: 'calc(100vh - 280px)' }"
+        :custom-row="(record: ProductRow) => ({
+          class: currentRowKey === record.id ? 'row-current' : '',
+          onClick: () => { currentRowKey = record.id }
+        })"
+      >
+        <template #headerCell="{ column }">
+          <template v-if="column.key === 'seq'">
+            <a-checkbox
+              :checked="allPageChecked"
+              :indeterminate="pageIndeterminate"
+              @change="toggleAllPage"
+            />
+          </template>
+          <span v-else-if="(column as MallColumn).filterable" class="sg-th-filter">
+            <span class="sg-th-name">{{ column.title }}</span>
+            <a-dropdown
+              :open="thFilterOpen === thKey('main', String(column.key))"
+              :trigger="['hover']"
+              overlay-class-name="sg-excel-filter-overlay"
+              @open-change="(open: boolean) => onThFilterOpen('main', String(column.key), open)"
+            >
+              <button
+                type="button"
+                class="sg-excel-filter-btn"
+                :class="{ on: isThFilterActive('main', String(column.key)) }"
+                :title="'筛选' + column.title"
+                @click.stop
+              ><FilterOutlined /></button>
+              <template #overlay>
+                <div v-if="column.key === 'cat'" class="sg-excel-filter-panel" @click.stop>
+                  <div class="sg-excel-filter-list">
+                    <label
+                      v-for="opt in catFilterOptions('main')"
+                      :key="String(opt.value)"
+                      class="sg-excel-filter-item"
+                    >
+                      <a-checkbox
+                        :checked="isDraftCatValueOn(opt.value)"
+                        @click.prevent="toggleDraftCatValue('main', opt.value)"
+                      />
+                      {{ opt.label }}
+                    </label>
+                    <div v-if="!catFilterOptions('main').length" class="sg-excel-filter-empty">无匹配项</div>
+                  </div>
+                  <div class="sg-col-filter-actions">
+                    <button type="button" @click="cancelCatFilter('main')">取消</button>
+                    <button type="button" class="sg-col-filter-ok" @click="confirmCatFilter('main')">确定</button>
+                  </div>
+                </div>
+                <div v-else class="sg-col-filter" @click.stop>
+                  <a-input
+                    :value="draftColQueries[thKey('main', String(column.key))]"
+                    allow-clear
+                    size="small"
+                    placeholder="按回车筛选"
+                    @update:value="draftColQueries[thKey('main', String(column.key))] = String($event || '')"
+                    @press-enter="applyThFilter('main', String(column.key))"
+                  />
+                  <div class="sg-col-filter-actions">
+                    <button type="button" @click="applyThFilter('main', String(column.key))">筛选</button>
+                    <button type="button" @click="resetThFilter('main', String(column.key))">重置</button>
+                  </div>
+                </div>
+              </template>
+            </a-dropdown>
+          </span>
+        </template>
+        <template #bodyCell="{ column, record, index }">
+          <template v-if="column.key === 'seq'">
+            <a-checkbox
+              :checked="selectedKeys.includes(record.id)"
+              @click.stop
+              @change="toggleCheck(record.id)"
+            />
+            <span class="mall-seq">{{ (page - 1) * pageSize + index + 1 }}</span>
+          </template>
+          <template v-else-if="column.key === 'price'">
+            {{ Number(record.price || 0).toFixed(2) }}
+          </template>
+          <template v-else-if="column.key === 'enabled'">
+            <a-tag :color="record.enabled ? 'success' : 'default'">{{ record.enabled ? "是" : "否" }}</a-tag>
+          </template>
+          <template v-else-if="column.key === 'mallPrice'">
+            {{ formatMallPrice(record.id) }}
+          </template>
+          <template v-else-if="column.key === 'shelfOn'">
+            <a-tag :color="isShelfOn(record.id) ? 'success' : 'default'">{{ isShelfOn(record.id) ? "上架" : "下架" }}</a-tag>
+          </template>
+          <template v-else-if="column.key === 'action'">
+            <a-popover
+              :open="pricePopKey === record.id"
+              placement="leftTop"
+              :trigger="[]"
+              overlay-class-name="sg-mall-price-pop"
+            >
+              <template #title>
+                <span class="sg-mall-price-pop-title">设置商城价</span>
+              </template>
+              <template #content>
+                <div class="sg-mall-price-pop-body">
+                  <div class="sg-mall-price-pop-name">{{ priceTargetName }}</div>
+                  <a-input-number
+                    v-model:value="priceDraft"
+                    :min="0"
+                    :precision="2"
+                    :step="1"
+                    style="width: 100%"
+                    placeholder="请输入商城价"
+                    @click.stop
+                  />
+                </div>
+                <div class="sg-mall-price-pop-ft">
+                  <button type="button" class="sg-mall-price-cancel" @click.stop="cancelPricePopover">取消</button>
+                  <button type="button" class="sg-mall-price-ok" @click.stop="confirmPricePopover">确定</button>
+                </div>
+              </template>
+              <a-dropdown
+                :open="rowMenuOpenKey === record.id || pricePopKey === record.id"
+                :trigger="['hover']"
+                placement="bottomRight"
+                overlay-class-name="sg-row-more-overlay"
+                @openChange="(open: boolean) => onRowMenuOpen(record, open)"
+              >
+                <button type="button" class="sg-row-more" title="更多操作" @click.stop="currentRowKey = record.id">
+                  <EllipsisOutlined />
+                </button>
+                <template #overlay>
+                  <a-menu @click="(info: { key: string | number }) => onRowMenuClick(info, record)">
+                    <a-menu-item key="price">设置商城价</a-menu-item>
+                    <a-menu-item key="shelfOn" :disabled="isShelfOn(record.id)">上架</a-menu-item>
+                    <a-menu-item key="shelfOff" :disabled="!isShelfOn(record.id)">下架</a-menu-item>
+                    <a-menu-item key="remove" danger>移出</a-menu-item>
+                  </a-menu>
+                </template>
+              </a-dropdown>
+            </a-popover>
+          </template>
+        </template>
+      </a-table>
+    </div>
+
+    <a-modal
+      v-model:open="pickerOpen"
+      title="从产品资料添加商品"
+      width="1080px"
+      ok-text="添加到商城"
+      cancel-text="取消"
+      :confirm-loading="pickerLoading"
+      destroy-on-close
+      @ok="onPickerOk"
+    >
+      <div class="mall-picker-bar">
+        <a-input
+          v-model:value="pickerQ"
+          allow-clear
+          placeholder="品类/品牌/代号/名称/系列/型号/产品标签"
+          style="max-width: 280px"
+        >
+          <template #prefix><SearchOutlined /></template>
+        </a-input>
+        <span class="mall-picker-hint">已选 {{ pickerSelected.length }}，可选 {{ pickerFiltered.length }}</span>
+      </div>
+      <a-table
+        size="small"
+        :columns="pickerColumns"
+        :data-source="pickerPaged"
+        :loading="pickerLoading"
+        row-key="id"
+        :row-selection="{
+          selectedRowKeys: pickerSelected,
+          onChange: (keys: (string | number)[]) => { pickerSelected = keys.map(String) }
+        }"
+        :pagination="{
+          current: pickerPage,
+          pageSize: pickerPageSize,
+          total: pickerFiltered.length,
+          showSizeChanger: true,
+          pageSizeOptions: ['10', '20', '50'],
+          showTotal: tableShowTotal,
+          onChange: (p: number, ps: number) => { pickerPage = p; pickerPageSize = ps }
+        }"
+        :scroll="{ x: 900, y: 420 }"
+      >
+        <template #headerCell="{ column }">
+          <span v-if="(column as MallColumn).filterable" class="sg-th-filter">
+            <span class="sg-th-name">{{ column.title }}</span>
+            <a-dropdown
+              :open="pickerThFilterOpen === thKey('picker', String(column.key))"
+              :trigger="['hover']"
+              overlay-class-name="sg-excel-filter-overlay"
+              @open-change="(open: boolean) => onThFilterOpen('picker', String(column.key), open)"
+            >
+              <button
+                type="button"
+                class="sg-excel-filter-btn"
+                :class="{ on: isThFilterActive('picker', String(column.key)) }"
+                :title="'筛选' + column.title"
+                @click.stop
+              ><FilterOutlined /></button>
+              <template #overlay>
+                <div v-if="column.key === 'cat'" class="sg-excel-filter-panel" @click.stop>
+                  <div class="sg-excel-filter-list">
+                    <label
+                      v-for="opt in catFilterOptions('picker')"
+                      :key="String(opt.value)"
+                      class="sg-excel-filter-item"
+                    >
+                      <a-checkbox
+                        :checked="isDraftCatValueOn(opt.value)"
+                        @click.prevent="toggleDraftCatValue('picker', opt.value)"
+                      />
+                      {{ opt.label }}
+                    </label>
+                    <div v-if="!catFilterOptions('picker').length" class="sg-excel-filter-empty">无匹配项</div>
+                  </div>
+                  <div class="sg-col-filter-actions">
+                    <button type="button" @click="cancelCatFilter('picker')">取消</button>
+                    <button type="button" class="sg-col-filter-ok" @click="confirmCatFilter('picker')">确定</button>
+                  </div>
+                </div>
+                <div v-else class="sg-col-filter" @click.stop>
+                  <a-input
+                    :value="pickerDraftColQueries[thKey('picker', String(column.key))]"
+                    allow-clear
+                    size="small"
+                    placeholder="按回车筛选"
+                    @update:value="pickerDraftColQueries[thKey('picker', String(column.key))] = String($event || '')"
+                    @press-enter="applyThFilter('picker', String(column.key))"
+                  />
+                  <div class="sg-col-filter-actions">
+                    <button type="button" @click="applyThFilter('picker', String(column.key))">筛选</button>
+                    <button type="button" @click="resetThFilter('picker', String(column.key))">重置</button>
+                  </div>
+                </div>
+              </template>
+            </a-dropdown>
+          </span>
+        </template>
+        <template #bodyCell="{ column, record }">
+          <template v-if="column.key === 'price'">
+            {{ Number(record.price || 0).toFixed(2) }}
+          </template>
+          <template v-else-if="column.key === 'enabled'">
+            {{ record.enabled ? "是" : "否" }}
+          </template>
+        </template>
+      </a-table>
+    </a-modal>
+
+    <a-modal
+      v-model:open="priceModalOpen"
+      title="批量设置商城价"
+      ok-text="保存"
+      cancel-text="取消"
+      :confirm-loading="priceModalLoading"
+      destroy-on-close
+      @ok="onPriceModalOk"
+    >
+      <div class="mall-price-form">
+        <div class="mall-price-name">{{ priceTargetName }}</div>
+        <a-input-number
+          v-model:value="priceDraft"
+          :min="0"
+          :precision="2"
+          :step="1"
+          style="width: 100%"
+          placeholder="请输入商城价，可清空表示未设置"
+        />
+      </div>
+    </a-modal>
+  </div>
+</template>
+
+<style scoped>
+.mall-goods {
+  position: absolute;
+  inset: 16px 24px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: #fff;
+  border: 1px solid #eceff1;
+  overflow: hidden;
+}
+.mall-goods-tip {
+  flex-shrink: 0;
+  padding: 8px 12px;
+  background: #fffbe6;
+  border-bottom: 1px solid #ffe58f;
+  color: #ad6800;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.sg-actbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 40px;
+  padding: 8px 12px;
+  border-bottom: 1px solid #eceff1;
+  flex-shrink: 0;
+}
+.sg-actbar-left,
+.sg-actbar-right {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.sg-act-sep {
+  width: 1px;
+  height: 16px;
+  background: #e0e5e4;
+  margin: 0 2px;
+}
+.sg-act {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 30px;
+  padding: 0 12px;
+  border: 1px solid #13c2c2;
+  border-radius: 4px;
+  background: #fff;
+  color: #13c2c2;
+  font-size: 13px;
+  cursor: pointer;
+}
+.sg-act:hover:not(:disabled) {
+  background: #e8faf6;
+}
+.sg-act:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.sg-querybar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid #eceff1;
+  flex-shrink: 0;
+}
+.sg-query-input {
+  width: 320px;
+  max-width: 42vw;
+}
+.sg-query-solid.ant-btn-primary {
+  background: #13c2c2;
+  border-color: #13c2c2;
+}
+.sg-query-solid.ant-btn-primary:hover {
+  background: #36cfc9;
+  border-color: #36cfc9;
+}
+.sg-ol {
+  border-color: #13c2c2;
+  color: #13c2c2;
+}
+.mall-goods-count {
+  font-size: 13px;
+  color: #667;
+}
+.mall-goods-table-host {
+  flex: 1;
+  min-height: 0;
+  padding: 0 8px 8px;
+  overflow: hidden;
+}
+.mall-seq {
+  margin-left: 6px;
+  color: #889;
+  font-size: 12px;
+}
+.mall-picker-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.mall-picker-hint {
+  font-size: 13px;
+  color: #667;
+}
+:deep(.sg-catalog-table .ant-table-tbody > tr.row-current > td) {
+  background: #f0fffc !important;
+}
+
+.sg-th-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  max-width: 100%;
+}
+.sg-th-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sg-excel-filter-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  margin-left: 2px;
+  border: 0;
+  border-radius: 2px;
+  background: transparent;
+  color: #6b7572;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+.sg-excel-filter-btn:hover,
+.sg-excel-filter-btn.on {
+  background: #02bfa1;
+  color: #fff;
+}
+:deep(.sg-act-link.ant-btn-link) {
+  padding: 0 4px;
+}
+.sg-row-more {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 6px;
+  border: 1px solid #13c2c2;
+  background: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #13c2c2;
+  line-height: 1;
+  transition: background 0.15s, color 0.15s;
+}
+.sg-row-more:hover,
+.sg-row-more.ant-dropdown-open,
+:deep(.ant-dropdown-open > .sg-row-more) {
+  background: #13c2c2;
+  border-color: #13c2c2;
+  color: #fff;
+}
+:deep(.sg-catalog-table .ant-table-cell:has(.sg-row-more)) {
+  padding-left: 8px !important;
+  padding-right: 8px !important;
+}
+.mall-price-form {
+  padding: 8px 0 4px;
+}
+.mall-price-name {
+  margin-bottom: 10px;
+  color: #333;
+  font-size: 13px;
+}
+</style>
+<style>
+.sg-excel-filter-overlay {
+  --sg: #02bfa1;
+  --sg-deep: #018a74;
+}
+.sg-row-more-overlay .ant-dropdown-menu-item-danger,
+.sg-row-more-overlay .ant-dropdown-menu-item.ant-dropdown-menu-item-danger {
+  color: #ff4d4f;
+}
+.sg-excel-filter-overlay .sg-col-filter {
+  width: 196px;
+  padding: 10px;
+  background: #fff;
+  border: 1px solid #e6e6e6;
+  border-radius: 4px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+}
+.sg-excel-filter-overlay .sg-excel-filter-panel {
+  width: 220px;
+  padding: 10px;
+  background: #fff;
+  border: 1px solid #e6e6e6;
+  border-radius: 4px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+}
+.sg-excel-filter-overlay .sg-excel-filter-list {
+  max-height: 180px;
+  overflow: auto;
+  margin: 6px 0;
+  border: 1px solid #ececec;
+  padding: 4px 0;
+}
+.sg-excel-filter-overlay .sg-excel-filter-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  font-size: 12px;
+  color: #2c3533;
+  cursor: pointer;
+}
+.sg-excel-filter-overlay .sg-excel-filter-item.all {
+  font-weight: 600;
+  margin-top: 6px;
+}
+.sg-excel-filter-overlay .sg-excel-filter-item:hover {
+  background: #f3f8f6;
+}
+.sg-excel-filter-overlay .sg-excel-filter-empty {
+  padding: 12px 8px;
+  text-align: center;
+  color: #8a9390;
+  font-size: 12px;
+}
+.sg-excel-filter-overlay .sg-col-filter-ok {
+  background: #02bfa1 !important;
+  border-color: #02bfa1 !important;
+  color: #fff !important;
+}
+.sg-excel-filter-overlay .sg-col-filter-ok:hover {
+  background: #018a74 !important;
+  border-color: #018a74 !important;
+  color: #fff !important;
+}
+.sg-excel-filter-overlay .sg-col-filter-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+.sg-excel-filter-overlay .sg-col-filter-actions button {
+  flex: 1;
+  height: 28px;
+  border: 1px solid #ececec;
+  border-radius: 2px;
+  background: #f7f7f7;
+  color: #8c8c8c;
+  font-size: 13px;
+  cursor: pointer;
+}
+.sg-excel-filter-overlay .sg-col-filter-actions button:hover {
+  color: #595959;
+  border-color: #d9d9d9;
+}
+
+.sg-mall-price-pop .ant-popover-inner {
+  padding: 0;
+}
+.sg-mall-price-pop .ant-popover-title {
+  padding: 10px 12px 0;
+  border-bottom: 0;
+  font-weight: 600;
+  font-size: 14px;
+  color: #262626;
+}
+.sg-mall-price-pop-title {
+  display: inline-flex;
+  align-items: center;
+}
+.sg-mall-price-pop .ant-popover-inner-content {
+  padding: 8px 12px 12px;
+}
+.sg-mall-price-pop-body {
+  width: 220px;
+  margin-bottom: 10px;
+}
+.sg-mall-price-pop-name {
+  margin-bottom: 8px;
+  color: #595959;
+  font-size: 12px;
+  line-height: 1.4;
+  word-break: break-all;
+}
+.sg-mall-price-pop-ft {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.sg-mall-price-cancel,
+.sg-mall-price-ok {
+  min-width: 64px;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.sg-mall-price-cancel {
+  border: 1px solid #d9d9d9;
+  background: #fff;
+  color: #595959;
+}
+.sg-mall-price-cancel:hover {
+  border-color: #13c2c2;
+  color: #13c2c2;
+}
+.sg-mall-price-ok {
+  border: 1px solid #13c2c2;
+  background: #13c2c2;
+  color: #fff;
+}
+.sg-mall-price-ok:hover {
+  background: #36cfc9;
+  border-color: #36cfc9;
+}
+</style>
