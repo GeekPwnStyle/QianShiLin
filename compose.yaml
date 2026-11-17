@@ -14,6 +14,7 @@ services:
       - ./apps/api/db/migrations/002_reference_catalog.sql:/docker-entrypoint-initdb.d/003_reference_catalog.sql:ro
       - ./apps/api/db/migrations/003_catalog_access.sql:/docker-entrypoint-initdb.d/004_catalog_access.sql:ro
       - ./apps/api/db/migrations/004_purchase_orders.sql:/docker-entrypoint-initdb.d/005_purchase_orders.sql:ro
+      - ./apps/api/db/migrations/005_manual_inbound.sql:/docker-entrypoint-initdb.d/006_manual_inbound.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U qianshilin -d qianshilin"]
       interval: 10s

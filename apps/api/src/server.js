@@ -3,6 +3,7 @@ import { randomBytes, createHash } from 'node:crypto';
 import { Pool } from 'pg';
 import { handleCatalog } from './catalog.js';
 import { handlePurchase } from './purchase.js';
+import { handleManualInbound } from './manual-inbound.js';
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL, max: 10 });
 const cookieName = 'qsl_session';
@@ -62,6 +63,7 @@ const server = http.createServer(async (req, res) => {
     }
     if (path.startsWith('/purchase/')) {
       const user = await sessionUser(getToken(req));
+      if (await handleManualInbound({ req, res, url, user, pool, send, readJson })) return;
       if (await handlePurchase({ req, res, url, user, pool, send, readJson })) return;
     }
     send(res, 404, { error: 'Not found' });

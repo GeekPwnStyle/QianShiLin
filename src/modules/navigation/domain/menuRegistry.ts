@@ -22,6 +22,7 @@ export type PageKind =
   | 'catalog_supplier'
   | 'catalog_warehouse'
   | 'purchase_orders'
+  | 'purchase_manual_inbound'
   | 'document_list'
   | 'brand_portal'
   | 'help_docs'
@@ -337,7 +338,7 @@ const RAW_MODULES: RawNodeInput[] = [
     nodeType: 'module',
     children: [
       { id: 'purchase.orders', label: '采购订货单', description: '向合作光学厂商发起采购订货并跟踪交期。', permission: 'purchase.read', nodeType: 'page', favoritable: true, pageKind: 'purchase_orders', implemented: true },
-      { id: 'purchase.manual_inbound', label: '手工入库', description: '非扫码批次商品的手工入库制单与规格核对。', permission: 'purchase.create', nodeType: 'page', pageKind: 'document_list' },
+      { id: 'purchase.manual_inbound', label: '手工入库', description: '供应商、商品、价格与数量的手工入库草稿。', permission: 'purchase.create', nodeType: 'page', pageKind: 'purchase_manual_inbound', implemented: true },
       { id: 'purchase.scan_inbound', label: '扫码入库', description: '支持条码/UDI枪连续扫描核验入库（模拟录入）。', permission: 'purchase.create', nodeType: 'page', pageKind: 'document_list' },
       { id: 'purchase.returns', label: '采购退货', description: '瑕疵品及滞销协议退回供应商出库单据。', permission: 'purchase.create', nodeType: 'page', pageKind: 'document_list' },
       { id: 'purchase.temp_returns', label: '临时退货登记', description: '待供应商确认折让或换货的暂存退货记录。', permission: 'purchase.create', nodeType: 'page', pageKind: 'document_list' },
