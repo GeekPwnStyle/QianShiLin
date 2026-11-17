@@ -1,5 +1,7 @@
 import { ensureAccountSchema } from './account.js';
 
+import { randomUUID } from 'node:crypto';
+
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const roleId = /^role_[a-z0-9_]{1,80}$/;
 const permission = /^[a-z][a-z0-9_.]{1,100}$/;
@@ -10,8 +12,8 @@ const shapeRole = row => ({ id: row.id, name: row.name, identityType: row.identi
   permissions: row.permissions, sensitiveFields: row.sensitive_fields,
   updatedAt: row.updated_at, updatedBy: row.updated_by });
 const shapeAudit = row => ({ id: row.id, roleId: row.target_kind === 'role' ? row.target_id : '',
-  roleName: row.target_kind === 'role' ? row.target_id : '', operator: row.actor_name,
-  actionSummary: `${row.target_kind === 'role' ? '角色权限' : '用户权限'}已更新：${row.target_id}`,
+  roleName: row.target_kind === 'role' ? (row.after_state?.name ?? row.before_state?.name ?? row.target_id) : '', operator: row.actor_name,
+  actionSummary: `${row.target_kind === 'role' ? '角色权限' : '用户权限'}${!row.before_state ? '已创建' : row.after_state && !Object.keys(row.after_state).length ? '已删除' : '已更新'}：${row.target_id}`,
   changedPermissions: [], createdAt: row.created_at });
 const validCodes = value => Array.isArray(value) && value.length <= 300 && value.every(code => typeof code === 'string' && permission.test(code)) && new Set(value).size === value.length;
 const validStores = value => Array.isArray(value) && value.length <= stores.size && value.every(id => stores.has(id)) && new Set(value).size === value.length;
@@ -76,7 +78,46 @@ export async function handleSystemAccess({ req, res, url, user, pool, send, read
       ORDER BY u.username`);
     send(res,200,rows); return true;
   }
+  if (path === '/system/roles' && req.method === 'POST') {
+    if (!canRole) { send(res,403,{ error: 'Forbidden' }); return true; }
+    let body;
+    try { body=await readJson(req); } catch { send(res,400,{ error: 'Invalid JSON' }); return true; }
+    const name=typeof body?.name === 'string' ? body.name.trim() : '';
+    const identityType=body?.identityType;
+    const requiredScope=identityType === 'store' ? 'assigned_stores' : identityType === 'supplier' ? 'own_supplier' : null;
+    if (!requiredScope || !name || name.length > 60 || !validCodes(body?.permissions) || body.permissions.length > 100
+      || body.permissions.some(code => !actor.permissions.includes(code) || actor.permission_denies.includes(code)) || !body.permissions.includes(identityType === 'store' ? 'workbench.read' : 'brands.read')) {
+      send(res,400,{ error: 'Invalid role definition' }); return true;
+    }
+    const id=`role_custom_${randomUUID().replace(/-/g,'')}`;
+    const fields=Object.fromEntries(sensitiveKeys.map(key => [key,false]));
+    const client=await pool.connect();
+    try { await client.query('BEGIN');
+      const {rows}=await client.query(`INSERT INTO identity.roles(id,name,identity_type,description,data_scope,permissions,sensitive_fields,updated_by)
+        VALUES($1,$2,$3,$4,$5,$6,$7::jsonb,$8) RETURNING *`,[id,name,identityType,body.description?.slice?.(0,300) ?? '',requiredScope,body.permissions,JSON.stringify(fields),user.display_name]);
+      await client.query(`INSERT INTO identity.access_audit(actor_user_id,target_kind,target_id,after_state) VALUES($1,'role',$2,to_jsonb($3::json))`,[user.id,id,JSON.stringify(rows[0])]);
+      await client.query(`INSERT INTO identity.operation_log(actor_user_id,actor_role_id,actor_role_name,category,action,target,details)
+        SELECT $1,a.role_id,r.name,'权限管理','新增角色',$2,$3::jsonb FROM identity.user_access a JOIN identity.roles r ON r.id=a.role_id WHERE a.user_id=$1`,[user.id,id,JSON.stringify({role:name})]);
+      await client.query('COMMIT'); send(res,201,shapeRole(rows[0])); return true;
+    } catch (error) { await client.query('ROLLBACK'); throw error; } finally { client.release(); }
+  }
   const roleMatch = /^\/system\/roles\/([^/]+)$/.exec(path);
+  if (roleMatch && req.method === 'DELETE') {
+    if (!canRole) { send(res,403,{ error: 'Forbidden' }); return true; }
+    const id=roleMatch[1];
+    if (!/^role_custom_[0-9a-f]{32}$/.test(id)) { send(res,400,{ error: 'Only custom roles can be deleted' }); return true; }
+    const client=await pool.connect();
+    try { await client.query('BEGIN');
+      const assigned=await client.query('SELECT count(*)::int AS total FROM identity.user_access WHERE role_id=$1',[id]);
+      if (assigned.rows[0].total) { await client.query('ROLLBACK'); send(res,409,{ error: 'Role is assigned to users' }); return true; }
+      const {rows}=await client.query('DELETE FROM identity.roles WHERE id=$1 RETURNING *',[id]);
+      if (!rows.length) { await client.query('ROLLBACK'); send(res,404,{ error: 'Not found' }); return true; }
+      await client.query(`INSERT INTO identity.access_audit(actor_user_id,target_kind,target_id,before_state,after_state) VALUES($1,'role',$2,to_jsonb($3::json),'{}'::jsonb)`,[user.id,id,JSON.stringify(rows[0])]);
+      await client.query(`INSERT INTO identity.operation_log(actor_user_id,actor_role_id,actor_role_name,category,action,target,details)
+        SELECT $1,a.role_id,r.name,'权限管理','删除角色',$2,$3::jsonb FROM identity.user_access a JOIN identity.roles r ON r.id=a.role_id WHERE a.user_id=$1`,[user.id,id,JSON.stringify({role:rows[0].name})]);
+      await client.query('COMMIT'); send(res,200,{deleted:id}); return true;
+    } catch (error) { await client.query('ROLLBACK'); throw error; } finally { client.release(); }
+  }
   if (roleMatch && req.method === 'PUT') {
     if (!canRole) { send(res,403,{ error: 'Forbidden' }); return true; }
     const id = roleMatch[1];

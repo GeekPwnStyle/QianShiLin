@@ -1,11 +1,11 @@
 import http from 'node:http';
 import { randomBytes, createHash } from 'node:crypto';
 import { Pool } from 'pg';
-import { ensureAccountSchema, handleAccount } from './account.js';
 import { handleCatalog } from './catalog.js';
 import { handlePurchase } from './purchase.js';
 import { handleManualInbound } from './manual-inbound.js';
 import { handleSystemAccess } from './system-access.js';
+import { handleNotices } from './notices.js';
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL, max: 10 });
 const cookieName = 'qsl_session';
@@ -15,50 +15,23 @@ const send = (res, code, data, headers = {}) => {
   res.writeHead(code, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', ...headers });
   res.end(JSON.stringify(data));
 };
-const readJson = async (req, maxBytes = 65536) => {
+const readJson = async req => {
   let body = '';
   for await (const chunk of req) {
     body += chunk;
-    if (body.length > maxBytes) throw new Error('Request too large');
+    if (body.length > 65536) throw new Error('Request too large');
   }
   return JSON.parse(body);
 };
 const getToken = req => (req.headers.cookie ?? '').split(';').map(x => x.trim()).find(x => x.startsWith(cookieName + '='))?.slice(cookieName.length + 1);
-
-const USER_SESSION_FIELDS = `
-  u.id, u.username, u.display_name, u.email,
-  a.role_id, a.store_ids, a.permission_denies,
-  r.name AS role_name, r.identity_type, r.sub_role,
-  uca.supplier_id, sup.name AS supplier_name,
-  COALESCE(NULLIF(up.title, ''), r.name, '系统成员') AS title,
-  COALESCE(NULLIF(up.avatar_initials, ''), NULLIF(left(btrim(u.display_name), 1), ''), upper(left(u.username, 1))) AS avatar_initials,
-  up.avatar_url,
-  COALESCE(up.avatar_color_preset, 'charcoal') AS avatar_color_preset,
-  COALESCE(up.theme_key, 'lime_charcoal') AS theme_key
-`;
-
-const USER_SESSION_JOINS = `
-  LEFT JOIN identity.user_access a ON a.user_id = u.id
-  LEFT JOIN identity.roles r ON r.id = a.role_id
-  LEFT JOIN identity.user_catalog_access uca ON uca.user_id = u.id
-  LEFT JOIN catalog.suppliers sup ON sup.id = uca.supplier_id
-  LEFT JOIN identity.user_profiles up ON up.user_id = u.id
-`;
-
 const sessionUser = async token => {
   if (!token || !/^[a-f0-9]{64}$/.test(token)) return null;
-  await ensureAccountSchema(pool);
-  const { rows } = await pool.query(
-    `SELECT ${USER_SESSION_FIELDS}
-     FROM identity.sessions s
-     JOIN identity.users u ON u.id = s.user_id
-     ${USER_SESSION_JOINS}
-     WHERE s.token_hash=$1 AND s.expires_at>now() AND u.status='active'`,
-    [hash(token)]
-  );
+  const { rows } = await pool.query(`SELECT u.id, u.username, u.display_name,a.role_id,a.store_ids,a.permission_denies
+    FROM identity.sessions s JOIN identity.users u ON u.id=s.user_id
+    LEFT JOIN identity.user_access a ON a.user_id=u.id
+    WHERE s.token_hash=$1 AND s.expires_at>now() AND u.status='active'`, [hash(token)]);
   return rows[0] ?? null;
 };
-
 const server = http.createServer(async (req, res) => {
   try {
     const url = new URL(req.url, 'http://localhost');
@@ -74,20 +47,13 @@ const server = http.createServer(async (req, res) => {
     if (path === '/login' && req.method === 'POST') {
       const { username, password } = await readJson(req);
       if (typeof username !== 'string' || typeof password !== 'string' || username.length > 254 || password.length > 1024) return send(res, 400, { error: 'Invalid request' });
-      await ensureAccountSchema(pool);
       const client = await pool.connect();
       try {
-        const { rows } = await client.query(
-          `SELECT ${USER_SESSION_FIELDS}
-           FROM identity.users u
-           JOIN identity.password_credentials p ON p.user_id = u.id
-           ${USER_SESSION_JOINS}
-           WHERE u.status='active'
-             AND (lower(u.username)=lower($1) OR EXISTS (SELECT 1 FROM identity.login_aliases la WHERE la.user_id=u.id AND lower(la.alias)=lower($1)))
-             AND p.password_hash=crypt($2,p.password_hash)
-           LIMIT 1`,
-          [username.trim(), password]
-        );
+        const { rows } = await client.query(`SELECT u.id,u.username,u.display_name,a.role_id,a.store_ids,a.permission_denies
+          FROM identity.users u JOIN identity.password_credentials p ON p.user_id=u.id
+          LEFT JOIN identity.user_access a ON a.user_id=u.id
+          WHERE u.status='active' AND (lower(u.username)=lower($1) OR EXISTS (SELECT 1 FROM identity.login_aliases la WHERE la.user_id=u.id AND lower(la.alias)=lower($1)))
+          AND p.password_hash=crypt($2,p.password_hash) LIMIT 1`, [username.trim(), password]);
         const user = rows[0];
         if (!user) return send(res, 401, { error: '用户名或密码错误。' });
         const token = randomBytes(32).toString('hex');
@@ -106,10 +72,6 @@ const server = http.createServer(async (req, res) => {
       if (token) await pool.query('DELETE FROM identity.sessions WHERE token_hash=$1', [hash(token)]);
       return send(res, 200, { ok: true }, { 'Set-Cookie': `${cookieName}=; HttpOnly; Secure; SameSite=Lax; Path=/qian/api; Max-Age=0` });
     }
-    if (path.startsWith('/account/')) {
-      const user = await sessionUser(getToken(req));
-      if (await handleAccount({ req, res, url, user, pool, send, readJson, clientIp })) return;
-    }
     if (path.startsWith('/catalog/')) {
       const user = await sessionUser(getToken(req));
       if (await handleCatalog({ req, res, url, user, pool, send, readJson })) return;
@@ -122,6 +84,10 @@ const server = http.createServer(async (req, res) => {
     if (path.startsWith('/system/')) {
       const user = await sessionUser(getToken(req));
       if (await handleSystemAccess({ req, res, url, user, pool, send, readJson })) return;
+    }
+    if (path.startsWith('/notices/')) {
+      const user = await sessionUser(getToken(req));
+      if (await handleNotices({ req, res, url, user, pool, send, readJson })) return;
     }
     send(res, 404, { error: 'Not found' });
   } catch (error) {

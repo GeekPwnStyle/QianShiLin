@@ -27,6 +27,7 @@ import { SystemParametersPage } from '@/src/modules/system/parameters/ui/SystemP
 import { RolePermissionsPage } from '@/src/modules/system/roles/ui/RolePermissionsPage';
 import { UserAssignmentsPage } from '@/src/modules/system/user-assignments/ui/UserAssignmentsPage';
 import { OperationLogsPage } from '@/src/modules/system/audit/ui/OperationLogsPage';
+import { NoticeAdminPage } from '@/src/modules/system/notices/ui/NoticeAdminPage';
 import { StoreProfilePage } from '@/src/modules/system/stores/ui/StoreProfilePage';
 import { VisionRecordPage } from '@/src/modules/vision-records/ui/VisionRecordPage';
 import { WorkbenchPage } from '@/src/modules/workbench/ui/WorkbenchPage';
@@ -75,6 +76,9 @@ export const PageDispatcher: React.FC = () => {
 
     case 'operation_logs':
       return <OperationLogsPage />;
+
+    case 'internal_notices':
+      return <NoticeAdminPage />;
 
     case 'store_profiles':
       return <StoreProfilePage />;

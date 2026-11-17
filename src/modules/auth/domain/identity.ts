@@ -173,6 +173,7 @@ export const ALL_MODULE_BASE_PERMISSIONS: PermissionCode[] = [
   'brands.order.create',
   'marketing.read',
   'system.read',
+  'system.notice.publish',
   'system.role.manage',
   'system.user.manage',
   'system.store.manage',

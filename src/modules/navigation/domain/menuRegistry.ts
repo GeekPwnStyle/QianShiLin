@@ -9,6 +9,7 @@ export type PageKind =
   | 'role_permissions'
   | 'user_assignments'
   | 'operation_logs'
+  | 'internal_notices'
   | 'store_profiles'
   | 'system_parameters'
   | 'vision_record'
@@ -739,10 +740,10 @@ const RAW_MODULES: RawNodeInput[] = [
     permission: 'system.read',
     nodeType: 'module',
     children: [
-      { id: 'system.roles', label: '角色权限管理', description: '配置身份类型、18模块功能权限树、数据范围与敏感字段可见性及变更留痕。', permission: 'system.role.manage', nodeType: 'page', favoritable: true, pageKind: 'role_permissions', implemented: true },
-      { id: 'system.user_assignments', label: '用户权限分配', description: '为员工、店长及供应商账号绑定角色及授权门店范围。', permission: 'system.user.manage', nodeType: 'page', pageKind: 'user_assignments', implemented: true },
+      { id: 'system.roles', label: '角色权限管理', description: '按菜单与操作矩阵配置角色授权，管理自定义角色、敏感字段及变更留痕。', permission: 'system.role.manage', nodeType: 'page', favoritable: true, pageKind: 'role_permissions', implemented: true },
+      { id: 'system.user_assignments', label: '用户权限分配', description: '按员工与菜单操作矩阵核对实际权限，绑定角色、授权门店并设置个人减权。', permission: 'system.user.manage', nodeType: 'page', pageKind: 'user_assignments', implemented: true },
       { id: 'system.parameters', label: '参数设置', description: '配置销售收银、充值验光、加工中心、采购调拨、小程序、工作提醒、近效期预警及管理员授权等全局与门店参数。', permission: 'system.read', nodeType: 'page', favoritable: true, pageKind: 'system_parameters', implemented: true },
-      { id: 'system.notices_send', label: '内部公告', description: '发布门店公告，并在同页查看历史发布与已读范围。', permission: 'system.read', nodeType: 'page', pageKind: 'document_list' },
+      { id: 'system.notices_send', label: '内部公告', description: '管理员发布公告并查看每位接收人的阅读状态；用户可在消息中心查阅历史。', permission: 'system.notice.publish', nodeType: 'page', pageKind: 'internal_notices', implemented: true },
       { id: 'system.product_maintenance', label: '商品数据治理', description: '跨门店价格同步、商品合并、效期批量修改及监管数据导出。', permission: 'basic.product.update', nodeType: 'page', pageKind: 'product_list' },
       { id: 'system.stores', label: '门店资料', description: '维护直营/加盟门店编码、营业地址、医疗器械资质、小程序显示与跨店查看权限。', permission: 'system.store.manage', nodeType: 'page', favoritable: true, pageKind: 'store_profiles', implemented: true },
       { id: 'system.processing_warehouses', label: '加工仓库设置', description: '配置门店对应的中央加工仓与毛坯片默认调出仓。', permission: 'system.store.manage', nodeType: 'page', pageKind: 'catalog_warehouse', implemented: true },
