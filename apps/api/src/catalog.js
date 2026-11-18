@@ -1,8 +1,129 @@
 const DATA_IMAGE_URL_RE = /^data:image\/(png|jpeg|jpg|webp|gif);base64,[A-Za-z0-9+/=]+$/i;
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const dateRe = /^\d{4}-\d{2}-\d{2}$/;
+const usernameRe = /^[a-zA-Z0-9_.-]{3,32}$/;
 
 const ALL_STORE_IDS = ['store_hq_01', 'store_hz_02', 'store_sh_03', 'store_nj_04'];
+
+const SUPPLIER_USERNAME_BY_NAME = {
+  卡尔蔡司光学华东代理: 'supplier',
+  依视路镜片供应链中心: 'sup_essilor',
+  北欧钛架联合供货商: 'sup_titan',
+  精益高登光学器械有限公司: 'sup_jygd',
+  重庆千里眼商贸有限公司: 'sup_qly',
+  洪旭德生光学镜片有限公司: 'sup_hxds',
+  上海图观眼镜有限公司: 'sup_shtg',
+  四川上品视嘉眼镜有限公司: 'sup_spsj',
+  上海忠诚商贸有限公司: 'sup_zcsm',
+  北京宝典商贸有限责任公司: 'sup_bjbd',
+  欧普康视角膜塑形镜供应站: 'sup_opks',
+  博士伦隐形与护理直供中心: 'sup_bsl',
+};
+
+const CHAR_PINYIN_MAP = {
+  卡: 'k', 尔: 'e', 蔡: 'c', 司: 's', 光: 'g', 学: 'x', 华: 'h', 东: 'd', 代: 'd', 理: 'l',
+  依: 'y', 视: 's', 路: 'l', 镜: 'j', 片: 'p', 供: 'g', 应: 'y', 链: 'l', 中: 'z', 心: 'x',
+  北: 'b', 欧: 'o', 钛: 't', 架: 'j', 联: 'l', 合: 'h', 货: 'h', 商: 's', 精: 'j', 益: 'y',
+  高: 'g', 登: 'd', 器: 'q', 械: 'x', 有: 'y', 限: 'x', 公: 'g', 重: 'c', 庆: 'q', 千: 'q',
+  里: 'l', 眼: 'y', 贸: 'm', 洪: 'h', 旭: 'x', 德: 'd', 生: 's', 上: 's', 海: 'h', 图: 't',
+  观: 'g', 四: 's', 川: 'c', 品: 'p', 嘉: 'j', 忠: 'z', 诚: 'c', 京: 'j', 宝: 'b', 典: 'd',
+  普: 'p', 康: 'k', 角: 'j', 膜: 'm', 塑: 's', 形: 'x', 站: 'z', 博: 'b', 士: 's', 伦: 'l',
+  隐: 'y', 护: 'h', 直: 'z', 豪: 'h', 雅: 'y', 明: 'm', 月: 'y', 暴: 'b', 龙: 'l', 陌: 'm',
+  森: 's', 太: 't', 阳: 'y', 昌: 'c', 科: 'k', 技: 'j', 浙: 'z', 江: 'j', 杭: 'h', 州: 'z',
+};
+
+function supplierInitialSlug(name) {
+  let out = '';
+  for (const ch of String(name || '').trim()) {
+    if (/[a-zA-Z0-9]/.test(ch)) {
+      out += ch.toLowerCase();
+    } else if (CHAR_PINYIN_MAP[ch]) {
+      out += CHAR_PINYIN_MAP[ch];
+    }
+  }
+  return out.slice(0, 14) || 'partner';
+}
+
+function buildSupplierDisplayName(supplier) {
+  const contact = String(supplier.contact || '').trim();
+  const shortName = String(supplier.alias || supplier.name || '').trim();
+  if (contact && shortName) return `${contact} · ${shortName}`.slice(0, 110);
+  return (contact || shortName || '合作供应商').slice(0, 110);
+}
+
+async function resolveUniqueSupplierUsername(client, preferredUsername, supplierName) {
+  if (preferredUsername) {
+    const clean = preferredUsername.trim().toLowerCase();
+    if (!usernameRe.test(clean)) {
+      throw new Error('登录账号 ID 需为 3-32 位字母、数字、下划线或点号');
+    }
+    const { rows } = await client.query(
+      `SELECT 1 FROM identity.users WHERE lower(username) = lower($1) LIMIT 1`,
+      [clean]
+    );
+    if (rows.length) {
+      throw new Error(`登录账号「${clean}」已被占用`);
+    }
+    return clean;
+  }
+
+  const mapped = SUPPLIER_USERNAME_BY_NAME[String(supplierName || '').trim()];
+  const base = mapped || `sup_${supplierInitialSlug(supplierName)}`;
+  for (let i = 0; i < 100; i++) {
+    const candidate = i === 0 ? base : `${base}_${i + 1}`;
+    const { rows } = await client.query(
+      `SELECT 1 FROM identity.users WHERE lower(username) = lower($1) LIMIT 1`,
+      [candidate]
+    );
+    if (!rows.length) return candidate;
+  }
+  return `sup_${Date.now().toString(36)}`;
+}
+
+async function provisionSupplierUserAccount(client, supplier, options = {}) {
+  const username = await resolveUniqueSupplierUsername(client, options.preferredUsername, supplier.name);
+  const password = (options.password && String(options.password).trim()) || 'Qsl@123456';
+  if (password.length < 6 || password.length > 64) {
+    throw new Error('供应商初始登录密码长度需在 6 至 64 位之间');
+  }
+  const displayName = buildSupplierDisplayName(supplier);
+  const status = supplier.enabled === false ? 'disabled' : 'active';
+
+  const { rows: [createdUser] } = await client.query(
+    `INSERT INTO identity.users (username, display_name, status)
+     VALUES ($1, $2, $3) RETURNING id, username, display_name, status`,
+    [username, displayName, status]
+  );
+
+  await client.query(
+    `INSERT INTO identity.password_credentials (user_id, password_hash, password_algorithm)
+     VALUES ($1, crypt($2, gen_salt('bf', 10)), 'bcrypt')`,
+    [createdUser.id, password]
+  );
+
+  await client.query(
+    `INSERT INTO identity.user_access (user_id, role_id, store_ids, updated_by)
+     VALUES ($1, 'role_supplier_partner', '{}'::text[], $2)`,
+    [createdUser.id, options.actorUserId ?? null]
+  );
+
+  await client.query(
+    `INSERT INTO identity.user_catalog_access (user_id, role, supplier_id)
+     VALUES ($1, 'supplier', $2)
+     ON CONFLICT (user_id) DO UPDATE SET role = 'supplier', supplier_id = EXCLUDED.supplier_id`,
+    [createdUser.id, supplier.id]
+  );
+
+  await client.query(
+    `INSERT INTO identity.user_profiles (user_id, title, avatar_initials, theme_key)
+     VALUES ($1, $2, $3, 'lime_charcoal')
+     ON CONFLICT (user_id) DO NOTHING`,
+    [createdUser.id, `供应商协同账号 · ${supplier.name}`.slice(0, 120), displayName.slice(0, 1)]
+  );
+
+  await client.query(`UPDATE catalog.suppliers SET user_id = $1 WHERE id = $2`, [createdUser.id, supplier.id]);
+  return createdUser;
+}
 
 const DEFAULT_OPTICAL_SUPPLIERS = [
   {
@@ -292,6 +413,79 @@ const DEFAULT_OPTICAL_SUPPLIERS = [
   },
 ];
 
+export async function syncSuppliersToIdentityUsers(pool) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    // 1. Ensure existing preset 'supplier' user (顾承泽) is linked to a supplier if unlinked
+    const { rows: [presetSupplierUser] } = await client.query(
+      `SELECT u.id, u.username, uca.supplier_id
+       FROM identity.users u
+       LEFT JOIN identity.user_catalog_access uca ON uca.user_id = u.id
+       WHERE lower(u.username) = 'supplier'
+       LIMIT 1`
+    );
+
+    if (presetSupplierUser) {
+      if (presetSupplierUser.supplier_id) {
+        await client.query(
+          `UPDATE catalog.suppliers SET user_id = $1 WHERE id = $2 AND user_id IS NULL`,
+          [presetSupplierUser.id, presetSupplierUser.supplier_id]
+        );
+      } else {
+        const { rows: [zeissOrDefault] } = await client.query(
+          `SELECT id, name FROM catalog.suppliers
+           WHERE user_id IS NULL
+           ORDER BY CASE WHEN name = '卡尔蔡司光学华东代理' THEN 0 ELSE 1 END,
+                    is_default DESC, sort_order ASC, created_at ASC
+           LIMIT 1`
+        );
+        if (zeissOrDefault) {
+          await client.query(
+            `INSERT INTO identity.user_catalog_access (user_id, role, supplier_id)
+             VALUES ($1, 'supplier', $2)
+             ON CONFLICT (user_id) DO UPDATE SET role = 'supplier', supplier_id = EXCLUDED.supplier_id`,
+            [presetSupplierUser.id, zeissOrDefault.id]
+          );
+          await client.query(
+            `UPDATE catalog.suppliers SET user_id = $1 WHERE id = $2`,
+            [presetSupplierUser.id, zeissOrDefault.id]
+          );
+        }
+      }
+    }
+
+    // 2. Link any existing user_catalog_access supplier mappings whose catalog.suppliers.user_id is still NULL
+    await client.query(
+      `UPDATE catalog.suppliers s
+       SET user_id = uca.user_id
+       FROM identity.user_catalog_access uca
+       WHERE uca.supplier_id = s.id AND uca.role = 'supplier' AND s.user_id IS NULL
+         AND NOT EXISTS (SELECT 1 FROM catalog.suppliers s2 WHERE s2.user_id = uca.user_id)`
+    );
+
+    // 3. Provision unique login accounts for every remaining supplier in catalog.suppliers
+    const { rows: unlinkedSuppliers } = await client.query(
+      `SELECT id, name, alias, contact, enabled
+       FROM catalog.suppliers
+       WHERE user_id IS NULL
+       ORDER BY sort_order ASC, is_default DESC, created_at ASC`
+    );
+
+    for (const sup of unlinkedSuppliers) {
+      await provisionSupplierUserAccount(client, sup);
+    }
+
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
 let supplierSchemaReadyPromise = null;
 
 export function ensureSupplierSchema(pool) {
@@ -317,11 +511,17 @@ export function ensureSupplierSchema(pool) {
           ADD COLUMN IF NOT EXISTS owner_store_type varchar(40) NOT NULL DEFAULT '总店',
           ADD COLUMN IF NOT EXISTS owner_store_name varchar(120) NOT NULL DEFAULT '杭州西湖旗舰店',
           ADD COLUMN IF NOT EXISTS bound_product_ids text[] NOT NULL DEFAULT '{}',
-          ADD COLUMN IF NOT EXISTS third_party_binding jsonb NOT NULL DEFAULT '{}'::jsonb
+          ADD COLUMN IF NOT EXISTS third_party_binding jsonb NOT NULL DEFAULT '{}'::jsonb,
+          ADD COLUMN IF NOT EXISTS user_id uuid REFERENCES identity.users(id) ON DELETE SET NULL
       `);
       await pool.query(`
         CREATE INDEX IF NOT EXISTS suppliers_sort_order_idx
           ON catalog.suppliers (sort_order ASC, is_default DESC, created_at DESC)
+      `);
+      await pool.query(`
+        CREATE UNIQUE INDEX IF NOT EXISTS suppliers_user_id_unique
+          ON catalog.suppliers (user_id)
+          WHERE user_id IS NOT NULL
       `);
       await pool.query(`
         CREATE TABLE IF NOT EXISTS catalog.supplier_invitations (
@@ -341,10 +541,9 @@ export function ensureSupplierSchema(pool) {
           ON catalog.supplier_invitations (applied_at DESC)
       `);
 
-      // Sync & enrich seeded optical suppliers in PostgreSQL without duplicating existing records
       for (const item of DEFAULT_OPTICAL_SUPPLIERS) {
         const { rows: [existing] } = await pool.query(
-          `SELECT id, sort_order, scope, authorized_store_ids, owner_store_name FROM catalog.suppliers WHERE lower(name) = lower($1) LIMIT 1`,
+          `SELECT id, sort_order, scope, authorized_store_ids FROM catalog.suppliers WHERE lower(name) = lower($1) LIMIT 1`,
           [item.name]
         );
         if (!existing) {
@@ -420,6 +619,8 @@ export function ensureSupplierSchema(pool) {
           );
         }
       }
+
+      await syncSuppliersToIdentityUsers(pool);
     })().catch((err) => {
       supplierSchemaReadyPromise = null;
       throw err;
@@ -481,7 +682,7 @@ const definitions = {
       remark: 'text',
     },
     required: ['name'],
-    order: 'sort_order ASC, is_default DESC, created_at DESC, name ASC',
+    order: 's.sort_order ASC, s.is_default DESC, s.created_at DESC, s.name ASC',
   },
   warehouses: {
     table: 'catalog.warehouses',
@@ -542,13 +743,25 @@ function validate(body, definition, creating) {
 }
 
 const SUPPLIER_SORT_MAP = {
-  name: 'name',
-  contact: 'contact',
-  phone: 'phone',
-  sort_order: 'sort_order',
-  device_license_expires_on: 'device_license_expires_on',
-  created_at: 'created_at',
+  name: 's.name',
+  contact: 's.contact',
+  phone: 's.phone',
+  sort_order: 's.sort_order',
+  device_license_expires_on: 's.device_license_expires_on',
+  created_at: 's.created_at',
 };
+
+const SUPPLIER_SELECT_SQL = `
+  SELECT s.*,
+         u.username AS login_username,
+         u.status AS login_status,
+         ua.role_id,
+         r.name AS role_name
+  FROM catalog.suppliers s
+  LEFT JOIN identity.users u ON u.id = s.user_id
+  LEFT JOIN identity.user_access ua ON ua.user_id = u.id
+  LEFT JOIN identity.roles r ON r.id = ua.role_id
+`;
 
 export async function handleCatalog({ req, res, url, user, pool, send, readJson }) {
   const match = /^\/catalog\/(brands|suppliers|warehouses)(?:\/([^/]+))?(?:\/([^/]+))?$/.exec(url.pathname);
@@ -570,7 +783,6 @@ export async function handleCatalog({ req, res, url, user, pool, send, readJson 
   );
   let access = accessRows[0];
   if (!access) {
-    // Fallback to user_access role identity_type if user_catalog_access row was not created for newly provisioned user
     const { rows: [fallbackRole] } = await pool.query(
       `SELECT r.identity_type FROM identity.user_access a JOIN identity.roles r ON r.id = a.role_id WHERE a.user_id = $1`,
       [user.id]
@@ -606,7 +818,6 @@ export async function handleCatalog({ req, res, url, user, pool, send, readJson 
     return true;
   }
 
-  // Special supplier endpoints before :id UUID routing
   if (resource === 'suppliers' && sub1 && !uuid.test(sub1)) {
     try {
       if (sub1 === 'invitations' && !sub2) {
@@ -629,47 +840,57 @@ export async function handleCatalog({ req, res, url, user, pool, send, readJson 
             send(res, 400, { error: '请输入邀请码' });
             return true;
           }
-          // Check if invite code corresponds to a known partner prefix or create a pending binding request
           const autoApprove = /^QSL-SUP-/i.test(inviteCode);
-          let linkedSupplierId = null;
           const storeName = autoApprove ? `合作加盟供货门店 (${inviteCode.toUpperCase()})` : `外部供应链门店 (${inviteCode})`;
           const contactName = autoApprove ? '供应链专员' : '待对方门店确认';
           const status = autoApprove ? '已通过' : '待审核';
           const note = autoApprove
-            ? '邀请码核验通过，已自动生成并关联供应商档案'
+            ? '邀请码核验通过，已自动生成并关联供应商档案与登录账号'
             : '已提交绑定申请，等待对方门店审核确认';
 
-          if (autoApprove) {
-            const { rows: [createdSup] } = await pool.query(
-              `INSERT INTO catalog.suppliers (
-                name, alias, contact, phone, categories, is_supply_chain,
-                authorized_store_ids, owner_store_type, owner_store_name, remark
-              ) VALUES ($1, $2, $3, $4, $5::text[], true, $6::text[], '总店', '杭州西湖旗舰店', $7)
-              RETURNING id`,
-              [
-                storeName,
-                inviteCode.toUpperCase(),
-                contactName,
-                '13800008888',
-                ['镜片', '镜架'],
-                ALL_STORE_IDS,
-                `通过邀请码 ${inviteCode} 自动绑定`,
-              ]
-            );
-            linkedSupplierId = createdSup.id;
-          }
+          const client = await pool.connect();
+          try {
+            await client.query('BEGIN');
+            let linkedSupplierId = null;
+            if (autoApprove) {
+              const { rows: [createdSup] } = await client.query(
+                `INSERT INTO catalog.suppliers (
+                  name, alias, contact, phone, categories, is_supply_chain,
+                  authorized_store_ids, owner_store_type, owner_store_name, remark
+                ) VALUES ($1, $2, $3, $4, $5::text[], true, $6::text[], '总店', '杭州西湖旗舰店', $7)
+                RETURNING id, name, alias, contact, enabled`,
+                [
+                  storeName,
+                  inviteCode.toUpperCase(),
+                  contactName,
+                  '13800008888',
+                  ['镜片', '镜架'],
+                  ALL_STORE_IDS,
+                  `通过邀请码 ${inviteCode} 自动绑定`,
+                ]
+              );
+              linkedSupplierId = createdSup.id;
+              await provisionSupplierUserAccount(client, createdSup, { actorUserId: user.id });
+            }
 
-          const { rows: [inserted] } = await pool.query(
-            `INSERT INTO catalog.supplier_invitations (
-              invite_code, status, target_store_name, target_store_contact, note, supplier_id, created_by
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7)
-            RETURNING id, invite_code, status, target_store_name, target_store_contact,
-                      to_char(applied_at AT TIME ZONE 'Asia/Shanghai', 'YYYY-MM-DD HH24:MI') AS applied_at,
-                      note, supplier_id`,
-            [inviteCode, status, storeName, contactName, note, linkedSupplierId, user.id]
-          );
-          send(res, 201, { item: inserted, autoApproved: autoApprove });
-          return true;
+            const { rows: [inserted] } = await client.query(
+              `INSERT INTO catalog.supplier_invitations (
+                invite_code, status, target_store_name, target_store_contact, note, supplier_id, created_by
+              ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+              RETURNING id, invite_code, status, target_store_name, target_store_contact,
+                        to_char(applied_at AT TIME ZONE 'Asia/Shanghai', 'YYYY-MM-DD HH24:MI') AS applied_at,
+                        note, supplier_id`,
+              [inviteCode, status, storeName, contactName, note, linkedSupplierId, user.id]
+            );
+            await client.query('COMMIT');
+            send(res, 201, { item: inserted, autoApproved: autoApprove });
+            return true;
+          } catch (err) {
+            await client.query('ROLLBACK');
+            throw err;
+          } finally {
+            client.release();
+          }
         }
       }
 
@@ -753,16 +974,20 @@ export async function handleCatalog({ req, res, url, user, pool, send, readJson 
             return true;
           }
           const { rows: boundAccounts } = await client.query(
-            `SELECT supplier_id FROM identity.user_catalog_access WHERE supplier_id = ANY($1::uuid[])`,
+            `SELECT s.id, u.username
+             FROM catalog.suppliers s
+             JOIN identity.users u ON u.id = s.user_id
+             WHERE s.id = ANY($1::uuid[]) AND lower(u.username) = 'supplier'`,
             [sourceIds]
           );
           if (boundAccounts.length) {
             await client.query('ROLLBACK');
-            send(res, 409, { error: '待合并的供应商中存在已绑定登录账号的记录，请将其作为主保留供应商后再合并' });
+            send(res, 409, { error: '待合并供应商中包含系统基准供应商账号（@supplier），请将其设为主保留供应商后再合并' });
             return true;
           }
           const { rows: sources } = await client.query(
-            `SELECT id, categories, authorized_store_ids, bound_product_ids FROM catalog.suppliers WHERE id = ANY($1::uuid[])`,
+            `SELECT id, user_id, categories, authorized_store_ids, bound_product_ids
+             FROM catalog.suppliers WHERE id = ANY($1::uuid[])`,
             [sourceIds]
           );
           const mergedCategories = Array.from(new Set([...(target.categories || []), ...sources.flatMap((s) => s.categories || [])]));
@@ -782,7 +1007,12 @@ export async function handleCatalog({ req, res, url, user, pool, send, readJson 
              ON CONFLICT DO NOTHING`,
             [targetId, sourceIds]
           );
+          const sourceUserIds = sources.map((s) => s.user_id).filter(Boolean);
           const { rowCount } = await client.query(`DELETE FROM catalog.suppliers WHERE id = ANY($1::uuid[])`, [sourceIds]);
+          if (sourceUserIds.length) {
+            await client.query(`DELETE FROM identity.user_catalog_access WHERE user_id = ANY($1::uuid[])`, [sourceUserIds]);
+            await client.query(`UPDATE identity.users SET status = 'disabled', updated_at = now() WHERE id = ANY($1::uuid[])`, [sourceUserIds]);
+          }
           await client.query('COMMIT');
           send(res, 200, { mergedCount: rowCount, targetId });
           return true;
@@ -810,9 +1040,13 @@ export async function handleCatalog({ req, res, url, user, pool, send, readJson 
 
   try {
     if (req.method === 'GET' && id) {
+      const sql =
+        resource === 'suppliers'
+          ? `${SUPPLIER_SELECT_SQL} WHERE s.id=$1${access.role === 'supplier' ? ' AND s.id=$2' : ''}`
+          : `SELECT * FROM ${definition.table} WHERE id=$1`;
       const { rows } = await pool.query(
-        `SELECT * FROM ${definition.table} WHERE id=$1${access.role === 'supplier' ? ' AND id=$2' : ''}`,
-        access.role === 'supplier' ? [id, access.supplier_id] : [id]
+        sql,
+        resource === 'suppliers' && access.role === 'supplier' ? [id, access.supplier_id] : [id]
       );
       send(res, rows.length ? 200 : 404, rows[0] ? visibleRow(rows[0], access.role, resource) : { error: 'Not found' });
       return true;
@@ -826,40 +1060,40 @@ export async function handleCatalog({ req, res, url, user, pool, send, readJson 
 
       let where =
         resource === 'suppliers'
-          ? `WHERE ($1::text IS NULL OR name ILIKE $1 ESCAPE '\\' OR alias ILIKE $1 ESCAPE '\\' OR alias_pinyin ILIKE $1 ESCAPE '\\' OR contact ILIKE $1 ESCAPE '\\' OR phone ILIKE $1 ESCAPE '\\' OR scope ILIKE $1 ESCAPE '\\' OR detail_address ILIKE $1 ESCAPE '\\')`
+          ? `WHERE ($1::text IS NULL OR s.name ILIKE $1 ESCAPE '\\' OR s.alias ILIKE $1 ESCAPE '\\' OR s.alias_pinyin ILIKE $1 ESCAPE '\\' OR s.contact ILIKE $1 ESCAPE '\\' OR s.phone ILIKE $1 ESCAPE '\\' OR s.scope ILIKE $1 ESCAPE '\\' OR s.detail_address ILIKE $1 ESCAPE '\\' OR u.username ILIKE $1 ESCAPE '\\')`
           : `WHERE ($1::text IS NULL OR name ILIKE $1 ESCAPE '\\')`;
 
       if (resource === 'suppliers') {
         const enabledParam = url.searchParams.get('enabled');
         if (enabledParam === 'true' || enabledParam === 'false') {
           values.push(enabledParam === 'true');
-          where += ` AND enabled = $${values.length}`;
+          where += ` AND s.enabled = $${values.length}`;
         }
         const defaultParam = url.searchParams.get('isDefault');
         if (defaultParam === 'true' || defaultParam === 'false') {
           values.push(defaultParam === 'true');
-          where += ` AND is_default = $${values.length}`;
+          where += ` AND s.is_default = $${values.length}`;
         }
         const supplyParam = url.searchParams.get('isSupplyChain');
         if (supplyParam === 'true' || supplyParam === 'false') {
           values.push(supplyParam === 'true');
-          where += ` AND is_supply_chain = $${values.length}`;
+          where += ` AND s.is_supply_chain = $${values.length}`;
         }
         const provinceParam = (url.searchParams.get('province') ?? '').trim().slice(0, 80);
         if (provinceParam) {
           values.push(provinceParam);
-          where += ` AND province = $${values.length}`;
+          where += ` AND s.province = $${values.length}`;
         }
         const storeIdParam = (url.searchParams.get('storeId') ?? '').trim().slice(0, 60);
         if (storeIdParam) {
           values.push(storeIdParam);
-          where += ` AND $${values.length} = ANY(authorized_store_ids)`;
+          where += ` AND $${values.length} = ANY(s.authorized_store_ids)`;
         }
       }
 
       if (access.role === 'supplier') {
         values.push(access.supplier_id);
-        where += ` AND id = $${values.length}`;
+        where += resource === 'suppliers' ? ` AND s.id = $${values.length}` : ` AND id = $${values.length}`;
       }
 
       let orderClause = definition.order;
@@ -867,16 +1101,22 @@ export async function handleCatalog({ req, res, url, user, pool, send, readJson 
         const sf = url.searchParams.get('sortField');
         const so = url.searchParams.get('sortOrder') === 'desc' ? 'DESC' : 'ASC';
         if (sf && SUPPLIER_SORT_MAP[sf]) {
-          orderClause = `${SUPPLIER_SORT_MAP[sf]} ${so} NULLS LAST, created_at DESC`;
+          orderClause = `${SUPPLIER_SORT_MAP[sf]} ${so} NULLS LAST, s.created_at DESC`;
         }
       }
 
-      const count = await pool.query(`SELECT count(*)::int AS total FROM ${definition.table} ${where}`, values);
+      const fromForCount =
+        resource === 'suppliers'
+          ? `FROM catalog.suppliers s LEFT JOIN identity.users u ON u.id = s.user_id`
+          : `FROM ${definition.table}`;
+      const count = await pool.query(`SELECT count(*)::int AS total ${fromForCount} ${where}`, values);
       values.push(pageSize, (page - 1) * pageSize);
-      const { rows } = await pool.query(
-        `SELECT * FROM ${definition.table} ${where} ORDER BY ${orderClause} LIMIT $${values.length - 1} OFFSET $${values.length}`,
-        values
-      );
+
+      const selectSql =
+        resource === 'suppliers'
+          ? `${SUPPLIER_SELECT_SQL} ${where} ORDER BY ${orderClause} LIMIT $${values.length - 1} OFFSET $${values.length}`
+          : `SELECT * FROM ${definition.table} ${where} ORDER BY ${orderClause} LIMIT $${values.length - 1} OFFSET $${values.length}`;
+      const { rows } = await pool.query(selectSql, values);
       send(res, 200, {
         items: rows.map((row) => visibleRow(row, access.role, resource)),
         total: count.rows[0].total,
@@ -889,42 +1129,196 @@ export async function handleCatalog({ req, res, url, user, pool, send, readJson 
     const maxBodyBytes = resource === 'suppliers' ? 6 * 1024 * 1024 : 65536;
 
     if (req.method === 'POST' && !id) {
-      const entries = validate(await readJson(req, maxBodyBytes), definition, true);
+      const rawBody = await readJson(req, maxBodyBytes);
+      const loginUsername = typeof rawBody?.login_username === 'string' ? rawBody.login_username : '';
+      const loginPassword = typeof rawBody?.login_password === 'string' ? rawBody.login_password : '';
+      const cleanedBody = rawBody && typeof rawBody === 'object' ? { ...rawBody } : rawBody;
+      if (cleanedBody && typeof cleanedBody === 'object') {
+        delete cleanedBody.login_username;
+        delete cleanedBody.login_password;
+      }
+
+      const entries = validate(cleanedBody, definition, true);
       const columns = entries.map(([key]) => key);
       const values = entries.map(([, value]) => value);
       const placeholders = values.map((_, index) => `$${index + 1}`);
-      const { rows } = await pool.query(
-        `INSERT INTO ${definition.table} (${columns.join(',')}) VALUES (${placeholders.join(',')}) RETURNING *`,
-        values
-      );
-      send(res, 201, rows[0]);
-      return true;
+
+      if (resource !== 'suppliers') {
+        const { rows } = await pool.query(
+          `INSERT INTO ${definition.table} (${columns.join(',')}) VALUES (${placeholders.join(',')}) RETURNING *`,
+          values
+        );
+        send(res, 201, rows[0]);
+        return true;
+      }
+
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        const { rows: [inserted] } = await client.query(
+          `INSERT INTO catalog.suppliers (${columns.join(',')}) VALUES (${placeholders.join(',')}) RETURNING *`,
+          values
+        );
+        const createdUser = await provisionSupplierUserAccount(client, inserted, {
+          preferredUsername: loginUsername,
+          password: loginPassword,
+          actorUserId: user.id,
+        });
+        await client.query(
+          `INSERT INTO identity.operation_log(actor_user_id, actor_role_id, actor_role_name, category, action, target, details)
+           SELECT $1, a.role_id, r.name, '供应商资料', '新增供应商并生成账号', $2, $3::jsonb
+           FROM identity.user_access a JOIN identity.roles r ON r.id = a.role_id WHERE a.user_id = $1`,
+          [user.id, inserted.id, JSON.stringify({ supplier: inserted.name, username: createdUser.username })]
+        );
+        await client.query('COMMIT');
+        const { rows: [enriched] } = await pool.query(`${SUPPLIER_SELECT_SQL} WHERE s.id = $1`, [inserted.id]);
+        send(res, 201, enriched ?? inserted);
+        return true;
+      } catch (err) {
+        await client.query('ROLLBACK');
+        if (err.message?.includes('登录') || err.message?.includes('密码')) {
+          send(res, 400, { error: err.message });
+          return true;
+        }
+        throw err;
+      } finally {
+        client.release();
+      }
     }
 
     if (req.method === 'PATCH' && id) {
-      const entries = validate(await readJson(req, maxBodyBytes), definition, false);
+      const rawBody = await readJson(req, maxBodyBytes);
+      const loginPassword = typeof rawBody?.login_password === 'string' ? rawBody.login_password.trim() : '';
+      const cleanedBody = rawBody && typeof rawBody === 'object' ? { ...rawBody } : rawBody;
+      if (cleanedBody && typeof cleanedBody === 'object') {
+        delete cleanedBody.login_username;
+        delete cleanedBody.login_password;
+      }
+
+      const entries = validate(cleanedBody, definition, false);
       const values = entries.map(([, value]) => value);
       const assignments = entries.map(([key], index) => `${key}=$${index + 1}`);
       values.push(id);
-      const { rows } = await pool.query(
-        `UPDATE ${definition.table} SET ${assignments.join(',')}, updated_at=now() WHERE id=$${values.length} RETURNING *`,
-        values
-      );
-      send(res, rows.length ? 200 : 404, rows[0] ?? { error: 'Not found' });
-      return true;
+
+      if (resource !== 'suppliers') {
+        const { rows } = await pool.query(
+          `UPDATE ${definition.table} SET ${assignments.join(',')}, updated_at=now() WHERE id=$${values.length} RETURNING *`,
+          values
+        );
+        send(res, rows.length ? 200 : 404, rows[0] ?? { error: 'Not found' });
+        return true;
+      }
+
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        const { rows: [updated] } = await client.query(
+          `UPDATE catalog.suppliers SET ${assignments.join(',')}, updated_at=now() WHERE id=$${values.length} RETURNING *`,
+          values
+        );
+        if (!updated) {
+          await client.query('ROLLBACK');
+          send(res, 404, { error: 'Not found' });
+          return true;
+        }
+
+        if (updated.user_id) {
+          const { rows: [linkedUser] } = await client.query(
+            `SELECT id, username FROM identity.users WHERE id = $1`,
+            [updated.user_id]
+          );
+          if (linkedUser) {
+            const nextStatus = updated.enabled ? 'active' : 'disabled';
+            if (linkedUser.username === 'supplier') {
+              await client.query(
+                `UPDATE identity.users SET status = $2, updated_at = now() WHERE id = $1`,
+                [linkedUser.id, nextStatus]
+              );
+            } else {
+              await client.query(
+                `UPDATE identity.users SET display_name = $2, status = $3, updated_at = now() WHERE id = $1`,
+                [linkedUser.id, buildSupplierDisplayName(updated), nextStatus]
+              );
+            }
+            await client.query(
+              `UPDATE identity.user_profiles SET title = $2 WHERE user_id = $1`,
+              [linkedUser.id, `供应商协同账号 · ${updated.name}`.slice(0, 120)]
+            );
+            if (loginPassword) {
+              if (loginPassword.length < 6 || loginPassword.length > 64) {
+                await client.query('ROLLBACK');
+                send(res, 400, { error: '重置登录密码长度需在 6 至 64 位之间' });
+                return true;
+              }
+              await client.query(
+                `UPDATE identity.password_credentials
+                 SET password_hash = crypt($2, gen_salt('bf', 10)), password_algorithm = 'bcrypt', password_changed_at = now()
+                 WHERE user_id = $1`,
+                [linkedUser.id, loginPassword]
+              );
+            }
+          }
+        } else {
+          await provisionSupplierUserAccount(client, updated, {
+            password: loginPassword || undefined,
+            actorUserId: user.id,
+          });
+        }
+
+        await client.query('COMMIT');
+        const { rows: [enriched] } = await pool.query(`${SUPPLIER_SELECT_SQL} WHERE s.id = $1`, [updated.id]);
+        send(res, 200, enriched ?? updated);
+        return true;
+      } catch (err) {
+        await client.query('ROLLBACK');
+        throw err;
+      } finally {
+        client.release();
+      }
     }
 
     if (req.method === 'DELETE' && id) {
       if (resource === 'suppliers') {
-        const { rows: bound } = await pool.query(
-          `SELECT 1 FROM identity.user_catalog_access WHERE supplier_id = $1 LIMIT 1`,
-          [id]
-        );
-        if (bound.length) {
-          send(res, 409, { error: '该供应商已绑定外部登录账号，不能直接删除，请改为停用' });
+        const client = await pool.connect();
+        try {
+          await client.query('BEGIN');
+          const { rows: [supRow] } = await client.query(
+            `SELECT s.id, s.user_id, u.username
+             FROM catalog.suppliers s
+             LEFT JOIN identity.users u ON u.id = s.user_id
+             WHERE s.id = $1 FOR UPDATE OF s`,
+            [id]
+          );
+          if (!supRow) {
+            await client.query('ROLLBACK');
+            send(res, 404, { error: 'Not found' });
+            return true;
+          }
+          if (supRow.username === 'supplier') {
+            await client.query('ROLLBACK');
+            send(res, 409, { error: '系统基准供应商账号（@supplier）受保护，请改为停用' });
+            return true;
+          }
+          const { rowCount } = await client.query(`DELETE FROM catalog.suppliers WHERE id = $1`, [id]);
+          if (supRow.user_id) {
+            await client.query(`DELETE FROM identity.user_catalog_access WHERE user_id = $1`, [supRow.user_id]);
+            await client.query(`DELETE FROM identity.users WHERE id = $1`, [supRow.user_id]);
+          }
+          await client.query('COMMIT');
+          send(res, rowCount ? 200 : 404, rowCount ? { ok: true } : { error: 'Not found' });
           return true;
+        } catch (err) {
+          await client.query('ROLLBACK');
+          if (err.code === '23503') {
+            send(res, 409, { error: '该供应商已关联采购或入库单据，不能直接删除，请改为停用' });
+            return true;
+          }
+          throw err;
+        } finally {
+          client.release();
         }
       }
+
       const { rowCount } = await pool.query(`DELETE FROM ${definition.table} WHERE id=$1`, [id]);
       send(res, rowCount ? 200 : 404, rowCount ? { ok: true } : { error: 'Not found' });
       return true;
@@ -933,7 +1327,13 @@ export async function handleCatalog({ req, res, url, user, pool, send, readJson 
     send(res, 405, { error: 'Method not allowed' });
     return true;
   } catch (error) {
-    if (error.message.startsWith('Invalid') || error.message.startsWith('Unsupported') || error.message.startsWith('Required')) {
+    if (
+      error.message.startsWith('Invalid') ||
+      error.message.startsWith('Unsupported') ||
+      error.message.startsWith('Required') ||
+      error.message.includes('登录') ||
+      error.message.includes('密码')
+    ) {
       send(res, 400, { error: error.message });
       return true;
     }

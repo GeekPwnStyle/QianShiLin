@@ -45,11 +45,21 @@ export interface SupplierRecord {
   bound_product_ids: string[];
   third_party_binding: SupplierThirdPartyBinding;
   remark: string;
+  user_id?: string | null;
+  login_username?: string;
+  login_status?: string;
+  role_id?: string;
+  role_name?: string;
   created_at?: string;
   updated_at?: string;
 }
 
-export type SupplierWritePayload = Partial<Omit<SupplierRecord, 'id' | 'created_at' | 'updated_at'>>;
+export type SupplierWritePayload = Partial<
+  Omit<SupplierRecord, 'id' | 'created_at' | 'updated_at' | 'user_id' | 'login_status' | 'role_id' | 'role_name'>
+> & {
+  login_username?: string;
+  login_password?: string;
+};
 
 export interface SupplierListParams {
   page: number;
@@ -201,6 +211,11 @@ const DEFAULT_DEBUG_SUPPLIERS: SupplierRecord[] = [
     bound_product_ids: [],
     third_party_binding: {},
     remark: '核心战略镜片供应方',
+    user_id: '00000000-0000-0000-0000-000000000005',
+    login_username: 'supplier',
+    login_status: 'active',
+    role_id: 'role_supplier_partner',
+    role_name: '合作供应商账号',
   },
   {
     id: '11111111-1111-4111-8111-111111111102',
@@ -242,6 +257,11 @@ const DEFAULT_DEBUG_SUPPLIERS: SupplierRecord[] = [
     bound_product_ids: [],
     third_party_binding: {},
     remark: '',
+    user_id: '00000000-0000-0000-0000-000000000102',
+    login_username: 'sup_essilor',
+    login_status: 'active',
+    role_id: 'role_supplier_partner',
+    role_name: '合作供应商账号',
   },
   {
     id: '11111111-1111-4111-8111-111111111103',
@@ -280,6 +300,11 @@ const DEFAULT_DEBUG_SUPPLIERS: SupplierRecord[] = [
     bound_product_ids: [],
     third_party_binding: {},
     remark: '',
+    user_id: '00000000-0000-0000-0000-000000000103',
+    login_username: 'sup_titan',
+    login_status: 'active',
+    role_id: 'role_supplier_partner',
+    role_name: '合作供应商账号',
   },
   {
     id: '11111111-1111-4111-8111-111111111104',
@@ -318,6 +343,11 @@ const DEFAULT_DEBUG_SUPPLIERS: SupplierRecord[] = [
     bound_product_ids: [],
     third_party_binding: {},
     remark: '',
+    user_id: '00000000-0000-0000-0000-000000000104',
+    login_username: 'sup_jygd',
+    login_status: 'active',
+    role_id: 'role_supplier_partner',
+    role_name: '合作供应商账号',
   },
   {
     id: '11111111-1111-4111-8111-111111111105',
@@ -356,6 +386,11 @@ const DEFAULT_DEBUG_SUPPLIERS: SupplierRecord[] = [
     bound_product_ids: [],
     third_party_binding: {},
     remark: '',
+    user_id: '00000000-0000-0000-0000-000000000105',
+    login_username: 'sup_qly',
+    login_status: 'active',
+    role_id: 'role_supplier_partner',
+    role_name: '合作供应商账号',
   },
   {
     id: '11111111-1111-4111-8111-111111111106',
@@ -394,6 +429,11 @@ const DEFAULT_DEBUG_SUPPLIERS: SupplierRecord[] = [
     bound_product_ids: [],
     third_party_binding: {},
     remark: '',
+    user_id: '00000000-0000-0000-0000-000000000106',
+    login_username: 'sup_hxds',
+    login_status: 'active',
+    role_id: 'role_supplier_partner',
+    role_name: '合作供应商账号',
   },
   {
     id: '11111111-1111-4111-8111-111111111107',
@@ -432,6 +472,11 @@ const DEFAULT_DEBUG_SUPPLIERS: SupplierRecord[] = [
     bound_product_ids: [],
     third_party_binding: {},
     remark: '',
+    user_id: '00000000-0000-0000-0000-000000000107',
+    login_username: 'sup_shtg',
+    login_status: 'active',
+    role_id: 'role_supplier_partner',
+    role_name: '合作供应商账号',
   },
   {
     id: '11111111-1111-4111-8111-111111111108',
@@ -470,6 +515,11 @@ const DEFAULT_DEBUG_SUPPLIERS: SupplierRecord[] = [
     bound_product_ids: [],
     third_party_binding: {},
     remark: '',
+    user_id: '00000000-0000-0000-0000-000000000108',
+    login_username: 'sup_spsj',
+    login_status: 'active',
+    role_id: 'role_supplier_partner',
+    role_name: '合作供应商账号',
   },
 ];
 
@@ -522,7 +572,7 @@ export const suppliersApi = {
       const q = (params.search ?? '').trim().toLowerCase();
       if (q) {
         rows = rows.filter((r) =>
-          [r.name, r.alias, r.alias_pinyin, r.contact, r.phone, r.scope, r.detail_address]
+          [r.name, r.alias, r.alias_pinyin, r.contact, r.phone, r.scope, r.detail_address, r.login_username]
             .some((v) => (v ?? '').toLowerCase().includes(q))
         );
       }
@@ -574,6 +624,19 @@ export const suppliersApi = {
 
   async create(payload: SupplierWritePayload, debugMode: boolean): Promise<SupplierRecord> {
     if (debugMode) {
+      const all = readDebugSuppliers();
+      const rawAccount = (payload.login_username ?? '').trim().toLowerCase();
+      const slug = toPinyinInitials(payload.name ?? '').toLowerCase() || String(Date.now()).slice(-6);
+      const baseUsername = rawAccount || `sup_${slug}`;
+      let resolvedUsername = baseUsername;
+      if (rawAccount && all.some((r) => (r.login_username ?? '').toLowerCase() === rawAccount)) {
+        throw new Error(`登录账号「${rawAccount}」已被占用`);
+      }
+      let idx = 2;
+      while (all.some((r) => (r.login_username ?? '').toLowerCase() === resolvedUsername)) {
+        resolvedUsername = `${baseUsername}_${idx++}`;
+      }
+      const enabled = payload.enabled !== false;
       const next: SupplierRecord = {
         id: `debug_sup_${Date.now()}`,
         name: payload.name ?? '',
@@ -586,7 +649,7 @@ export const suppliersApi = {
         qq: payload.qq ?? '',
         categories: payload.categories ?? [],
         is_default: Boolean(payload.is_default),
-        enabled: payload.enabled !== false,
+        enabled,
         province: payload.province ?? '',
         city: payload.city ?? '',
         district: payload.district ?? '',
@@ -614,8 +677,12 @@ export const suppliersApi = {
         bound_product_ids: payload.bound_product_ids ?? [],
         third_party_binding: payload.third_party_binding ?? {},
         remark: payload.remark ?? '',
+        user_id: `debug_user_${Date.now()}`,
+        login_username: resolvedUsername,
+        login_status: enabled ? 'active' : 'disabled',
+        role_id: 'role_supplier_partner',
+        role_name: '合作供应商账号',
       };
-      const all = readDebugSuppliers();
       writeDebugSuppliers([next, ...all]);
       return next;
     }
@@ -625,10 +692,16 @@ export const suppliersApi = {
   async update(id: string, payload: SupplierWritePayload, debugMode: boolean): Promise<SupplierRecord> {
     if (debugMode) {
       const all = readDebugSuppliers();
+      const { login_password: _ignoredPassword, login_username: _ignoredUsername, ...rest } = payload;
       let updated: SupplierRecord | null = null;
       const next = all.map((r) => {
         if (r.id !== id) return r;
-        updated = { ...r, ...payload };
+        const nextEnabled = rest.enabled !== undefined ? rest.enabled : r.enabled;
+        updated = {
+          ...r,
+          ...rest,
+          login_status: nextEnabled ? 'active' : 'disabled',
+        };
         return updated;
       });
       writeDebugSuppliers(next);

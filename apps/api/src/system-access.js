@@ -1,5 +1,6 @@
 import { resolveIpRegion } from './ip-region.js';
 import { ensureAccountSchema } from './account.js';
+import { ensureSupplierSchema } from './catalog.js';
 
 import { randomUUID } from 'node:crypto';
 
@@ -68,7 +69,7 @@ export async function handleSystemAccess({ req, res, url, user, pool, send, read
   }
   if (path === '/system/users' && req.method === 'GET') {
     if (!canUser) { send(res,403,{ error: 'Forbidden' }); return true; }
-    await ensureAccountSchema(pool);
+    await Promise.all([ensureAccountSchema(pool), ensureSupplierSchema(pool)]);
     const { rows } = await pool.query(`SELECT u.id,u.username,u.display_name,u.email,u.status,a.role_id,a.store_ids,a.permission_denies,
       a.updated_at,r.name AS role_name,r.identity_type,r.permissions,
       COALESCE(NULLIF(up.title,''), r.name, '系统成员') AS title,
@@ -81,7 +82,7 @@ export async function handleSystemAccess({ req, res, url, user, pool, send, read
       LEFT JOIN identity.user_profiles up ON up.user_id=u.id
       LEFT JOIN identity.user_catalog_access uca ON uca.user_id=u.id
       LEFT JOIN catalog.suppliers sup ON sup.id=uca.supplier_id
-      ORDER BY u.username`);
+      ORDER BY CASE r.identity_type WHEN 'admin' THEN 0 WHEN 'store' THEN 1 ELSE 2 END, u.username`);
     send(res,200,rows); return true;
   }
   if (path === '/system/roles' && req.method === 'POST') {

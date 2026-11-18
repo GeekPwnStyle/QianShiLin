@@ -33,6 +33,7 @@ import { ErrorState, LoadingSkeleton } from '@/src/shared/ui/StateViews';
 
 type ColumnKey =
   | 'name'
+  | 'login_username'
   | 'contact'
   | 'phone'
   | 'is_default'
@@ -51,6 +52,7 @@ type ColumnKey =
 
 const ALL_COLUMNS: Array<{ key: ColumnKey; label: string; sortField?: string }> = [
   { key: 'name', label: '供应商', sortField: 'name' },
+  { key: 'login_username', label: '登录账号 ID' },
   { key: 'contact', label: '联系人', sortField: 'contact' },
   { key: 'phone', label: '手机号', sortField: 'phone' },
   { key: 'is_default', label: '是否默认供应商' },
@@ -174,6 +176,7 @@ export const SupplierPage: React.FC = () => {
   const invalidateAll = async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ['catalog', 'suppliers'] }),
+      queryClient.invalidateQueries({ queryKey: ['system-users'] }),
       queryClient.invalidateQueries({ queryKey: ['product-meta'] }),
       queryClient.invalidateQueries({ queryKey: ['purchase-suppliers'] }),
       queryClient.invalidateQueries({ queryKey: ['manual-inbound-suppliers'] }),
@@ -255,6 +258,7 @@ export const SupplierPage: React.FC = () => {
       }
       const headers = [
         '供应商名称',
+        '登录账号 ID',
         '供应商别名',
         '联系人',
         '手机号',
@@ -278,6 +282,7 @@ export const SupplierPage: React.FC = () => {
         ...collected.map((r) =>
           [
             r.name,
+            r.login_username || '',
             r.alias || '',
             r.contact || '',
             r.phone || '',
@@ -735,10 +740,15 @@ export const SupplierPage: React.FC = () => {
                                 </button>
                                 <button
                                   type="button"
-                                  title="删除"
+                                  disabled={row.login_username === 'supplier' || busy}
+                                  title={
+                                    row.login_username === 'supplier'
+                                      ? '系统基准供应商账号（@supplier）受保护，请改为停用'
+                                      : '删除'
+                                  }
                                   aria-label={`删除 ${row.name}`}
                                   onClick={() => setDeletingSupplier(row)}
-                                  className="inline-flex h-6 w-6 items-center justify-center rounded border border-red-200 bg-red-600 text-white hover:bg-red-700 cursor-pointer"
+                                  className="inline-flex h-6 w-6 items-center justify-center rounded border border-red-200 bg-red-600 text-white hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                                 >
                                   <Trash2 className="w-3.5 h-3.5" />
                                 </button>
@@ -761,6 +771,22 @@ export const SupplierPage: React.FC = () => {
                                 <div className="truncate font-medium text-[#171916]" title={row.name}>
                                   {row.name}
                                 </div>
+                              </td>
+                            );
+                          }
+                          if (col.key === 'login_username') {
+                            return (
+                              <td key={col.key} className="px-2.5 py-2 whitespace-nowrap font-mono text-xs text-[#2D6A4F]">
+                                {row.login_username ? (
+                                  <span>
+                                    @{row.login_username}
+                                    {row.login_status === 'disabled' && (
+                                      <span className="ml-1.5 font-sans text-[#9AA096]">· 已停用</span>
+                                    )}
+                                  </span>
+                                ) : (
+                                  '—'
+                                )}
                               </td>
                             );
                           }
@@ -917,7 +943,8 @@ export const SupplierPage: React.FC = () => {
         onClose={() => setFormOpen(false)}
         onSaved={(saved, m) => {
           setFormOpen(false);
-          setNotice({ text: `${m === 'create' ? '已新增' : '已更新'}供应商「${saved.name}」` });
+          const accountNote = saved.login_username ? `（登录账号 @${saved.login_username}）` : '';
+          setNotice({ text: `${m === 'create' ? '已新增' : '已更新'}供应商「${saved.name}」${accountNote}` });
           void invalidateAll();
         }}
       />

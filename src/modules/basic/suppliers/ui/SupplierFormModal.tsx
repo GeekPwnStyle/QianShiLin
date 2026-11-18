@@ -55,6 +55,8 @@ interface FormState {
   is_default: boolean;
   remark: string;
   categories: string;
+  login_username: string;
+  login_password: string;
 }
 
 function toInitialState(
@@ -95,6 +97,8 @@ function toInitialState(
       is_default: Boolean(supplier.is_default),
       remark: supplier.remark || '',
       categories: Array.isArray(supplier.categories) ? supplier.categories.join('、') : '',
+      login_username: supplier.login_username || '',
+      login_password: '',
     };
   }
   return {
@@ -130,6 +134,8 @@ function toInitialState(
     is_default: false,
     remark: '',
     categories: '',
+    login_username: '',
+    login_password: '',
   };
 }
 
@@ -308,6 +314,17 @@ export const SupplierFormModal: React.FC<SupplierFormModalProps> = ({
       return;
     }
 
+    const trimmedUsername = form.login_username.trim();
+    const trimmedPassword = form.login_password.trim();
+    if (mode === 'create' && trimmedUsername && !/^[a-zA-Z0-9_.-]{3,32}$/.test(trimmedUsername)) {
+      setError('登录账号 ID 需为 3-32 位字母、数字、下划线或点号');
+      return;
+    }
+    if (trimmedPassword && (trimmedPassword.length < 6 || trimmedPassword.length > 64)) {
+      setError('登录密码长度需在 6 至 64 位之间');
+      return;
+    }
+
     const resolvedAlias = form.alias.trim() || trimmedName;
     const resolvedPinyin = form.alias_pinyin.trim() || toPinyinInitials(resolvedAlias);
     const parsedSort = Math.max(0, Math.min(100000, Number.parseInt(form.sort_order || '100', 10) || 100));
@@ -350,8 +367,10 @@ export const SupplierFormModal: React.FC<SupplierFormModalProps> = ({
         ? {
             owner_store_type: '总店',
             owner_store_name: defaultStoreName || '杭州西湖旗舰店',
+            ...(trimmedUsername ? { login_username: trimmedUsername } : {}),
           }
         : {}),
+      ...(trimmedPassword ? { login_password: trimmedPassword } : {}),
       ...(canEditBank
         ? {
             bank_holder: form.bank_holder.trim(),
@@ -634,6 +653,51 @@ export const SupplierFormModal: React.FC<SupplierFormModalProps> = ({
             </span>
           </div>
         </label>
+
+        {/* 系统登录账号 */}
+        <SectionDivider title="系统登录账号（同步至用户权限分配）" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 rounded-xl border border-[#E5E8E0] bg-[#FAFBF8] p-3.5">
+          {mode === 'create' ? (
+            <label className="grid gap-1">
+              <span className="text-xs font-medium text-[#2D6A4F]">唯一登录账号 ID</span>
+              <input
+                type="text"
+                className={fieldInputClass + ' font-mono'}
+                placeholder="留空自动生成唯一账号（如 sup_xxxx）"
+                value={form.login_username}
+                onChange={(e) => setForm((p) => ({ ...p, login_username: e.target.value }))}
+              />
+            </label>
+          ) : (
+            <div className="grid gap-1">
+              <span className="text-xs font-medium text-[#2D6A4F]">唯一登录账号 ID</span>
+              <div className="flex h-9 items-center justify-between rounded-lg border border-[#E5E8E0] bg-white px-3 text-sm">
+                <span className="font-mono font-medium text-[#171916]">
+                  @{form.login_username || '自动生成'}
+                </span>
+                <span className="text-[11px] text-[#73796F]">
+                  {initialSupplier?.role_name || '合作供应商账号'}
+                </span>
+              </div>
+            </div>
+          )}
+          <label className="grid gap-1">
+            <span className="text-xs font-medium text-[#2D6A4F]">
+              {mode === 'create' ? '初始登录密码' : '重置登录密码（可选）'}
+            </span>
+            <input
+              type="password"
+              autoComplete="new-password"
+              className={fieldInputClass}
+              placeholder={mode === 'create' ? '留空默认 Qsl@123456' : '留空则保持原密码不变'}
+              value={form.login_password}
+              onChange={(e) => setForm((p) => ({ ...p, login_password: e.target.value }))}
+            />
+          </label>
+          <p className="sm:col-span-2 text-xs text-[#73796F]">
+            供应商可使用该账号 ID 登录系统查看协同单据与自身商品，角色及菜单权限可在「系统管理 → 用户权限分配」中微调。
+          </p>
+        </div>
 
         {/* 银行资料 */}
         {canEditBank && (

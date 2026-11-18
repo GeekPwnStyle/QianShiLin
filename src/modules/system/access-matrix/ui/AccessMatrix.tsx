@@ -28,8 +28,8 @@ export function AccessMenuTree({ selected, onSelect }: { selected: NavNode; onSe
   </aside>;
 }
 
-export function AccessSummaryTable<T extends { id: string }>({ subjects, selected, nameOf, subtitleOf, codesOf, onEdit }: {
-  subjects: T[]; selected: NavNode; nameOf: (item: T) => string; subtitleOf: (item: T) => string;
+export function AccessSummaryTable<T extends { id: string }>({ subjects, selected, nameOf, metaOf, subtitleOf, codesOf, onEdit }: {
+  subjects: T[]; selected: NavNode; nameOf: (item: T) => string; metaOf?: (item: T) => string; subtitleOf: (item: T) => string;
   codesOf: (item: T) => readonly string[]; onEdit: (item: T) => void;
 }) {
   const [page, setPage] = useState(1);
@@ -39,10 +39,11 @@ export function AccessSummaryTable<T extends { id: string }>({ subjects, selecte
   const visibleSubjects = subjects.slice((safePage - 1) * pageSize, safePage * pageSize);
   const mapped = useMemo(() => actionCodes(selected), [selected]);
   return <div className="overflow-hidden rounded-[20px] border border-[#D9DDD4] bg-white">
-    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#E5E8E0] px-5 py-4"><div><h3 className="text-lg font-semibold">{selected.label}</h3><p className="text-xs text-[#73796F]">{selected.description ?? '按操作查看已生效的权限'}</p></div><span className="rounded-full bg-[#F0F2E9] px-3 py-1 text-xs">{subjects.length} 个对象</span></div>
+    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#E5E8E0] px-5 py-4"><div><h3 className="text-lg font-semibold">{selected.label}</h3><p className="text-xs text-[#73796F]">{selected.description ?? '按操作查看已生效的权限'}</p></div><span className="text-xs tabular-nums text-[#73796F]">共 {subjects.length} 个对象</span></div>
     <div className="overflow-x-auto"><table className="w-full min-w-[760px] border-collapse text-center text-sm"><thead className="bg-[#F8F9F5] text-[#5F645D]"><tr><th className="sticky left-0 bg-[#F8F9F5] px-4 py-3 text-left">操作 / 对象</th><th>角色</th>{ACCESS_ACTIONS.map(a => <th key={a} className="min-w-[74px]">{a}</th>)}</tr></thead><tbody>{visibleSubjects.map(item => {
       const codes = codesOf(item); const any = nodePermitted(selected, codes);
-      return <tr key={item.id} className="border-t border-[#EEF0E9] hover:bg-[#FBFCF6]"><td className="sticky left-0 bg-white px-4 py-3 text-left"><div className="flex items-center gap-2.5"><button type="button" onClick={() => onEdit(item)} title={`编辑 ${nameOf(item)}`} aria-label={`编辑 ${nameOf(item)}`} className="w-7 h-7 rounded-lg bg-[var(--qsl-accent)] text-[var(--qsl-accent-ink)] border border-[var(--qsl-accent-border)] hover:bg-[var(--qsl-accent-hover)] inline-flex items-center justify-center shrink-0 cursor-pointer transition-colors"><Pencil size={14} /></button><span className="font-medium text-[#171916]">{nameOf(item)}</span></div></td><td className="whitespace-nowrap px-2 text-[#74796F]">{subtitleOf(item)}</td>{ACCESS_ACTIONS.map(action => {
+      const meta = metaOf?.(item);
+      return <tr key={item.id} className="border-t border-[#EEF0E9] hover:bg-[#FBFCF6]"><td className="sticky left-0 bg-white px-4 py-3 text-left"><div className="flex items-center gap-2.5"><button type="button" onClick={() => onEdit(item)} title={`编辑 ${nameOf(item)}`} aria-label={`编辑 ${nameOf(item)}`} className="w-7 h-7 rounded-lg bg-[var(--qsl-accent)] text-[var(--qsl-accent-ink)] border border-[var(--qsl-accent-border)] hover:bg-[var(--qsl-accent-hover)] inline-flex items-center justify-center shrink-0 cursor-pointer transition-colors"><Pencil size={14} /></button><div className="min-w-0"><span className="font-medium text-[#171916]">{nameOf(item)}</span>{meta && <span className="ml-2 text-xs text-[#73796F]">{meta}</span>}</div></div></td><td className="whitespace-nowrap px-2 text-[#74796F]">{subtitleOf(item)}</td>{ACCESS_ACTIONS.map(action => {
         const available = action === '无权限' || Boolean(mapped[action]?.length);
         const active = action === '无权限' ? !any : Boolean(mapped[action]?.some(code => codes.includes(code)));
         return <td key={action} className="px-1">{available ? <span aria-label={active ? `${action}已授权` : `${action}未授权`} className={`inline-block h-3 w-3 rounded-full ${active ? 'bg-[var(--qsl-brand-dark)]' : 'border border-[#C8CEC1] bg-white'}`} /> : <span className="text-[#C8CEC1]">—</span>}</td>;
