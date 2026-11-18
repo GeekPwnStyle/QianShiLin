@@ -117,7 +117,7 @@ export const ModuleSidebar: React.FC = () => {
                     className={`w-full text-left px-2.5 py-2 rounded-xl flex items-center justify-between gap-2 transition-colors cursor-pointer ${
                       isDeveloped
                         ? isCurrent
-                          ? 'bg-[#ECF9A8] text-[#171916]'
+                          ? 'bg-[var(--qsl-accent-soft)] text-[#171916]'
                           : 'text-[#171916] hover:bg-[#F8F9F5]'
                         : isCurrent
                           ? 'bg-[#E5E7E1] text-[#6E736B] opacity-80 grayscale'
@@ -213,7 +213,7 @@ export const ModuleSidebar: React.FC = () => {
                   className={`w-full text-left px-3 py-2.5 rounded-2xl text-[15px] flex items-center gap-3 transition-colors cursor-pointer ${
                     l2Developed
                       ? selected
-                        ? 'font-bold bg-[#ECF9A8] text-[#171916]'
+                        ? 'font-bold bg-[var(--qsl-accent-soft)] text-[#171916]'
                         : 'font-bold text-[#171916] hover:bg-[#EAECE6]/70'
                       : selected
                         ? 'font-medium bg-[#E4E7E0] text-[#6E736B] opacity-85 grayscale'
@@ -291,7 +291,7 @@ export const ModuleSidebar: React.FC = () => {
                           className={`w-full text-left px-3 py-2 rounded-xl text-[14px] flex items-center gap-2 transition-colors cursor-pointer ${
                             l3Developed
                               ? selected
-                                ? 'font-medium bg-[#ECF9A8] text-[#171916]'
+                                ? 'font-medium bg-[var(--qsl-accent-soft)] text-[#171916]'
                                 : 'font-medium text-[#171916] hover:bg-[#EAECE6]/70'
                               : selected
                                 ? 'font-normal bg-[#E4E7E0] text-[#6E736B] opacity-85 grayscale'
@@ -327,7 +327,7 @@ export const ModuleSidebar: React.FC = () => {
             className="w-full h-10 px-3.5 rounded-2xl bg-white border border-[#D9DDD4] hover:border-[#171916] flex items-center justify-between gap-2 text-[14px] font-bold text-[#171916] cursor-pointer transition-colors"
           >
             <span className="inline-flex items-center gap-2">
-              <Star className="w-4 h-4 text-[#171916] fill-[#D7FF00]" />
+              <Star className="w-4 h-4 text-[#171916] fill-[var(--qsl-accent)]" />
               <span>常用菜单</span>
             </span>
             <span className="text-[12px] font-medium text-[#73796F] tabular-nums">
@@ -373,7 +373,7 @@ export const ModuleSidebar: React.FC = () => {
               className={`w-11 h-11 rounded-2xl inline-flex items-center justify-center transition-colors cursor-pointer shrink-0 ${
                 l2Developed
                   ? selected
-                    ? 'bg-[#171916] text-[#D7FF00]'
+                    ? 'bg-[var(--qsl-brand-dark)] text-[var(--qsl-accent-on-dark)]'
                     : 'text-[#171916] hover:bg-[#EAECE6]'
                   : selected
                     ? 'bg-[#E2E5DE] text-[#6E736B] opacity-80 grayscale'
@@ -399,7 +399,7 @@ export const ModuleSidebar: React.FC = () => {
           title="常用菜单"
           className="w-10 h-10 rounded-full bg-white border border-[#D9DDD4] hover:border-[#171916] inline-flex items-center justify-center text-[#171916] cursor-pointer transition-colors"
         >
-          <Star className="w-4 h-4 fill-[#D7FF00]" />
+          <Star className="w-4 h-4 text-[#171916] fill-[var(--qsl-accent)]" />
         </button>
       </div>
     </aside>

@@ -25,6 +25,11 @@ export const Modal: React.FC<ModalProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
+  const onCloseRef = useRef(onClose);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   useEffect(() => {
     if (!open) return;
@@ -38,8 +43,15 @@ export const Modal: React.FC<ModalProps> = ({
     const timer = window.setTimeout(() => {
       const container = containerRef.current;
       if (!container) return;
+      const firstInput = container.querySelector<HTMLElement>(
+        'input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled])'
+      );
+      if (firstInput) {
+        firstInput.focus();
+        return;
+      }
       const focusable = container.querySelectorAll<HTMLElement>(
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        'button:not([disabled]), [href], [tabindex]:not([tabindex="-1"])'
       );
       if (focusable.length > 0) {
         focusable[0].focus();
@@ -51,7 +63,7 @@ export const Modal: React.FC<ModalProps> = ({
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault();
-        onClose();
+        onCloseRef.current();
         return;
       }
       if (e.key === 'Tab' && containerRef.current) {
@@ -81,7 +93,7 @@ export const Modal: React.FC<ModalProps> = ({
       document.body.style.overflow = prevBodyOverflow;
       previousFocusRef.current?.focus();
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open) return null;
 
