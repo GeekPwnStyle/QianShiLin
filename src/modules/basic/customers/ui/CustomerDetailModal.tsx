@@ -1,4 +1,5 @@
-import { CustomerRecordPanel, CustomerValuePanel } from './CustomerRecordPanels';
+import { CustomerRecordPanel } from './CustomerRecordPanels';
+import { CustomerValuePanel } from './CustomerValuePanel';
 import { ExtensionPanel } from './ExtensionPanel';
 import { VisionExamPanel } from './VisionExamPanel';
 import React, { useState } from 'react';
@@ -43,7 +44,7 @@ export function CustomerDetailModal({customer,onClose,debugMode}:{customer:Custo
         <div className="space-y-5"><HomeInfo number="09" title="眼健康信息" rows={[["复查日期",customer.nextReviewDate],["健康标签",customer.tags.join('、')||'—']]}/><HomeInfo number="08" title="消费信息" rows={[["到店次数",String(customer.visitCount)],["最近到店",customer.lastVisitDate]]}/><HomeInfo number="07" title="消费偏好" rows={[["顾客类型",customer.customerType],["导购",customer.guideName]]}/><HomeInfo number="06" title="售后信息" rows={[["备注",customer.remark||'—']]}/><HomeInfo number="05" title="价值分析" rows={[["会员等级",customer.tier],["积分",String(customer.pointsBalance)]]}/></div>
       </div>}
       {tab==='basic'&&<div className="grid gap-4 md:grid-cols-2"><Card title="身份与联系" rows={[["姓名",customer.name],["手机号",customer.phoneMasked?'已按权限隐藏':customer.phone],["性别",customer.gender],["生日",customer.birthday],["年龄",String(customer.age)],["地址",customer.address]]}/><Card title="会员与门店" rows={[["卡号",customer.memberNo],["等级",customer.tier],["门店",customer.storeName],["导购",customer.guideName],["顾客来源",customer.source],["备注",customer.remark]]}/></div>}
-      {tab==='value'&&<CustomerValuePanel customer={customer}/>}
+      {tab==='value'&&<CustomerValuePanel customerId={customer.id} debugMode={debugMode}/>}
       {tab==='vision'&&<VisionExamPanel customerId={customer.id} debugMode={debugMode} items={items} refresh={()=>records.refetch()} />}
       {tab==='extensions'&&<ExtensionPanel customerId={customer.id} debugMode={debugMode} items={items} refresh={()=>records.refetch()} />}
       {['sales','history','repairs','referrals','health'].includes(tab)&&<CustomerRecordPanel section={tab} items={items} customer={customer} loading={records.isLoading} error={records.isError} debugMode={debugMode} refresh={()=>records.refetch()}/>}
