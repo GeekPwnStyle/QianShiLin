@@ -1,3 +1,4 @@
+import { lookupIpRegion } from './ip-region.js';
 import { ensureAccountSchema } from './account.js';
 
 import { randomUUID } from 'node:crypto';
@@ -45,7 +46,12 @@ export async function handleSystemAccess({ req, res, url, user, pool, send, read
     const {rows}=await pool.query(`SELECT l.id,l.category,l.action,l.target,l.details,l.ip_address,l.client_type,l.created_at,l.actor_role_id,l.actor_role_name,
       u.display_name AS actor_name FROM identity.operation_log l LEFT JOIN identity.users u ON u.id=l.actor_user_id ${where}
       ORDER BY l.created_at DESC,l.id DESC LIMIT $3 OFFSET $4`,[...values,pageSize,(page-1)*pageSize]);
-    send(res,200,{items:rows,total:count.rows[0].total,page,pageSize}); return true;
+    const regions = new Map();
+    const items = rows.map(row => {
+      if (!regions.has(row.ip_address)) regions.set(row.ip_address, lookupIpRegion(row.ip_address));
+      return { ...row, ip_region: regions.get(row.ip_address) };
+    });
+    send(res,200,{items,total:count.rows[0].total,page,pageSize}); return true;
   }
 
   if (path === '/system/roles' && req.method === 'GET') {
