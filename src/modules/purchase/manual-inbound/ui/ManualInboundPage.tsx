@@ -37,6 +37,7 @@ export const ManualInboundPage: React.FC = () => {
   const { session, dataScope, hasPermission } = useAuth();
   const cache = useQueryClient();
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [keyword, setKeyword] = useState('');
   const [search, setSearch] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
@@ -56,8 +57,8 @@ export const ManualInboundPage: React.FC = () => {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const listStoreId = session.currentStoreId === 'all' ? '' : session.currentStoreId;
-  const list = useQuery({ queryKey: ['manual-inbound',listStoreId,page,search],
-    queryFn: () => request<Page>(`/purchase/manual-inbound?storeId=${encodeURIComponent(listStoreId)}&page=${page}&pageSize=20&search=${encodeURIComponent(search)}`) });
+  const list = useQuery({ queryKey: ['manual-inbound',listStoreId,page,pageSize,search],
+    queryFn: () => request<Page>(`/purchase/manual-inbound?storeId=${encodeURIComponent(listStoreId)}&page=${page}&pageSize=${pageSize}&search=${encodeURIComponent(search)}`) });
   const detail = useQuery({ queryKey: ['manual-inbound-detail',detailId], enabled: Boolean(detailId),
     queryFn: () => request<Draft>(`/purchase/manual-inbound/${detailId}`) });
   const suppliers = useQuery({ queryKey: ['manual-inbound-suppliers'], enabled: createOpen,
@@ -118,7 +119,8 @@ export const ManualInboundPage: React.FC = () => {
     </div>
     {notice && <OperationStatus role="status">{notice}</OperationStatus>}
     {list.isLoading ? <LoadingSkeleton /> : list.isError ? <ErrorState message={list.error.message} onRetry={() => list.refetch()} />
-      : list.data?.items.length ? <DataTable columns={columns} rows={list.data.items} total={list.data.total} page={page} pageSize={20} onPageChange={setPage} />
+      : list.data?.items.length ? <DataTable columns={columns} rows={list.data.items} total={list.data.total} page={page} pageSize={pageSize} onPageChange={setPage}
+          onPageSizeChange={next => { setPageSize(next); setPage(1); }} />
       : <EmptyState mode={search ? 'filtered' : 'initial'} />}
     <Modal open={createOpen} onClose={() => setCreateOpen(false)} title="新增手工入库草稿" maxWidthClass="max-w-6xl"
       footer={<><Button onClick={reset}>重置</Button><Button variant="primary" loading={saving} onClick={save}>保存草稿</Button></>}>

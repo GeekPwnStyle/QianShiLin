@@ -32,6 +32,7 @@ export const FinanceLedgerPage: React.FC<{ pageTitle: string }> = ({ pageTitle }
   const { session } = useAuth();
   const [detail, setDetail] = useState<FinanceDocRow | null>(null);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const visibleRows = FINANCE_ROWS.filter((r) => {
     if (session.identityType === 'supplier') {
@@ -92,8 +93,12 @@ export const FinanceLedgerPage: React.FC<{ pageTitle: string }> = ({ pageTitle }
         rows={visibleRows}
         total={visibleRows.length}
         page={page}
-        pageSize={8}
+        pageSize={pageSize}
         onPageChange={setPage}
+        onPageSizeChange={(next) => {
+          setPageSize(next);
+          setPage(1);
+        }}
       />
 
       <Modal

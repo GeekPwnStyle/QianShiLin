@@ -77,6 +77,7 @@ export const FollowupNotificationPage: React.FC<Props> = ({ category }) => {
   });
 
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   // Detail & Log modals
@@ -90,12 +91,12 @@ export const FollowupNotificationPage: React.FC<Props> = ({ category }) => {
   const [batchResult, setBatchResult] = useState<BatchNotifyResult | null>(null);
 
   const { data, isLoading, isError, error, refetch } = useQuery({
-    queryKey: ['followup_notifications', category, page, appliedFilters, session.roleId, session.currentStoreId],
+    queryKey: ['followup_notifications', category, page, pageSize, appliedFilters, session.roleId, session.currentStoreId],
     queryFn: () =>
       appRepositories.notifications.queryNotifications(
         {
           page,
-          pageSize: 8,
+          pageSize,
           filters: {
             category,
             ...appliedFilters,
@@ -492,8 +493,12 @@ export const FollowupNotificationPage: React.FC<Props> = ({ category }) => {
           rows={rows}
           total={data?.total ?? 0}
           page={page}
-          pageSize={8}
+          pageSize={pageSize}
           onPageChange={setPage}
+          onPageSizeChange={(next) => {
+            setPageSize(next);
+            setPage(1);
+          }}
           selectable={canSend}
           selectedIds={selectedIds}
           onSelectionChange={setSelectedIds}

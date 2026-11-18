@@ -31,6 +31,7 @@ import { Button } from '@/src/shared/ui/Button';
 import { DataTable, type TableColumn } from '@/src/shared/ui/DataTable';
 import { HelpTooltip } from '@/src/shared/ui/HelpTooltip';
 import { Modal } from '@/src/shared/ui/Modal';
+import { PaginationBar } from '@/src/shared/ui/PaginationBar';
 import { Select } from '@/src/shared/ui/Select';
 import {
   EmptyState,
@@ -108,6 +109,11 @@ export const ProductListPage: React.FC = () => {
   });
 
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [importPreviewPage, setImportPreviewPage] = useState(1);
+  const [importPreviewPageSize, setImportPreviewPageSize] = useState(10);
+  const [importHistoryPage, setImportHistoryPage] = useState(1);
+  const [importHistoryPageSize, setImportHistoryPageSize] = useState(10);
   const [sortBy, setSortBy] = useState<string>('createdAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -133,6 +139,7 @@ export const ProductListPage: React.FC = () => {
       selectedCategory,
       applied,
       page,
+      pageSize,
       sortBy,
       sortOrder,
       session.roleId,
@@ -142,7 +149,7 @@ export const ProductListPage: React.FC = () => {
       appRepositories.products.queryProducts(
         {
           page,
-          pageSize: 8,
+          pageSize,
           sortBy,
           sortOrder,
           filters: {
@@ -773,8 +780,12 @@ export const ProductListPage: React.FC = () => {
               rows={rows}
               total={data?.total ?? 0}
               page={page}
-              pageSize={8}
+              pageSize={pageSize}
               onPageChange={setPage}
+              onPageSizeChange={(next) => {
+                setPageSize(next);
+                setPage(1);
+              }}
               sortBy={sortBy}
               sortOrder={sortOrder}
               onSortChange={handleSort}
@@ -1117,7 +1128,12 @@ export const ProductListPage: React.FC = () => {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-[#E5E8E0]">
-                        {importPreviews.map((row) => (
+                        {importPreviews
+                          .slice(
+                            (Math.min(importPreviewPage, Math.max(1, Math.ceil(importPreviews.length / importPreviewPageSize))) - 1) * importPreviewPageSize,
+                            Math.min(importPreviewPage, Math.max(1, Math.ceil(importPreviews.length / importPreviewPageSize))) * importPreviewPageSize
+                          )
+                          .map((row) => (
                           <tr key={row.rowNumber}>
                             <td className="px-3 py-2 tabular-nums">{row.rowNumber}</td>
                             <td className="px-3 py-2">{row.brand || '-'}</td>
@@ -1137,26 +1153,58 @@ export const ProductListPage: React.FC = () => {
                       </tbody>
                     </table>
                   </div>
+                  <PaginationBar
+                    compact
+                    total={importPreviews.length}
+                    page={importPreviewPage}
+                    pageSize={importPreviewPageSize}
+                    unit="行"
+                    onPageChange={setImportPreviewPage}
+                    onPageSizeChange={(next) => {
+                      setImportPreviewPageSize(next);
+                      setImportPreviewPage(1);
+                    }}
+                  />
                 </div>
               )}
 
               <div>
                 <h4 className="text-[15px] font-semibold text-[#171916] mb-2">最近导入历史记录</h4>
-                <div className="space-y-2">
-                  {importHistory.map((h) => (
-                    <div
-                      key={h.id}
-                      className="p-3 rounded-xl bg-[#F8F9F5] border border-[#E5E8E0] flex flex-wrap items-center justify-between gap-2 text-[14px]"
-                    >
-                      <div>
-                        <span className="font-medium text-[#171916]">{h.fileName}</span>
-                        <span className="text-[#5F645D] ml-2">· {h.statusNote}</span>
+                <div className="rounded-xl border border-[#E5E8E0] overflow-hidden">
+                  <div className="space-y-2 p-2.5 bg-[#FAFBF8]">
+                    {importHistory
+                      .slice(
+                        (Math.min(importHistoryPage, Math.max(1, Math.ceil(importHistory.length / importHistoryPageSize))) - 1) * importHistoryPageSize,
+                        Math.min(importHistoryPage, Math.max(1, Math.ceil(importHistory.length / importHistoryPageSize))) * importHistoryPageSize
+                      )
+                      .map((h) => (
+                      <div
+                        key={h.id}
+                        className="p-3 rounded-xl bg-white border border-[#E5E8E0] flex flex-wrap items-center justify-between gap-2 text-[14px]"
+                      >
+                        <div>
+                          <span className="font-medium text-[#171916]">{h.fileName}</span>
+                          <span className="text-[#5F645D] ml-2">· {h.statusNote}</span>
+                        </div>
+                        <div className="text-[#73796F] tabular-nums">
+                          {formatDate(h.createdAt)} · {h.operator}
+                        </div>
                       </div>
-                      <div className="text-[#73796F] tabular-nums">
-                        {formatDate(h.createdAt)} · {h.operator}
-                      </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
+                  {importHistory.length > 0 && (
+                    <PaginationBar
+                      compact
+                      total={importHistory.length}
+                      page={importHistoryPage}
+                      pageSize={importHistoryPageSize}
+                      onPageChange={setImportHistoryPage}
+                      onPageSizeChange={(next) => {
+                        setImportHistoryPageSize(next);
+                        setImportHistoryPage(1);
+                      }}
+                    />
+                  )}
                 </div>
               </div>
             </>

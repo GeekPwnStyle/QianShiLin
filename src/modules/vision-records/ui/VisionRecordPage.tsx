@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Plus, Eye } from 'lucide-react';
 import { Button } from '@/src/shared/ui/Button';
 import { Modal } from '@/src/shared/ui/Modal';
+import { PaginationBar } from '@/src/shared/ui/PaginationBar';
 import { StatusLabel } from '@/src/shared/ui/StatusLabel';
 import { HelpTooltip } from '@/src/shared/ui/HelpTooltip';
 
@@ -76,6 +77,8 @@ export const VisionRecordPage: React.FC<{ isOrtho?: boolean; pageTitle: string }
   const [records, setRecords] = useState<OptometryExamRecord[]>(INITIAL_RECORDS);
   const [selected, setSelected] = useState<OptometryExamRecord>(INITIAL_RECORDS[0]);
   const [addOpen, setAddOpen] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const [customerName, setCustomerName] = useState('');
   const [odSph, setOdSph] = useState('-2.00D');
@@ -137,7 +140,12 @@ export const VisionRecordPage: React.FC<{ isOrtho?: boolean; pageTitle: string }
             </Button>
           </div>
           <div className="space-y-2">
-            {records.map((r) => {
+            {records
+              .slice(
+                (Math.min(page, Math.max(1, Math.ceil(records.length / pageSize))) - 1) * pageSize,
+                Math.min(page, Math.max(1, Math.ceil(records.length / pageSize))) * pageSize
+              )
+              .map((r) => {
               const active = selected.id === r.id;
               return (
                 <button
@@ -164,6 +172,19 @@ export const VisionRecordPage: React.FC<{ isOrtho?: boolean; pageTitle: string }
               );
             })}
           </div>
+          <PaginationBar
+            compact
+            className="rounded-b-[16px] -mx-4 -mb-4"
+            total={records.length}
+            page={page}
+            pageSize={pageSize}
+            unit="份"
+            onPageChange={setPage}
+            onPageSizeChange={(next) => {
+              setPageSize(next);
+              setPage(1);
+            }}
+          />
         </div>
 
         {/* Right Long Grouped Clinical Sheet */}

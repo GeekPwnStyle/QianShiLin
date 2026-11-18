@@ -39,6 +39,7 @@ export const InventoryQueryPage: React.FC<{ isCrosstab?: boolean; pageTitle: str
   const { navigateToRoute } = useNavigation();
   const [kw, setKw] = useState('');
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const filtered = STOCK_ROWS.filter((r) => {
     if (session.identityType === 'store' && session.currentStoreId !== 'all') {
@@ -155,7 +156,10 @@ export const InventoryQueryPage: React.FC<{ isCrosstab?: boolean; pageTitle: str
               <input
                 type="text"
                 value={kw}
-                onChange={(e) => setKw(e.target.value)}
+                onChange={(e) => {
+                  setKw(e.target.value);
+                  setPage(1);
+                }}
                 placeholder="按商品名称、SKU或光度规格筛选"
                 className="w-full h-10 pl-9 pr-3 rounded-[9px] bg-[#F8F9F5] border border-[#D9DDD4] text-[15px]"
               />
@@ -190,8 +194,12 @@ export const InventoryQueryPage: React.FC<{ isCrosstab?: boolean; pageTitle: str
             rows={filtered}
             total={filtered.length}
             page={page}
-            pageSize={8}
+            pageSize={pageSize}
             onPageChange={setPage}
+            onPageSizeChange={(next) => {
+              setPageSize(next);
+              setPage(1);
+            }}
           />
         </>
       )}

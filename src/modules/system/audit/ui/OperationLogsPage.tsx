@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Search } from 'lucide-react';
 import { useAuth } from '@/src/modules/auth/application/AuthContext';
+import { PaginationBar } from '@/src/shared/ui/PaginationBar';
 import { ErrorState, LoadingSkeleton, NoPermissionState } from '@/src/shared/ui/StateViews';
 
 type LogRow = { id:string; category:string; action:string; target:string | null;
@@ -16,9 +17,10 @@ export const OperationLogsPage:React.FC = () => {
   const [draft,setDraft]=useState('');
   const [search,setSearch]=useState('');
   const [page,setPage]=useState(1);
+  const [pageSize,setPageSize]=useState(10);
   const allowed=session.identityType==='admin' && hasPermission('system.read');
-  const logs=useQuery({queryKey:['system-operation-logs',month,search,page],enabled:allowed,queryFn:async()=>{
-    const query=new URLSearchParams({month,search,page:String(page),pageSize:'20'});
+  const logs=useQuery({queryKey:['system-operation-logs',month,search,page,pageSize],enabled:allowed,queryFn:async()=>{
+    const query=new URLSearchParams({month,search,page:String(page),pageSize:String(pageSize)});
     const response=await fetch(`${base}/system/operation-logs?${query}`,{credentials:'same-origin'});
     const body=await response.json();
     if (!response.ok) throw new Error(body.error ?? '加载操作日志失败');
@@ -38,7 +40,16 @@ export const OperationLogsPage:React.FC = () => {
       <div className="overflow-x-auto"><table className="w-full min-w-[1050px] text-left text-sm"><thead className="bg-[#F8F9F5] text-[#686F65]"><tr>{['项目','操作','操作人','用户角色','操作时间','操作IP','客户端','操作详情'].map(label=><th key={label} className="px-5 py-3 font-medium">{label}</th>)}</tr></thead>
         <tbody className="divide-y divide-[#E9ECE5]">{logs.data?.items.map(row=><tr key={row.id} className="hover:bg-[#FAFBF5]"><td className="px-5 py-3 font-medium">{row.category}</td><td className="px-5 py-3">{row.action}</td><td className="px-5 py-3">{row.actor_name ?? '系统'}</td><td className="px-5 py-3">{row.actor_role_name ?? '—'}</td><td className="whitespace-nowrap px-5 py-3">{new Date(row.created_at).toLocaleString('zh-CN',{hour12:false})}</td><td className="px-5 py-3 font-mono text-xs">{row.ip_address ?? '—'}</td><td className="px-5 py-3">{row.client_type}</td><td className="px-5 py-3 text-[#6D736A]">{row.details.username as string ?? row.details.role as string ?? row.target ?? '—'}</td></tr>)}</tbody></table>
       {logs.data?.items.length===0 && <p className="px-5 py-12 text-center text-sm text-[#73796F]">该条件下暂无操作记录</p>}</div>
-      <div className="flex items-center justify-end gap-3 border-t border-[#E5E8E0] px-5 py-3 text-sm"><button disabled={page===1} onClick={()=>setPage(value=>value-1)} className="disabled:opacity-40">上一页</button><span>{page} / {Math.max(1,Math.ceil((logs.data?.total ?? 0)/20))}</span><button disabled={page*20 >= (logs.data?.total ?? 0)} onClick={()=>setPage(value=>value+1)} className="disabled:opacity-40">下一页</button></div>
+      <PaginationBar
+        total={logs.data?.total ?? 0}
+        page={page}
+        pageSize={pageSize}
+        onPageChange={setPage}
+        onPageSizeChange={(next) => {
+          setPageSize(next);
+          setPage(1);
+        }}
+      />
     </section>}
   </div>;
 };

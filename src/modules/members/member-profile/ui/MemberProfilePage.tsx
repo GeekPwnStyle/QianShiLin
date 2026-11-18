@@ -40,16 +40,17 @@ export const MemberProfilePage: React.FC<{ defaultOpenCreate?: boolean }> = ({
   const [tierFilter, setTierFilter] = useState<MemberTier | 'all'>('all');
   const [applied, setApplied] = useState({ keyword: '', tier: 'all' as MemberTier | 'all' });
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const [detailMember, setDetailMember] = useState<MemberProfile | null>(null);
   const [detailTab, setDetailTab] = useState<'basic' | 'consumption' | 'wallet' | 'appointments' | 'vision'>('basic');
   const [createOpen, setCreateOpen] = useState(defaultOpenCreate);
 
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ['members', applied, page, session.roleId, session.currentStoreId],
+    queryKey: ['members', applied, page, pageSize, session.roleId, session.currentStoreId],
     queryFn: () =>
       appRepositories.members.queryMembers(
-        { page, pageSize: 8, filters: applied },
+        { page, pageSize, filters: applied },
         dataScope
       ),
   });
@@ -221,8 +222,12 @@ export const MemberProfilePage: React.FC<{ defaultOpenCreate?: boolean }> = ({
           rows={rows}
           total={data?.total ?? 0}
           page={page}
-          pageSize={8}
+          pageSize={pageSize}
           onPageChange={setPage}
+          onPageSizeChange={(next) => {
+            setPageSize(next);
+            setPage(1);
+          }}
         />
       )}
 

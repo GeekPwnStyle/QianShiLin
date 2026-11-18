@@ -18,6 +18,7 @@ import { CustomerDetailModal } from '@/src/modules/basic/customers/ui/CustomerDe
 import { CustomerFormModal } from '@/src/modules/basic/customers/ui/CustomerFormModal';
 import { maskPhone } from '@/src/shared/lib/format';
 import { OperationStatus } from '@/src/shared/ui/OperationStatus';
+import { PaginationBar } from '@/src/shared/ui/PaginationBar';
 import { ErrorState, LoadingSkeleton } from '@/src/shared/ui/StateViews';
 
 type ToggleableColumnKey =
@@ -133,7 +134,7 @@ export const CustomerArchivePage: React.FC = () => {
     });
   }, [allItems, store, gender, tier, keyword]);
 
-  const pageSize = 20;
+  const [pageSize, setPageSize] = useState(10);
   const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
   const safePage = Math.min(page, totalPages);
   const shown = rows.slice((safePage - 1) * pageSize, safePage * pageSize);
@@ -760,31 +761,22 @@ export const CustomerArchivePage: React.FC = () => {
               )}
             </div>
 
-            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[#E7EAE2] px-4 py-2.5 text-sm">
-              <div aria-live="polite" className="flex flex-wrap items-center gap-x-4 gap-y-1 tabular-nums text-[#5F645D]">
-                <span>可见 {data?.total ?? '—'} 人{data?.total !== rows.length && ` · 筛选 ${rows.length} 人`} · 本页 {shown.length} 人</span>
-                <span className="text-xs">{debugMode ? '本地调试演示库' : '顾客档案库'}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="mr-1 whitespace-nowrap tabular-nums">第 {safePage} / {totalPages} 页</span>
-                <button
-                  type="button"
-                  disabled={safePage <= 1}
-                  onClick={() => setPage(safePage - 1)}
-                  className="rounded-lg border border-[#D9DDD4] px-3 py-1 disabled:opacity-40 cursor-pointer"
-                >
-                  上一页
-                </button>
-                <button
-                  type="button"
-                  disabled={safePage >= totalPages}
-                  onClick={() => setPage(safePage + 1)}
-                  className="rounded-lg border border-[#D9DDD4] px-3 py-1 disabled:opacity-40 cursor-pointer"
-                >
-                  下一页
-                </button>
-              </div>
-            </div>
+            <PaginationBar
+              total={rows.length}
+              page={safePage}
+              pageSize={pageSize}
+              unit="人"
+              onPageChange={setPage}
+              onPageSizeChange={(next) => {
+                setPageSize(next);
+                setPage(1);
+              }}
+              summaryExtra={
+                <span className="text-xs text-[#73796F]">
+                  可见 {data?.total ?? '—'} 人{data?.total !== rows.length && ` · 筛选 ${rows.length} 人`} · {debugMode ? '本地调试演示库' : '顾客档案库'}
+                </span>
+              }
+            />
           </>
         )}
       </section>

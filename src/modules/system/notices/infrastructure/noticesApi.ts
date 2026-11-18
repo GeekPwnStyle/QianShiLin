@@ -24,7 +24,7 @@ export const noticesApi = {
   inbox: (status: 'all'|'unread'|'read', page = 1, pageSize = 20) => request<NoticePage>(`/inbox?status=${status}&page=${page}&pageSize=${pageSize}`),
   detail: (id: string) => request<Notice>(`/${encodeURIComponent(id)}`),
   markRead: (id: string) => request<{readAt:string}>(`/${encodeURIComponent(id)}/read`, 'POST'),
-  adminList: (page: number, search: string) => request<NoticePage>(`/admin?page=${page}&pageSize=20&search=${encodeURIComponent(search)}`),
+  adminList: (page: number, search: string, pageSize = 10) => request<NoticePage>(`/admin?page=${page}&pageSize=${pageSize}&search=${encodeURIComponent(search)}`),
   recipients: () => request<NoticeRecipients>('/recipients'),
   receipts: (id: string) => request<{items:NoticeReceipt[];total:number;allRead:boolean}>(`/admin/${encodeURIComponent(id)}/receipts`),
   publish: (body: { title:string; category:NoticeCategory; severity:NoticeSeverity; content:string;

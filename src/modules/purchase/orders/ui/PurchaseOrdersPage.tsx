@@ -43,6 +43,7 @@ export const PurchaseOrdersPage: React.FC = () => {
   const client = useQueryClient();
   const [view, setView] = useState<'mine' | 'branch'>('mine');
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [keyword, setKeyword] = useState('');
   const [search, setSearch] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
@@ -60,8 +61,8 @@ export const PurchaseOrdersPage: React.FC = () => {
   const currentStore = session.currentStoreId;
   const otherStores = dataScope.authorizedStoreIds.filter(id => id !== currentStore);
   const selectedStore = view === 'mine' ? (currentStore === 'all' ? '' : currentStore) : otherStores[0] ?? '';
-  const list = useQuery({ queryKey: ['purchase-orders', view, selectedStore, page, search],
-    queryFn: () => request<Page>(`/purchase/orders?page=${page}&pageSize=20&storeId=${encodeURIComponent(selectedStore)}&search=${encodeURIComponent(search)}`) });
+  const list = useQuery({ queryKey: ['purchase-orders', view, selectedStore, page, pageSize, search],
+    queryFn: () => request<Page>(`/purchase/orders?page=${page}&pageSize=${pageSize}&storeId=${encodeURIComponent(selectedStore)}&search=${encodeURIComponent(search)}`) });
   const detail = useQuery({ queryKey: ['purchase-order', detailId], enabled: Boolean(detailId),
     queryFn: () => request<Order>(`/purchase/orders/${detailId}`) });
   const suppliers = useQuery({ queryKey: ['purchase-suppliers'], enabled: createOpen,
@@ -136,7 +137,8 @@ export const PurchaseOrdersPage: React.FC = () => {
     {notice && <OperationStatus role="status">{notice}</OperationStatus>}
     {list.isLoading ? <LoadingSkeleton /> : list.isError ? <ErrorState message={list.error.message} onRetry={() => list.refetch()} />
       : list.data?.items.length ? <DataTable columns={columns} rows={list.data.items} total={list.data.total}
-        page={page} pageSize={20} onPageChange={setPage} /> : <EmptyState mode={search ? 'filtered' : 'initial'} />}
+        page={page} pageSize={pageSize} onPageChange={setPage}
+        onPageSizeChange={next => { setPageSize(next); setPage(1); }} /> : <EmptyState mode={search ? 'filtered' : 'initial'} />}
     <Modal open={createOpen} onClose={() => setCreateOpen(false)} title={`新增${orderType === 'single' ? '单品' : '系列'}采购订货单`}
       maxWidthClass="max-w-5xl" footer={<><Button onClick={() => { setNote(''); setLines([]); }}>重置</Button>
         <Button variant="primary" loading={saving} onClick={save}>保存草稿</Button></>}>

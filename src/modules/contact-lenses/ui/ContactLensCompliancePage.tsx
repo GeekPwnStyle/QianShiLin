@@ -48,6 +48,7 @@ export const ContactLensCompliancePage: React.FC<{ nodeId: string; pageTitle: st
   const [tempVal, setTempVal] = useState('19.8');
   const [humVal, setHumVal] = useState('50');
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const handleAddTemp = () => {
     const t = Number.parseFloat(tempVal);
@@ -127,7 +128,18 @@ export const ContactLensCompliancePage: React.FC<{ nodeId: string; pageTitle: st
           </div>
         </div>
 
-        <DataTable columns={tempColumns} rows={logs} total={logs.length} page={page} pageSize={8} onPageChange={setPage} />
+        <DataTable
+          columns={tempColumns}
+          rows={logs}
+          total={logs.length}
+          page={page}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={(next) => {
+            setPageSize(next);
+            setPage(1);
+          }}
+        />
       </div>
     );
   }
@@ -166,8 +178,12 @@ export const ContactLensCompliancePage: React.FC<{ nodeId: string; pageTitle: st
         rows={COMPLIANCE_BATCHES}
         total={COMPLIANCE_BATCHES.length}
         page={page}
-        pageSize={8}
+        pageSize={pageSize}
         onPageChange={setPage}
+        onPageSizeChange={(next) => {
+          setPageSize(next);
+          setPage(1);
+        }}
       />
     </div>
   );

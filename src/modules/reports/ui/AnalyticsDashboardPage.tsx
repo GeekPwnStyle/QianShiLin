@@ -28,6 +28,7 @@ export const AnalyticsDashboardPage: React.FC<{ pageTitle: string }> = ({ pageTi
   const [selectedStore, setSelectedStore] = useState<string>('all');
   const [definitionOpen, setDefinitionOpen] = useState(false);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const visibleRows =
     selectedStore === 'all'
@@ -51,7 +52,10 @@ export const AnalyticsDashboardPage: React.FC<{ pageTitle: string }> = ({ pageTi
           <Select
             ariaLabel="联动筛选门店"
             value={selectedStore}
-            onChange={setSelectedStore}
+            onChange={(val) => {
+              setSelectedStore(val);
+              setPage(1);
+            }}
             className="w-56"
             options={[
               { value: 'all', label: '全部授权门店' },
@@ -124,8 +128,12 @@ export const AnalyticsDashboardPage: React.FC<{ pageTitle: string }> = ({ pageTi
         rows={visibleRows}
         total={visibleRows.length}
         page={page}
-        pageSize={8}
+        pageSize={pageSize}
         onPageChange={setPage}
+        onPageSizeChange={(next) => {
+          setPageSize(next);
+          setPage(1);
+        }}
       />
 
       <Modal

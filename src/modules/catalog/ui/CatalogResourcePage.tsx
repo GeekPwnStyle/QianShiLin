@@ -53,6 +53,7 @@ export const CatalogResourcePage: React.FC<{ config: CatalogConfig }> = ({ confi
   const { session } = useAuth();
   const canEdit = session.identityType === 'admin';
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [keyword, setKeyword] = useState('');
   const [search, setSearch] = useState('');
   const [editing, setEditing] = useState<CatalogRow | null>(null);
@@ -60,10 +61,10 @@ export const CatalogResourcePage: React.FC<{ config: CatalogConfig }> = ({ confi
   const [message, setMessage] = useState('');
   const [transferring, setTransferring] = useState(false);
   const importInput = useRef<HTMLInputElement>(null);
-  const queryKey = ['catalog', config.resource, page, search];
+  const queryKey = ['catalog', config.resource, page, pageSize, search];
   const query = useQuery({
     queryKey,
-    queryFn: () => api<PageResult>(`/${config.resource}?page=${page}&pageSize=20&search=${encodeURIComponent(search)}`),
+    queryFn: () => api<PageResult>(`/${config.resource}?page=${page}&pageSize=${pageSize}&search=${encodeURIComponent(search)}`),
   });
   const save = useMutation({
     mutationFn: (values: Record<string, unknown>) => api<CatalogRow>(
@@ -162,7 +163,8 @@ export const CatalogResourcePage: React.FC<{ config: CatalogConfig }> = ({ confi
     {remove.error && <OperationStatus role="alert">{remove.error.message}</OperationStatus>}
     {query.isLoading ? <LoadingSkeleton /> : query.isError ? <ErrorState message={query.error.message} onRetry={() => query.refetch()} />
       : query.data?.items.length ? <DataTable columns={columns} rows={query.data.items} total={query.data.total}
-          page={page} pageSize={20} onPageChange={setPage} /> : <EmptyState mode={search ? 'filtered' : 'initial'} />}
+          page={page} pageSize={pageSize} onPageChange={setPage}
+          onPageSizeChange={next => { setPageSize(next); setPage(1); }} /> : <EmptyState mode={search ? 'filtered' : 'initial'} />}
     <Modal open={form !== null} onClose={() => setForm(null)} title={`${editing ? '编辑' : '新增'}${config.title}`}
       maxWidthClass="max-w-2xl" footer={<><Button onClick={() => setForm(null)}>取消</Button>
         <Button variant="primary" loading={save.isPending} onClick={() => {

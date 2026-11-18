@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight, Columns3 } from 'lucide-react';
+import { ArrowDown, ArrowUp, ArrowUpDown, Columns3 } from 'lucide-react';
 import { Button } from './Button';
+import { PaginationBar } from './PaginationBar';
 
 export interface TableColumn<T> {
   key: string;
@@ -20,6 +21,8 @@ interface DataTableProps<T extends { id: string }> {
   page: number;
   pageSize: number;
   onPageChange: (page: number) => void;
+  onPageSizeChange?: (pageSize: number) => void;
+  pageSizeOptions?: readonly number[];
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
   onSortChange?: (key: string) => void;
@@ -37,6 +40,8 @@ export function DataTable<T extends { id: string }>({
   page,
   pageSize,
   onPageChange,
+  onPageSizeChange,
+  pageSizeOptions,
   sortBy,
   sortOrder,
   onSortChange,
@@ -55,17 +60,25 @@ export function DataTable<T extends { id: string }>({
   });
   const [colMenuOpen, setColMenuOpen] = useState(false);
 
+  const safePageSize = Math.max(1, pageSize);
+  const totalPages = Math.max(1, Math.ceil(total / safePageSize));
+  const safePage = Math.min(Math.max(1, page), totalPages);
+  const displayedRows =
+    rows.length > safePageSize
+      ? rows.slice((safePage - 1) * safePageSize, safePage * safePageSize)
+      : rows;
+
   const visibleColumns = columns.filter((c) => !hiddenCols[c.key]);
   const allOnPageSelected =
-    rows.length > 0 && rows.every((r) => selectedIds.includes(r.id));
+    displayedRows.length > 0 && displayedRows.every((r) => selectedIds.includes(r.id));
 
   const toggleAll = () => {
     if (!onSelectionChange) return;
     if (allOnPageSelected) {
-      const pageIdSet = new Set(rows.map((r) => r.id));
+      const pageIdSet = new Set(displayedRows.map((r) => r.id));
       onSelectionChange(selectedIds.filter((id) => !pageIdSet.has(id)));
     } else {
-      const merged = Array.from(new Set([...selectedIds, ...rows.map((r) => r.id)]));
+      const merged = Array.from(new Set([...selectedIds, ...displayedRows.map((r) => r.id)]));
       onSelectionChange(merged);
     }
   };
@@ -78,10 +91,6 @@ export function DataTable<T extends { id: string }>({
       onSelectionChange([...selectedIds, id]);
     }
   };
-
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  const startIdx = total === 0 ? 0 : (page - 1) * pageSize + 1;
-  const endIdx = Math.min(total, page * pageSize);
 
   return (
     <div className="bg-white border border-[#D9DDD4] rounded-[20px] overflow-hidden">
@@ -218,7 +227,7 @@ export function DataTable<T extends { id: string }>({
             </tr>
           </thead>
           <tbody className="divide-y divide-[#E5E8E0]">
-            {rows.map((row) => {
+            {displayedRows.map((row) => {
               const checked = selectedIds.includes(row.id);
               return (
                 <tr
@@ -265,34 +274,14 @@ export function DataTable<T extends { id: string }>({
         </table>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5 border-t border-[#E5E8E0] bg-white text-[15px] text-[#5F645D]">
-        <div className="tabular-nums">
-          第 {startIdx}–{endIdx} 条 · 共 {total} 条记录
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            variant="secondary"
-            disabled={page <= 1}
-            onClick={() => onPageChange(page - 1)}
-            icon={<ChevronLeft className="w-3.5 h-3.5" />}
-          >
-            上一页
-          </Button>
-          <span className="px-2 tabular-nums text-[14px] text-[#171916]">
-            {page} / {totalPages}
-          </span>
-          <Button
-            size="sm"
-            variant="secondary"
-            disabled={page >= totalPages}
-            onClick={() => onPageChange(page + 1)}
-          >
-            <span>下一页</span>
-            <ChevronRight className="w-3.5 h-3.5" />
-          </Button>
-        </div>
-      </div>
+      <PaginationBar
+        total={total}
+        page={safePage}
+        pageSize={safePageSize}
+        onPageChange={onPageChange}
+        onPageSizeChange={onPageSizeChange}
+        pageSizeOptions={pageSizeOptions}
+      />
     </div>
   );
 }

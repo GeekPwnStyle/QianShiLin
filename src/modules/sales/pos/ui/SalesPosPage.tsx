@@ -13,6 +13,7 @@ import {
 import { formatCurrency, formatDateTime, maskPhone } from '@/src/shared/lib/format';
 import { Button } from '@/src/shared/ui/Button';
 import { HelpTooltip } from '@/src/shared/ui/HelpTooltip';
+import { PaginationBar } from '@/src/shared/ui/PaginationBar';
 import { Select } from '@/src/shared/ui/Select';
 import { StatusLabel } from '@/src/shared/ui/StatusLabel';
 
@@ -33,6 +34,11 @@ export const SalesPosPage: React.FC = () => {
   const [savedNotice, setSavedNotice] = useState<string | null>(null);
   const [discountError, setDiscountError] = useState<string | null>(null);
 
+  const [productPage, setProductPage] = useState(1);
+  const [productPageSize, setProductPageSize] = useState(10);
+  const [ordersPage, setOrdersPage] = useState(1);
+  const [ordersPageSize, setOrdersPageSize] = useState(10);
+
   // Mobile step toggle so mobile users don't get overwhelmed
   const [mobileStep, setMobileStep] = useState<1 | 2>(1);
 
@@ -43,17 +49,17 @@ export const SalesPosPage: React.FC = () => {
   });
 
   const { data: productsData } = useQuery({
-    queryKey: ['pos', 'products', productSearch, session.currentStoreId],
+    queryKey: ['pos', 'products', productSearch, productPage, productPageSize, session.currentStoreId],
     queryFn: () =>
       appRepositories.products.queryProducts(
-        { page: 1, pageSize: 8, filters: { keyword: productSearch, enabled: 'true' } },
+        { page: productPage, pageSize: productPageSize, filters: { keyword: productSearch, enabled: 'true' } },
         dataScope
       ),
   });
 
   const { data: recentOrders } = useQuery({
-    queryKey: ['pos', 'recent_orders', session.currentStoreId],
-    queryFn: () => appRepositories.salesOrders.queryOrders({ page: 1, pageSize: 5 }, dataScope),
+    queryKey: ['pos', 'recent_orders', ordersPage, ordersPageSize, session.currentStoreId],
+    queryFn: () => appRepositories.salesOrders.queryOrders({ page: ordersPage, pageSize: ordersPageSize }, dataScope),
   });
 
   const members: MemberProfile[] = membersData?.items ?? [];
@@ -259,7 +265,10 @@ export const SalesPosPage: React.FC = () => {
                 <input
                   type="text"
                   value={productSearch}
-                  onChange={(e) => setProductSearch(e.target.value)}
+                  onChange={(e) => {
+                    setProductSearch(e.target.value);
+                    setProductPage(1);
+                  }}
                   placeholder="搜索商品名称 / SKU / 品牌"
                   className="w-full h-10 pl-9 pr-3 rounded-[9px] bg-[#F8F9F5] border border-[#D9DDD4] text-[15px] outline-none focus:border-[#171916]"
                 />
@@ -301,6 +310,19 @@ export const SalesPosPage: React.FC = () => {
                 </div>
               ))}
             </div>
+            <PaginationBar
+              compact
+              className="-mx-5 -mb-5 rounded-b-[20px]"
+              total={productsData?.total ?? 0}
+              page={productPage}
+              pageSize={productPageSize}
+              unit="件商品"
+              onPageChange={setProductPage}
+              onPageSizeChange={(next) => {
+                setProductPageSize(next);
+                setProductPage(1);
+              }}
+            />
           </div>
         </div>
 
@@ -489,6 +511,19 @@ export const SalesPosPage: React.FC = () => {
                 </div>
               ))}
             </div>
+            <PaginationBar
+              compact
+              className="-mx-5 -mb-5 rounded-b-[20px]"
+              total={recentOrders?.total ?? 0}
+              page={ordersPage}
+              pageSize={ordersPageSize}
+              unit="单"
+              onPageChange={setOrdersPage}
+              onPageSizeChange={(next) => {
+                setOrdersPageSize(next);
+                setOrdersPage(1);
+              }}
+            />
           </div>
         </div>
       </div>

@@ -9,6 +9,7 @@ import { Button } from '@/src/shared/ui/Button';
 import { DataTable, type TableColumn } from '@/src/shared/ui/DataTable';
 import { HelpTooltip } from '@/src/shared/ui/HelpTooltip';
 import { Modal } from '@/src/shared/ui/Modal';
+import { PaginationBar } from '@/src/shared/ui/PaginationBar';
 import { StatusLabel } from '@/src/shared/ui/StatusLabel';
 
 /* ------------------------------------------------------------------
@@ -91,6 +92,7 @@ export const MasterDataView: React.FC<{ node: NavNode }> = ({ node }) => {
   const seed = getMasterSeedForNode(node.id);
   const [rows, setRows] = useState(seed.rows);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [addOpen, setAddOpen] = useState(false);
   const [newName, setNewName] = useState('');
   const [newAttr, setNewAttr] = useState('');
@@ -136,7 +138,18 @@ export const MasterDataView: React.FC<{ node: NavNode }> = ({ node }) => {
           新增{node.label}
         </Button>
       </div>
-      <DataTable columns={columns} rows={rows} total={rows.length} page={page} pageSize={8} onPageChange={setPage} />
+      <DataTable
+        columns={columns}
+        rows={rows}
+        total={rows.length}
+        page={page}
+        pageSize={pageSize}
+        onPageChange={setPage}
+        onPageSizeChange={(next) => {
+          setPageSize(next);
+          setPage(1);
+        }}
+      />
 
       <Modal
         open={addOpen}
@@ -206,6 +219,7 @@ export const DocumentListView: React.FC<{ node: NavNode }> = ({ node }) => {
   const { session } = useAuth();
   const [detail, setDetail] = useState<BusinessDocument | null>(null);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const prefix = node.moduleId === 'purchase' ? 'CG' : node.moduleId === 'transfer' ? 'DB' : node.moduleId === 'after_sales' ? 'WX' : 'YW';
   const docs: BusinessDocument[] = [
@@ -262,7 +276,18 @@ export const DocumentListView: React.FC<{ node: NavNode }> = ({ node }) => {
 
   return (
     <div className="space-y-4">
-      <DataTable columns={columns} rows={docs} total={docs.length} page={page} pageSize={8} onPageChange={setPage} />
+      <DataTable
+        columns={columns}
+        rows={docs}
+        total={docs.length}
+        page={page}
+        pageSize={pageSize}
+        onPageChange={setPage}
+        onPageSizeChange={(next) => {
+          setPageSize(next);
+          setPage(1);
+        }}
+      />
       <Modal
         open={Boolean(detail)}
         onClose={() => setDetail(null)}
@@ -288,6 +313,7 @@ export const DocumentListView: React.FC<{ node: NavNode }> = ({ node }) => {
  * ------------------------------------------------------------------ */
 export const VisionScreeningView: React.FC<{ pageTitle: string }> = ({ pageTitle }) => {
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const rows = [
     { id: 'sc_1', school: '杭州市西湖区学军小学（示例）', grade: '四年级 (8个班)', screened: 342, alertCount: 94, rate: '27.5%', date: '2026-10-28' },
     { id: 'sc_2', school: '杭州市滨江区江南实验学校（示例）', grade: '七年级 (10个班)', screened: 465, alertCount: 218, rate: '46.9%', date: '2026-11-04' },
@@ -316,8 +342,12 @@ export const VisionScreeningView: React.FC<{ pageTitle: string }> = ({ pageTitle
         rows={rows}
         total={rows.length}
         page={page}
-        pageSize={8}
+        pageSize={pageSize}
         onPageChange={setPage}
+        onPageSizeChange={(next) => {
+          setPageSize(next);
+          setPage(1);
+        }}
       />
     </div>
   );
@@ -436,6 +466,11 @@ export const UnconfirmedPageShell: React.FC<{ node: NavNode }> = ({ node }) => {
 export const HelpDocsPage: React.FC = () => {
   const { navigateToRoute } = useNavigation();
   const unconfirmedNodes = FLAT_MENU_NODES.filter((n) => Boolean(n.unconfirmedNote));
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const totalPages = Math.max(1, Math.ceil(unconfirmedNodes.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const visibleNodes = unconfirmedNodes.slice((safePage - 1) * pageSize, safePage * pageSize);
 
   return (
     <div className="space-y-6">
@@ -463,27 +498,40 @@ export const HelpDocsPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="bg-white border border-[#D9DDD4] rounded-[20px] p-6 space-y-4">
-        <h2 className="text-[19px] font-semibold text-[#171916]">
-          待确认业务规则清单 ({unconfirmedNodes.length} 项)
-        </h2>
-        <div className="divide-y divide-[#E5E8E0]">
-          {unconfirmedNodes.map((n) => (
-            <div key={n.id} className="py-3 flex flex-wrap items-start justify-between gap-3 text-[15px]">
-              <div>
-                <div className="font-semibold text-[#171916]">{n.label}</div>
-                <div className="text-[#5F645D] mt-0.5">{n.unconfirmedNote}</div>
+      <div className="bg-white border border-[#D9DDD4] rounded-[20px] overflow-hidden">
+        <div className="p-6 pb-4 space-y-4">
+          <h2 className="text-[19px] font-semibold text-[#171916]">
+            待确认业务规则清单 ({unconfirmedNodes.length} 项)
+          </h2>
+          <div className="divide-y divide-[#E5E8E0]">
+            {visibleNodes.map((n) => (
+              <div key={n.id} className="py-3 flex flex-wrap items-start justify-between gap-3 text-[15px]">
+                <div>
+                  <div className="font-semibold text-[#171916]">{n.label}</div>
+                  <div className="text-[#5F645D] mt-0.5">{n.unconfirmedNote}</div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => navigateToRoute(n.route)}
+                  className="text-[14px] font-medium text-[#171916] underline cursor-pointer shrink-0"
+                >
+                  前往查看
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => navigateToRoute(n.route)}
-                className="text-[14px] font-medium text-[#171916] underline cursor-pointer shrink-0"
-              >
-                前往查看
-              </button>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
+        <PaginationBar
+          total={unconfirmedNodes.length}
+          page={safePage}
+          pageSize={pageSize}
+          unit="项"
+          onPageChange={setPage}
+          onPageSizeChange={(next) => {
+            setPageSize(next);
+            setPage(1);
+          }}
+        />
       </div>
     </div>
   );

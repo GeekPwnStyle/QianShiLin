@@ -311,7 +311,7 @@ export const Select: React.FC<SelectProps> = ({
               width: `${menuPos.width}px`,
               maxHeight: `${menuPos.maxHeight}px`,
             }}
-            className={`z-[90] qsl-glass-popover rounded-[14px] p-1.5 overflow-y-auto qsl-scroll ${
+            className={`z-[120] qsl-glass-popover rounded-[14px] p-1.5 overflow-y-auto qsl-scroll ${
               menuPos.placement === 'top' ? 'origin-bottom' : 'origin-top'
             } ${popoverClassName}`}
           >

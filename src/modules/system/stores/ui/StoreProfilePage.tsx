@@ -36,6 +36,7 @@ import { downloadCsv } from '@/src/shared/lib/exportCsv';
 import { Button } from '@/src/shared/ui/Button';
 import { HelpTooltip } from '@/src/shared/ui/HelpTooltip';
 import { Modal } from '@/src/shared/ui/Modal';
+import { PaginationBar } from '@/src/shared/ui/PaginationBar';
 import { Select } from '@/src/shared/ui/Select';
 import { EmptyState } from '@/src/shared/ui/StateViews';
 import { StatusLabel } from '@/src/shared/ui/StatusLabel';
@@ -389,7 +390,7 @@ export const StoreProfilePage: React.FC = () => {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [columnFilters, setColumnFilters] = useState<Partial<Record<ColumnFilterKey, string>>>({});
   const [page, setPage] = useState(1);
-  const pageSize = 10;
+  const [pageSize, setPageSize] = useState(10);
 
   // Column visibility popover ("设置表头")
   const [hiddenCols, setHiddenCols] = useState<Record<string, boolean>>({});
@@ -638,7 +639,7 @@ export const StoreProfilePage: React.FC = () => {
   const safePage = Math.min(page, totalPages);
   const pagedStores = useMemo(
     () => filteredStores.slice((safePage - 1) * pageSize, safePage * pageSize),
-    [filteredStores, safePage]
+    [filteredStores, safePage, pageSize]
   );
 
   const hasActiveFilters =
@@ -1546,34 +1547,20 @@ export const StoreProfilePage: React.FC = () => {
           </div>
 
           {/* Pagination Footer */}
-          <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5 border-t border-[#E5E8E0] bg-white text-[14px] text-[#5F645D]">
-            <div className="tabular-nums">
-              第 {startIdx}–{endIdx} 条 · 共 <strong className="text-[#171916]">{filteredStores.length}</strong> 家门店
-              <span className="mx-2 text-[#D9DDD4]">|</span>
-              <span>提示：左右滑动表格可查看完整门店资质与跨店权限列</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                size="sm"
-                variant="secondary"
-                disabled={safePage <= 1}
-                onClick={() => setPage(safePage - 1)}
-              >
-                上一页
-              </Button>
-              <span className="px-2 tabular-nums text-[#171916]">
-                {safePage} / {totalPages}
-              </span>
-              <Button
-                size="sm"
-                variant="secondary"
-                disabled={safePage >= totalPages}
-                onClick={() => setPage(safePage + 1)}
-              >
-                下一页
-              </Button>
-            </div>
-          </div>
+          <PaginationBar
+            total={filteredStores.length}
+            page={safePage}
+            pageSize={pageSize}
+            unit="家门店"
+            onPageChange={setPage}
+            onPageSizeChange={(next) => {
+              setPageSize(next);
+              setPage(1);
+            }}
+            summaryExtra={
+              <span className="text-xs text-[#73796F]">左右滑动查看完整门店资质与跨店权限列</span>
+            }
+          />
         </div>
       )}
 
