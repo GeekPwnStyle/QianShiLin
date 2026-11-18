@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useLayoutEffect } from 'react';
+import { applyFontSizes, readFontSizes } from '@/src/modules/system/parameters/domain/displayFontSizes';
 import { ChevronRight, Star } from 'lucide-react';
 import { useAuth } from '@/src/modules/auth/application/AuthContext';
 import { useNavigation } from '@/src/modules/navigation/application/NavigationContext';
@@ -18,6 +19,7 @@ interface AppShellProps {
 }
 
 export const AppShell: React.FC<AppShellProps> = ({ children }) => {
+  useLayoutEffect(() => applyFontSizes(readFontSizes()), []);
   const { hasPermission, currentRole } = useAuth();
   const {
     activeNode,
@@ -60,7 +62,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
       <div className="flex-1 flex min-h-0 bg-transparent pt-16">
         <ModuleSidebar />
 
-        <main className="flex-1 min-w-0 bg-transparent">
+        <main className="qsl-font-main flex-1 min-w-0 bg-transparent">
           <div className="w-full px-4 sm:px-6 lg:px-9 py-6 space-y-6">
             {!isWorkbench && (
               <>
@@ -133,7 +135,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
                           title={isFavorited ? '取消收藏' : '收藏到常用菜单'}
                           className={`w-9 h-9 rounded-full inline-flex items-center justify-center border transition-colors cursor-pointer ${
                             isFavorited
-                              ? 'bg-[var(--qsl-accent)] border-[var(--qsl-accent-border)] text-[var(--qsl-accent-ink)]'
+                              ? 'bg-[#D7FF00] border-[#171916]/30 text-[#171916]'
                               : 'bg-white border-[#D9DDD4] text-[#73796F] hover:text-[#171916]'
                           }`}
                         >
@@ -163,7 +165,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
                           className={`h-10 px-5 rounded-full text-[15px] font-medium whitespace-nowrap transition-colors cursor-pointer ${
                             tabDeveloped
                               ? active
-                                ? 'bg-[var(--qsl-nav-active-bg)] text-[var(--qsl-nav-active-ink)]'
+                                ? 'bg-[#171916] text-white'
                                 : 'bg-white text-[#171916] border border-[#D9DDD4] hover:border-[#171916]'
                               : active
                                 ? 'bg-[#D9DDD4] text-[#5F645D] grayscale'

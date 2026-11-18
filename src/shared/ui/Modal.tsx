@@ -98,7 +98,7 @@ export const Modal: React.FC<ModalProps> = ({
       <div
         ref={containerRef}
         tabIndex={-1}
-        className={`qsl-modal-panel rounded-[24px] flex flex-col overflow-hidden outline-none ${
+        className={`qsl-font-main qsl-modal-panel rounded-[24px] flex flex-col overflow-hidden outline-none ${
           fixedViewportSize ? 'w-[80dvw] h-[80dvh]' : `w-full ${maxWidthClass} max-h-[calc(100dvh-2rem)]`
         }`}
       >

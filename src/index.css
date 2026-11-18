@@ -45,7 +45,7 @@
   --qsl-status-processing-bg: #F1F5F9;
 
   --qsl-font-sans: "DengXian", "等线", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
-  --qsl-font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  --qsl-font-mono: Arial, "Microsoft YaHei", sans-serif;
 }
 
 :root[data-theme="emerald_mint"] {
@@ -211,6 +211,7 @@
 }
 
 @theme {
+  --font-mono: var(--qsl-font-mono);
   --font-sans: "DengXian", "等线", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
 }
 
@@ -379,3 +380,34 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* Adjust text independently in each workspace region. */
+.qsl-font-top { --qsl-font-offset: var(--qsl-font-offset-top, 2px); }
+.qsl-font-side { --qsl-font-offset: var(--qsl-font-offset-side, 2px); }
+.qsl-font-main { --qsl-font-offset: var(--qsl-font-offset-main, 1px); }
+:is(.qsl-font-top, .qsl-font-side, .qsl-font-main) { font-size: calc(16px + var(--qsl-font-offset)); }
+body { font-feature-settings: "zero" 0; }
+.font-mono { font-variant-numeric: tabular-nums; font-feature-settings: "zero" 0; }
+:where(.qsl-font-top, .qsl-font-side, .qsl-font-main) .text-xs { font-size: calc(12px + var(--qsl-font-offset)); }
+:where(.qsl-font-top, .qsl-font-side, .qsl-font-main) .text-sm { font-size: calc(14px + var(--qsl-font-offset)); }
+:where(.qsl-font-top, .qsl-font-side, .qsl-font-main) .text-base { font-size: calc(16px + var(--qsl-font-offset)); }
+:where(.qsl-font-top, .qsl-font-side, .qsl-font-main) .text-lg { font-size: calc(18px + var(--qsl-font-offset)); }
+:where(.qsl-font-top, .qsl-font-side, .qsl-font-main) .text-xl { font-size: calc(20px + var(--qsl-font-offset)); }
+:where(.qsl-font-top, .qsl-font-side, .qsl-font-main) .text-2xl { font-size: calc(24px + var(--qsl-font-offset)); }
+:where(.qsl-font-top, .qsl-font-side, .qsl-font-main) .text-3xl { font-size: calc(30px + var(--qsl-font-offset)); }
+:where(.qsl-font-top, .qsl-font-side, .qsl-font-main) .text-\[10px\] { font-size: calc(10px + var(--qsl-font-offset)); }
+:where(.qsl-font-top, .qsl-font-side, .qsl-font-main) .text-\[11px\] { font-size: calc(11px + var(--qsl-font-offset)); }
+:where(.qsl-font-top, .qsl-font-side, .qsl-font-main) .text-\[12px\] { font-size: calc(12px + var(--qsl-font-offset)); }
+:where(.qsl-font-top, .qsl-font-side, .qsl-font-main) .text-\[13px\] { font-size: calc(13px + var(--qsl-font-offset)); }
+:where(.qsl-font-top, .qsl-font-side, .qsl-font-main) .text-\[14px\] { font-size: calc(14px + var(--qsl-font-offset)); }
+:where(.qsl-font-top, .qsl-font-side, .qsl-font-main) .text-\[15px\] { font-size: calc(15px + var(--qsl-font-offset)); }
+:where(.qsl-font-top, .qsl-font-side, .qsl-font-main) .text-\[16px\] { font-size: calc(16px + var(--qsl-font-offset)); }
+:where(.qsl-font-top, .qsl-font-side, .qsl-font-main) .text-\[17px\] { font-size: calc(17px + var(--qsl-font-offset)); }
+:where(.qsl-font-top, .qsl-font-side, .qsl-font-main) .text-\[18px\] { font-size: calc(18px + var(--qsl-font-offset)); }
+:where(.qsl-font-top, .qsl-font-side, .qsl-font-main) .text-\[19px\] { font-size: calc(19px + var(--qsl-font-offset)); }
+:where(.qsl-font-top, .qsl-font-side, .qsl-font-main) .text-\[20px\] { font-size: calc(20px + var(--qsl-font-offset)); }
+:where(.qsl-font-top, .qsl-font-side, .qsl-font-main) .text-\[22px\] { font-size: calc(22px + var(--qsl-font-offset)); }
+:where(.qsl-font-top, .qsl-font-side, .qsl-font-main) .text-\[24px\] { font-size: calc(24px + var(--qsl-font-offset)); }
+:where(.qsl-font-top, .qsl-font-side, .qsl-font-main) .text-\[28px\] { font-size: calc(28px + var(--qsl-font-offset)); }
+:where(.qsl-font-top, .qsl-font-side, .qsl-font-main) .text-\[30px\] { font-size: calc(30px + var(--qsl-font-offset)); }
+:where(.qsl-font-top, .qsl-font-side, .qsl-font-main) .text-\[32px\] { font-size: calc(32px + var(--qsl-font-offset)); }
