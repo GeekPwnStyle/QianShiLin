@@ -118,74 +118,75 @@ export function lookupIpRegion(raw) {
 const onlineCache = new Map();
 const inFlight = new Map();
 const providerRetryAt = new Map();
+const mainlandRegion = /^(?:[\p{Script=Han}]{2,12}(?:省|自治区)|(?:北京|天津|上海|重庆)市|中国(?: · |$))/u;
 
-function extractIp138Location(html, ip) {
-  if (!html.includes(ip)) return null;
-  const plain = value => value.replace(/<[^>]*>/g, '').replace(/&nbsp;|&#160;/gi, ' ').trim();
-  for (const row of html.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/gi)) {
-    const cells = [...row[1].matchAll(/<t[dh]\b[^>]*>([\s\S]*?)<\/t[dh]>/gi)].map(cell => plain(cell[1]));
-    if (!/^(?:ASN\s*归属地|本站数据|IP归属地)[:：]?$/i.test(cells[0] ?? '')) continue;
-    const data = cells[1]?.replace(/\s+/g, ' ').trim();
-    if (data && data.length <= 100 && !/未知|保留地址|查询失败/.test(data)) return data;
+function formatOnlineLocation(data, local) {
+  const { countryCode, region, city, isp } = data;
+  if (!/^[A-Z]{2}$/.test(countryCode) || !city || city.length > 100 || region.length > 100 || /未知|不详/.test(region + city)) return null;
+  if (countryCode === 'CN') {
+    const chineseName = /^[\p{Script=Han}]{2,16}$/u;
+    if (!chineseName.test(region) || !chineseName.test(city)) return null;
+    const province = provinceName(region);
+    const locality = [...new Set([province, formatCity(city, '中国')])].join('');
+    return [locality, /China Mobile/i.test(isp) ? '移动' : (local?.startsWith(province) ? local.split(' · ')[1] : isp)].filter(Boolean).join(' · ');
   }
-  return null;
+  const country = countries.of(countryCode);
+  const locality = ['HK', 'MO'].includes(countryCode) ? `中国${country.replace(/^中国/, '')}`
+    : [...new Set([country, region, city].filter(Boolean))].join(' ');
+  return [locality, isp].filter(Boolean).join(' · ');
 }
+
+const providers = [
+  {
+    name: 'ipwhois',
+    url: ip => `https://ipwho.is/${encodeURIComponent(ip)}?lang=zh-CN&fields=ip,success,country_code,region,city,connection`,
+    parse: (data, ip) => data?.success === true && data.ip === ip && {
+      countryCode: data.country_code, region: clean(data.region), city: clean(data.city), isp: clean(data.connection?.isp),
+    },
+  },
+  {
+    name: 'ipinfo',
+    url: ip => `https://ipinfo.io/${encodeURIComponent(ip)}/json`,
+    parse: (data, ip) => data?.ip === ip && data.country !== 'CN' && {
+      countryCode: data.country, region: clean(data.region), city: clean(data.city), isp: clean(data.org).replace(/^AS\d+\s+/, ''),
+    },
+  },
+];
 
 export async function resolveIpRegion(raw) {
   const local = lookupIpRegion(raw);
-  const ip = typeof raw === 'string' ? raw.trim().replace(/^::ffff:(?=\d+\.)/i, '') : '';
-  const marker = / · (?:(?:省市|城市)未收录|部分数据源不可用)$/;
-  const incomplete = marker.test(local ?? '');
-  const visibleLocal = local?.replace(marker, '') ?? null;
-  const mainland = /^(?:[\p{Script=Han}]{2,12}(?:省|自治区)|(?:北京|天津|上海|重庆)市)/u.test(visibleLocal ?? '');
-  if (!isIP(ip) || (local && !mainland && !incomplete && local !== '归属地查询暂不可用')) return visibleLocal;
+  const ip = typeof raw === 'string' ? raw.trim().replace(/^::ffff:(?=\d+\.)/i, '').split('%')[0] : '';
+  const version = isIP(ip);
+  const visibleLocal = local?.replace(/ · (?:(?:省市|城市)未收录|部分数据源不可用)$/, '') ?? null;
+  if (!version || visibleLocal === '内网地址' || visibleLocal?.endsWith(' · Cloudflare')) return visibleLocal;
   const cached = onlineCache.get(ip);
   if (cached && cached.expires > Date.now()) return cached.value;
   if (inFlight.has(ip)) return inFlight.get(ip);
-  const provider = mainland ? 'ipwhois' : 'ip138';
-  if (providerRetryAt.get(provider) > Date.now() || inFlight.size >= 4) return visibleLocal;
+  if (inFlight.size >= 4) return visibleLocal;
   const lookup = (async () => {
     let value = visibleLocal;
-    let ttl = 10 * 60 * 1000;
-    try {
-      if (mainland) {
-        const endpoint = new URL(`https://ipwho.is/${ip}`);
-        endpoint.search = new URLSearchParams({ lang: 'zh-CN', fields: 'ip,success,country_code,region,city' });
-        const response = await fetch(endpoint, {
-          headers: { Accept: 'application/json' },
-          redirect: 'error',
-          signal: AbortSignal.timeout(1800),
+    let ttl = 60 * 1000;
+    const deadline = Date.now() + 4000;
+    for (const provider of providers) {
+      if (providerRetryAt.get(provider.name) > Date.now()) continue;
+      if (provider.name === 'ipinfo' && mainlandRegion.test(visibleLocal ?? '')) continue;
+      const timeout = Math.min(provider.name === 'ipwhois' ? 2800 : 1200, deadline - Date.now());
+      if (timeout <= 0) break;
+      try {
+        const response = await fetch(provider.url(ip), {
+          headers: { Accept: 'application/json' }, redirect: 'error', signal: AbortSignal.timeout(timeout),
         });
-        if (!response.ok) throw new Error('IP location service unavailable');
-        const data = await response.json();
-        const province = provinceName(clean(data?.region));
-        const city = clean(data?.city);
-        const chineseName = /^[\p{Script=Han}]{2,16}$/u;
-        if (data?.success === true && data.ip === ip && data.country_code === 'CN' &&
-            chineseName.test(province) && chineseName.test(city) && !/未知|不详/.test(province + city)) {
-          const location = [...new Set([province, formatCity(city, '中国')])].join('');
-          const isp = visibleLocal?.startsWith(province) ? visibleLocal.split(' · ')[1] : null;
-          value = [location, isp].filter(Boolean).join(' · ');
-          ttl = 24 * 60 * 60 * 1000;
+        if (!response.ok) {
+          if (response.status === 429) providerRetryAt.set(provider.name, Date.now() + 5 * 60 * 1000);
+          continue;
         }
-      } else {
-        const endpoint = new URL('https://www.ip138.com/iplookup.php');
-        endpoint.search = new URLSearchParams({ ip, action: '2' });
-        const response = await fetch(endpoint, {
-          headers: { Accept: 'text/html' },
-          redirect: 'error',
-          signal: AbortSignal.timeout(1800),
-        });
-        if (!response.ok) throw new Error('IP138 page unavailable');
-        const html = await response.text();
-        const location = extractIp138Location(html, ip);
-        if (location && (!visibleLocal || /(?:省|自治区|市)\s*[^\s]+(?:市|州|盟)|新加坡/.test(location))) {
-          value = location.replace(/^中国\s+(?=\S)/, '').replace(/(省|自治区)\s+/g, '$1');
-          ttl = 24 * 60 * 60 * 1000;
-        }
-      }
-    } catch {
-      providerRetryAt.set(provider, Date.now() + 5 * 60 * 1000);
+        const data = provider.parse(await response.json(), ip);
+        const location = data && formatOnlineLocation(data, visibleLocal);
+        if (!location) continue;
+        value = location;
+        ttl = provider.name === 'ipwhois' ? 24 * 60 * 60 * 1000 : 10 * 60 * 1000;
+        break;
+      } catch {}
     }
     if (onlineCache.size >= 2048) onlineCache.delete(onlineCache.keys().next().value);
     onlineCache.set(ip, { value, expires: Date.now() + ttl });
