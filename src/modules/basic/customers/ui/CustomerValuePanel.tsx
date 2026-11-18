@@ -30,8 +30,10 @@ function share(sales: Payload[], key: string) {
   return quantity ? 100 * pairs.reduce((sum, [, count]) => sum + (count ?? 0), 0) / quantity : null;
 }
 
-function summarize(orders?: Payload[], referrals?: Payload[]): (number | null)[] {
-  const sales = orders?.filter(order => order['类型'] === '销售单' && (order['退换货'] == null || order['退换货'] === '' || order['退换货'] === '无') && !['已取消','已作废','已退款','已退货'].includes(String(order['状态'])));
+export const isMemberSale = (order: Payload) => order['类型'] === '销售单' && (order['退换货'] == null || order['退换货'] === '' || order['退换货'] === '无') && !['已取消','已作废','已退款','已退货'].includes(String(order['状态']));
+
+export function summarize(orders?: Payload[], referrals?: Payload[]): (number | null)[] {
+  const sales = orders?.filter(isMemberSale);
   const amounts = sales?.map(order => number(order['折后金额']));
   const dates = sales?.map(order => Date.parse(String(order['业务时间'] ?? '').replace(' ', 'T')));
   const hasAmounts = amounts?.length && amounts.every(amount => amount !== null);
@@ -45,6 +47,10 @@ function summarize(orders?: Payload[], referrals?: Payload[]): (number | null)[]
     sales ? share(sales, '高单价商品件数') : null,
     sales ? share(sales, '促销商品件数') : null,
   ];
+}
+
+export function scoreMemberValue(values: (number | null)[]) {
+  return values.map((value, index) => value === null ? null : index === 1 ? within(value, metrics[index].bounds) : above(value, metrics[index].bounds));
 }
 
 function Radar({ scores }: { scores: (number | null)[] }) {
@@ -94,7 +100,7 @@ export function CustomerValuePanel({ customerId, debugMode }: { customerId: stri
     },
   });
   const values = summarize(query.data?.orders, query.data?.referrals);
-  const scores = values.map((value, index) => value === null ? null : index === 1 ? within(value, metrics[index].bounds) : above(value, metrics[index].bounds));
+  const scores = scoreMemberValue(values);
   const sum = (items: (number | null)[]) => items.some(score => score === null) ? '—' : items.reduce<number>((total, score) => total + (score ?? 0), 0);
   const heading = 'border-b border-[var(--qsl-accent-border)] pb-1 text-sm font-semibold';
   return <div className="space-y-3 text-sm">
