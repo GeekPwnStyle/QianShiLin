@@ -711,6 +711,27 @@ export async function handleCustomers({ req, res, url, user, pool, send, readJso
     }
   }
 
+  const detailMatch = /^\/customers\/([0-9a-f-]{36})\/detail\/([a-z_]+)$/.exec(path);
+  if (detailMatch) {
+    const [, customerId, section] = detailMatch;
+    const sections = new Set(['basic','vision','sales','history','repairs','referrals','health','extensions']);
+    if (!uuidRe.test(customerId) || !sections.has(section)) { send(res, 400, { error: 'Invalid detail request' }); return true; }
+    const { rows: visible } = await pool.query('SELECT id FROM customer.profiles WHERE id=$1 AND store_id=ANY($2::text[])', [customerId, actor.store_ids]);
+    if (!visible.length) { send(res, 404, { error: 'Customer not found' }); return true; }
+    if (req.method === 'GET') {
+      const { rows } = await pool.query('SELECT id, payload, created_at, updated_at FROM customer.detail_records WHERE customer_id=$1 AND section=$2 ORDER BY created_at DESC', [customerId, section]);
+      send(res, 200, { items: rows }); return true;
+    }
+    if (req.method === 'POST') {
+      if (!canUpdate) { send(res, 403, { error: 'Forbidden' }); return true; }
+      let body; try { body=await readJson(req, 65536); } catch { send(res, 400, {error:'Invalid JSON'}); return true; }
+      if (!body || typeof body !== 'object' || Array.isArray(body) || JSON.stringify(body).length > 16000) { send(res,400,{error:'Invalid detail payload'}); return true; }
+      const { rows } = await pool.query('INSERT INTO customer.detail_records(customer_id,section,payload,created_by) VALUES($1,$2,$3::jsonb,$4) RETURNING id,payload,created_at,updated_at', [customerId,section,JSON.stringify(body),user.id]);
+      send(res,201,{item:rows[0]}); return true;
+    }
+    return false;
+  }
+
   // Single or collection endpoints
   const itemMatch = /^\/customers(?:\/([^/]+))?$/.exec(path);
   if (!itemMatch) return false;

@@ -15,6 +15,7 @@ import {
   customersApi,
   type CustomerProfile,
 } from '@/src/modules/basic/customers/infrastructure/customersApi';
+import { CustomerDetailModal } from '@/src/modules/basic/customers/ui/CustomerDetailModal';
 import { CustomerFormModal } from '@/src/modules/basic/customers/ui/CustomerFormModal';
 import { maskPhone } from '@/src/shared/lib/format';
 import { OperationStatus } from '@/src/shared/ui/OperationStatus';
@@ -67,6 +68,7 @@ export const CustomerArchivePage: React.FC = () => {
   const [columnsOpen, setColumnsOpen] = useState(false);
   const [hiddenColumns, setHiddenColumns] = useState<ToggleableColumnKey[]>([]);
 
+  const [detailCustomer, setDetailCustomer] = useState<CustomerProfile | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
   const [editingCustomer, setEditingCustomer] = useState<CustomerProfile | null>(null);
@@ -605,6 +607,7 @@ export const CustomerArchivePage: React.FC = () => {
                         onChange={toggleSelectAllShown}
                       />
                     </th>
+                    <th className="whitespace-nowrap px-4 py-3 font-medium">操作</th>
                     <th className="sticky left-0 z-10 bg-[#F8F9F5] whitespace-nowrap px-4 py-3 font-medium">
                       顾客姓名
                     </th>
@@ -659,7 +662,7 @@ export const CustomerArchivePage: React.FC = () => {
                     )}
                     <th className="whitespace-nowrap px-4 py-3 font-medium">到店次数</th>
                     <th className="whitespace-nowrap px-4 py-3 font-medium">最近到店</th>
-                    <th className="whitespace-nowrap px-4 py-3 font-medium">操作</th>
+
                   </tr>
                 </thead>
                 <tbody>
@@ -677,6 +680,7 @@ export const CustomerArchivePage: React.FC = () => {
                           }
                         />
                       </td>
+                      <td className="px-4 py-3.5 whitespace-nowrap"><button type="button" onClick={()=>setDetailCustomer(m)} className="rounded-lg border border-[#D9DDD4] px-3 py-1.5 text-xs font-medium hover:bg-[var(--qsl-accent-soft-85)]">查看详情</button></td>
                       <td className="sticky left-0 bg-white px-4 py-3.5 font-semibold text-[#171916]">
                         <div className="flex items-center gap-2.5 whitespace-nowrap">
                           {m.avatarUrl ? (
@@ -791,15 +795,7 @@ export const CustomerArchivePage: React.FC = () => {
                       <td className="px-4 py-3.5 whitespace-nowrap font-mono">
                         {m.lastVisitDate || '—'}
                       </td>
-                      <td className="px-4 py-3.5 whitespace-nowrap">
-                        <button
-                          type="button"
-                          onClick={() => openEditModal(m)}
-                          className="rounded-lg border border-[#D9DDD4] px-3 py-1.5 text-xs font-medium hover:bg-[var(--qsl-accent-soft-85)] hover:border-[#171916] cursor-pointer transition-colors"
-                        >
-                          查看/编辑
-                        </button>
-                      </td>
+
                     </tr>
                   ))}
                 </tbody>
@@ -836,6 +832,7 @@ export const CustomerArchivePage: React.FC = () => {
         )}
       </section>
 
+      <CustomerDetailModal customer={detailCustomer} onClose={()=>setDetailCustomer(null)} debugMode={debugMode} />
       <CustomerFormModal
         open={modalOpen}
         mode={modalMode}
