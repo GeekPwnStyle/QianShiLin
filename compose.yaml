@@ -36,6 +36,7 @@ services:
     container_name: qianshilin-api
     restart: unless-stopped
     environment:
+      QSL_REFRESH_GEOFEED: "1"
       DATABASE_URL: postgresql://qianshilin:${QIANSHILIN_DB_PASSWORD}@database:5432/qianshilin
     depends_on:
       database:

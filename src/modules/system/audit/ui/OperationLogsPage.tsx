@@ -3,7 +3,6 @@ import { useQuery } from '@tanstack/react-query';
 import { Search } from 'lucide-react';
 import { useAuth } from '@/src/modules/auth/application/AuthContext';
 import { ErrorState, LoadingSkeleton, NoPermissionState } from '@/src/shared/ui/StateViews';
-import { PaginationBar } from '@/src/shared/ui/PaginationBar';
 
 type LogRow = { id:string; category:string; action:string; target:string | null;
   details:Record<string,unknown>; ip_address:string | null; ip_region:string | null; client_type:string;
@@ -17,10 +16,9 @@ export const OperationLogsPage:React.FC = () => {
   const [draft,setDraft]=useState('');
   const [search,setSearch]=useState('');
   const [page,setPage]=useState(1);
-  const [pageSize,setPageSize]=useState(10);
   const allowed=session.identityType==='admin' && hasPermission('system.read');
-  const logs=useQuery({queryKey:['system-operation-logs',month,search,page,pageSize],enabled:allowed,queryFn:async()=>{
-    const query=new URLSearchParams({month,search,page:String(page),pageSize:String(pageSize)});
+  const logs=useQuery({queryKey:['system-operation-logs',month,search,page],enabled:allowed,queryFn:async()=>{
+    const query=new URLSearchParams({month,search,page:String(page),pageSize:'20'});
     const response=await fetch(`${base}/system/operation-logs?${query}`,{credentials:'same-origin'});
     const body=await response.json();
     if (!response.ok) throw new Error(body.error ?? '加载操作日志失败');
@@ -33,23 +31,14 @@ export const OperationLogsPage:React.FC = () => {
     <form className="flex flex-wrap items-end gap-3 rounded-[20px] border border-[#D9DDD4] bg-white p-4" onSubmit={event=>{event.preventDefault();setPage(1);setSearch(draft.trim());}}>
       <label className="text-xs text-[#6D736A]">选择月份<input aria-label="选择月份" type="month" value={month} onChange={event=>{setMonth(event.target.value);setPage(1);}} className="mt-1 block h-10 rounded-xl border border-[#D9DDD4] bg-[#F8F9F5] px-3 text-sm text-[#171916]" /></label>
       <label className="flex h-10 min-w-[230px] flex-1 items-center gap-2 rounded-xl border border-[#D9DDD4] bg-[#F8F9F5] px-3"><Search className="h-4 w-4 text-[#73796F]"/><input aria-label="搜索日志" placeholder="项目 / 操作 / 操作人" value={draft} onChange={event=>setDraft(event.target.value)} className="w-full bg-transparent text-sm outline-none" /></label>
-      <button type="submit" className="h-10 rounded-xl bg-[var(--qsl-brand-dark)] px-5 text-sm text-[var(--qsl-brand-dark-ink)] hover:bg-[var(--qsl-brand-dark-hover)] cursor-pointer transition-colors">搜索</button>
+      <button type="submit" className="h-10 rounded-xl bg-[#171916] px-5 text-sm text-white">搜索</button>
     </form>
     {logs.isLoading ? <LoadingSkeleton/> : logs.isError ? <ErrorState message={logs.error.message} onRetry={()=>logs.refetch()}/> : <section className="overflow-hidden rounded-[20px] border border-[#D9DDD4] bg-white">
       <div className="flex items-center justify-between border-b border-[#E5E8E0] px-5 py-4"><h3 className="font-semibold">审计记录</h3><span className="text-xs text-[#73796F]">共 {logs.data?.total ?? 0} 条</span></div>
       <div className="overflow-x-auto"><table className="w-full min-w-[1200px] text-left text-sm"><thead className="bg-[#F8F9F5] text-[#686F65]"><tr>{['项目','操作','操作人','用户角色','操作时间','操作IP','操作IP区域','客户端','操作详情'].map(label=><th key={label} className="px-5 py-3 font-medium">{label}</th>)}</tr></thead>
-        <tbody className="divide-y divide-[#E9ECE5]">{logs.data?.items.map(row=><tr key={row.id} className="hover:bg-[#FAFBF5]"><td className="px-5 py-3 font-medium">{row.category}</td><td className="px-5 py-3">{row.action}</td><td className="px-5 py-3">{row.actor_name ?? '系统'}</td><td className="px-5 py-3">{row.actor_role_name ?? '—'}</td><td className="whitespace-nowrap px-5 py-3">{new Date(row.created_at).toLocaleString('zh-CN',{hour12:false})}</td><td className="px-5 py-3 font-mono text-xs">{row.ip_address ?? '—'}</td><td className="whitespace-nowrap px-5 py-3" title="依据网络出口 IP 估算">{row.ip_region ?? (row.ip_address ? '未知' : '—')}</td><td className="px-5 py-3">{row.client_type}</td><td className="px-5 py-3 text-[#6D736A]">{row.details.username as string ?? row.details.role as string ?? row.target ?? '—'}</td></tr>)}</tbody></table>
+        <tbody className="divide-y divide-[#E9ECE5]">{logs.data?.items.map(row=><tr key={row.id} className="hover:bg-[#FAFBF5]"><td className="px-5 py-3 font-medium">{row.category}</td><td className="px-5 py-3">{row.action}</td><td className="px-5 py-3">{row.actor_name ?? '系统'}</td><td className="px-5 py-3">{row.actor_role_name ?? '—'}</td><td className="whitespace-nowrap px-5 py-3">{new Date(row.created_at).toLocaleString('zh-CN',{hour12:false})}</td><td className="px-5 py-3 font-mono text-xs">{row.ip_address ? <a className="underline decoration-dotted underline-offset-4" href={`https://www.ip138.com/iplookup.php?${new URLSearchParams({ip:row.ip_address,action:'2'})}`} target="_blank" rel="noreferrer noopener" title="在 IP138 查询">{row.ip_address}</a> : '—'}</td><td className="whitespace-nowrap px-5 py-3" title="依据网络出口 IP 估算">{row.ip_region ?? (row.ip_address ? '未知' : '—')}</td><td className="px-5 py-3">{row.client_type}</td><td className="px-5 py-3 text-[#6D736A]">{row.details.username as string ?? row.details.role as string ?? row.target ?? '—'}</td></tr>)}</tbody></table>
       {logs.data?.items.length===0 && <p className="px-5 py-12 text-center text-sm text-[#73796F]">该条件下暂无操作记录</p>}</div>
-      <PaginationBar
-        total={logs.data?.total ?? 0}
-        page={page}
-        pageSize={pageSize}
-        onPageChange={setPage}
-        onPageSizeChange={(next) => {
-          setPageSize(next);
-          setPage(1);
-        }}
-      />
+      <div className="flex items-center justify-end gap-3 border-t border-[#E5E8E0] px-5 py-3 text-sm"><button disabled={page===1} onClick={()=>setPage(value=>value-1)} className="disabled:opacity-40">上一页</button><span>{page} / {Math.max(1,Math.ceil((logs.data?.total ?? 0)/20))}</span><button disabled={page*20 >= (logs.data?.total ?? 0)} onClick={()=>setPage(value=>value+1)} className="disabled:opacity-40">下一页</button></div>
     </section>}
   </div>;
 };

@@ -1,4 +1,4 @@
-import { lookupIpRegion } from './ip-region.js';
+import { resolveIpRegion } from './ip-region.js';
 import { ensureAccountSchema } from './account.js';
 
 import { randomUUID } from 'node:crypto';
@@ -47,10 +47,10 @@ export async function handleSystemAccess({ req, res, url, user, pool, send, read
       u.display_name AS actor_name FROM identity.operation_log l LEFT JOIN identity.users u ON u.id=l.actor_user_id ${where}
       ORDER BY l.created_at DESC,l.id DESC LIMIT $3 OFFSET $4`,[...values,pageSize,(page-1)*pageSize]);
     const regions = new Map();
-    const items = rows.map(row => {
-      if (!regions.has(row.ip_address)) regions.set(row.ip_address, lookupIpRegion(row.ip_address));
-      return { ...row, ip_region: regions.get(row.ip_address) };
-    });
+    const items = await Promise.all(rows.map(async row => {
+      if (!regions.has(row.ip_address)) regions.set(row.ip_address, resolveIpRegion(row.ip_address));
+      return { ...row, ip_region: await regions.get(row.ip_address) };
+    }));
     send(res,200,{items,total:count.rows[0].total,page,pageSize}); return true;
   }
 
