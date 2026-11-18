@@ -6,7 +6,6 @@ import {
   SlidersHorizontal,
   Trash2,
   Upload,
-  Users,
 } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/src/modules/auth/application/AuthContext';
@@ -339,53 +338,9 @@ export const CustomerArchivePage: React.FC = () => {
         </OperationStatus>
       )}
 
-      <header className="rounded-[24px] border border-[#D9DDD4] bg-white p-6 md:p-8">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <span className="rounded-2xl bg-[var(--qsl-accent-soft-85)] p-3 text-[#171916]">
-              <Users className="h-6 w-6" />
-            </span>
-            <div>
-              <h1 className="text-2xl font-bold text-[#171916]">客户档案</h1>
-              <p className="mt-1 text-sm text-[#73796F]">
-                按门店查看、录入与维护顾客资料、会员卡信息及标签分类
-              </p>
-            </div>
-          </div>
-          {canCreate && (
-            <button
-              type="button"
-              onClick={openCreateModal}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--qsl-accent)] text-[var(--qsl-accent-ink)] border border-[var(--qsl-accent-border)] hover:bg-[var(--qsl-accent-hover)] font-semibold px-4 py-2.5 text-sm cursor-pointer transition-colors"
-            >
-              <Plus className="h-4 w-4" />
-              <span>新增顾客资料</span>
-            </button>
-          )}
-        </div>
-
-        <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-4">
-          <div className="rounded-2xl bg-[#F8F9F5] p-4">
-            <p className="text-xs text-[#73796F]">当前可见顾客</p>
-            <strong className="mt-2 block text-2xl tabular-nums">
-              {data?.total ?? '—'}
-            </strong>
-          </div>
-          <div className="rounded-2xl bg-[#F8F9F5] p-4">
-            <p className="text-xs text-[#73796F]">筛选结果</p>
-            <strong className="mt-2 block text-2xl tabular-nums">{rows.length}</strong>
-          </div>
-          <div className="rounded-2xl bg-[#F8F9F5] p-4">
-            <p className="text-xs text-[#73796F]">本页人数</p>
-            <strong className="mt-2 block text-2xl tabular-nums">{shown.length}</strong>
-          </div>
-          <div className="rounded-2xl bg-[#F8F9F5] p-4">
-            <p className="text-xs text-[#73796F]">数据来源</p>
-            <strong className="mt-2 block text-sm">
-              {debugMode ? '本地调试演示库' : 'PostgreSQL 顾客档案库'}
-            </strong>
-          </div>
-        </div>
+      <header className="flex min-h-8 flex-wrap items-center gap-x-3 gap-y-1">
+        <h1 className="text-lg font-semibold text-[#171916]">客户档案</h1>
+        {debugMode && <span className="rounded-full bg-[#F2F4EF] px-2 py-0.5 text-xs text-[#5F645D]">演示数据</span>}
       </header>
 
       <div className="flex flex-wrap items-center gap-2 rounded-[20px] border border-[#D9DDD4] bg-white p-4 text-sm">
@@ -805,11 +760,13 @@ export const CustomerArchivePage: React.FC = () => {
               )}
             </div>
 
-            <div className="flex items-center justify-between border-t border-[#E7EAE2] px-5 py-4 text-sm">
-              <span>
-                第 {safePage} / {totalPages} 页
-              </span>
-              <div className="flex gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[#E7EAE2] px-4 py-2.5 text-sm">
+              <div aria-live="polite" className="flex flex-wrap items-center gap-x-4 gap-y-1 tabular-nums text-[#5F645D]">
+                <span>可见 {data?.total ?? '—'} 人{data?.total !== rows.length && ` · 筛选 ${rows.length} 人`} · 本页 {shown.length} 人</span>
+                <span className="text-xs">{debugMode ? '本地调试演示库' : '顾客档案库'}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="mr-1 whitespace-nowrap tabular-nums">第 {safePage} / {totalPages} 页</span>
                 <button
                   type="button"
                   disabled={safePage <= 1}
