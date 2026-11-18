@@ -117,7 +117,7 @@ export function lookupIpRegion(raw) {
 
 const onlineCache = new Map();
 const inFlight = new Map();
-let providerRetryAt = 0;
+const providerRetryAt = new Map();
 
 function extractIp138Location(html, ip) {
   if (!html.includes(ip)) return null;
@@ -137,31 +137,55 @@ export async function resolveIpRegion(raw) {
   const marker = / · (?:(?:省市|城市)未收录|部分数据源不可用)$/;
   const incomplete = marker.test(local ?? '');
   const visibleLocal = local?.replace(marker, '') ?? null;
-  if (!isIP(ip) || (local && !incomplete && local !== '归属地查询暂不可用')) return visibleLocal;
+  const mainland = /^(?:[\p{Script=Han}]{2,12}(?:省|自治区)|(?:北京|天津|上海|重庆)市)/u.test(visibleLocal ?? '');
+  if (!isIP(ip) || (local && !mainland && !incomplete && local !== '归属地查询暂不可用')) return visibleLocal;
   const cached = onlineCache.get(ip);
   if (cached && cached.expires > Date.now()) return cached.value;
   if (inFlight.has(ip)) return inFlight.get(ip);
-  if (providerRetryAt > Date.now() || inFlight.size >= 4) return visibleLocal;
+  const provider = mainland ? 'ipwhois' : 'ip138';
+  if (providerRetryAt.get(provider) > Date.now() || inFlight.size >= 4) return visibleLocal;
   const lookup = (async () => {
     let value = visibleLocal;
     let ttl = 10 * 60 * 1000;
     try {
-      const endpoint = new URL('https://www.ip138.com/iplookup.php');
-      endpoint.search = new URLSearchParams({ ip, action: '2' });
-      const response = await fetch(endpoint, {
-        headers: { Accept: 'text/html' },
-        redirect: 'error',
-        signal: AbortSignal.timeout(1800),
-      });
-      if (!response.ok) throw new Error('IP138 page unavailable');
-      const html = await response.text();
-      const location = extractIp138Location(html, ip);
-      if (location && (!visibleLocal || /(?:省|自治区|市)\s*[^\s]+(?:市|州|盟)|新加坡/.test(location))) {
-        value = location.replace(/^中国\s+(?=\S)/, '').replace(/(省|自治区)\s+/g, '$1');
-        ttl = 24 * 60 * 60 * 1000;
+      if (mainland) {
+        const endpoint = new URL(`https://ipwho.is/${ip}`);
+        endpoint.search = new URLSearchParams({ lang: 'zh-CN', fields: 'ip,success,country_code,region,city' });
+        const response = await fetch(endpoint, {
+          headers: { Accept: 'application/json' },
+          redirect: 'error',
+          signal: AbortSignal.timeout(1800),
+        });
+        if (!response.ok) throw new Error('IP location service unavailable');
+        const data = await response.json();
+        const province = provinceName(clean(data?.region));
+        const city = clean(data?.city);
+        const chineseName = /^[\p{Script=Han}]{2,16}$/u;
+        if (data?.success === true && data.ip === ip && data.country_code === 'CN' &&
+            chineseName.test(province) && chineseName.test(city) && !/未知|不详/.test(province + city)) {
+          const location = [...new Set([province, formatCity(city, '中国')])].join('');
+          const isp = visibleLocal?.startsWith(province) ? visibleLocal.split(' · ')[1] : null;
+          value = [location, isp].filter(Boolean).join(' · ');
+          ttl = 24 * 60 * 60 * 1000;
+        }
+      } else {
+        const endpoint = new URL('https://www.ip138.com/iplookup.php');
+        endpoint.search = new URLSearchParams({ ip, action: '2' });
+        const response = await fetch(endpoint, {
+          headers: { Accept: 'text/html' },
+          redirect: 'error',
+          signal: AbortSignal.timeout(1800),
+        });
+        if (!response.ok) throw new Error('IP138 page unavailable');
+        const html = await response.text();
+        const location = extractIp138Location(html, ip);
+        if (location && (!visibleLocal || /(?:省|自治区|市)\s*[^\s]+(?:市|州|盟)|新加坡/.test(location))) {
+          value = location.replace(/^中国\s+(?=\S)/, '').replace(/(省|自治区)\s+/g, '$1');
+          ttl = 24 * 60 * 60 * 1000;
+        }
       }
     } catch {
-      providerRetryAt = Date.now() + 5 * 60 * 1000;
+      providerRetryAt.set(provider, Date.now() + 5 * 60 * 1000);
     }
     if (onlineCache.size >= 2048) onlineCache.delete(onlineCache.keys().next().value);
     onlineCache.set(ip, { value, expires: Date.now() + ttl });
