@@ -224,6 +224,8 @@ interface ProfileSaveResult {
 interface AuthContextValue {
   isAuthenticated: boolean;
   authLoading: boolean;
+  permissionsLoading: boolean;
+  permissionsError: boolean;
   debugMode: boolean;
   setDebugMode: (enabled: boolean) => void;
   session: AuthSession;
@@ -312,14 +314,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
-  const { data: allRoles = [], refetch } = useQuery({
-    queryKey: ['rbac', 'roles', debugMode, isAuthenticated],
+  const { data: allRoles = [], refetch, isPending: rolesPending, isError: rolesError, isFetching: rolesFetching } = useQuery({
+    queryKey: ['rbac', 'roles', debugMode, isAuthenticated ? session.userId : null],
     queryFn: () => appRepositories.roles.listRoles(),
     enabled: debugMode || isAuthenticated,
   });
 
   const currentRole = useMemo(() => {
-    const role = allRoles.find((r) => r.id === session.roleId) ?? allRoles[0];
+    const role = allRoles.find((r) => r.id === session.roleId);
     return role
       ? {
           ...role,
@@ -607,6 +609,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const value: AuthContextValue = {
     isAuthenticated,
     authLoading,
+    permissionsLoading: isAuthenticated && (rolesPending || (rolesError && rolesFetching)),
+    permissionsError: isAuthenticated && rolesError && !allRoles.length,
     debugMode,
     setDebugMode,
     session,

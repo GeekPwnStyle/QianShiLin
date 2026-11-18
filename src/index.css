@@ -411,3 +411,23 @@ body { font-feature-settings: "zero" 0; }
 :where(.qsl-font-top, .qsl-font-side, .qsl-font-main) .text-\[28px\] { font-size: calc(28px + var(--qsl-font-offset)); }
 :where(.qsl-font-top, .qsl-font-side, .qsl-font-main) .text-\[30px\] { font-size: calc(30px + var(--qsl-font-offset)); }
 :where(.qsl-font-top, .qsl-font-side, .qsl-font-main) .text-\[32px\] { font-size: calc(32px + var(--qsl-font-offset)); }
+
+@media (prefers-reduced-motion: no-preference) {
+  .qsl-startup-card { animation: qsl-startup-enter 260ms 120ms ease-out both; }
+  .qsl-startup-ring { animation: qsl-startup-spin 1.45s linear infinite; }
+  .qsl-startup-sweep { animation: qsl-startup-sweep 1.5s ease-in-out infinite; }
+  .qsl-workspace-ready { animation: qsl-workspace-reveal 180ms ease-out both; }
+}
+@keyframes qsl-startup-enter {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes qsl-startup-spin { to { transform: rotate(360deg); } }
+@keyframes qsl-startup-sweep {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(200%); }
+}
+@keyframes qsl-workspace-reveal {
+  from { opacity: .65; }
+  to { opacity: 1; }
+}
