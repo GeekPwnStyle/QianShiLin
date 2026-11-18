@@ -28,7 +28,11 @@ export function CustomerDetailModal({customer,onClose,debugMode}:{customer:Custo
   const items=records.data??[];
   const save=async()=>{if(!customer||debugMode)return;setSaving(true);setError('');try{const r=await fetch(`${api}/${customer.id}/detail/${section}`,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(draft)});if(!r.ok)throw new Error((await r.json()).error??'保存失败');setDraft({});await qc.invalidateQueries({queryKey:['customer-detail',customer.id,section]})}catch(e){setError(e instanceof Error?e.message:'保存失败')}finally{setSaving(false)}};
   if(!customer)return null;
-  return <Modal open onClose={onClose} title={`顾客全景档案 · ${customer.name}`} subtitle={`${customer.memberNo} · ${customer.storeName}`} fixedViewportSize>
+  return <Modal open onClose={onClose} title={`顾客全景档案 · ${customer.name}`} subtitle={`${customer.memberNo} · ${customer.storeName}`} fixedViewportSize footer={<>
+      <button type="button" onClick={()=>setMinimized(v=>!v)} className="rounded-xl border px-4 py-2">{minimized?'展开':'最小化'}</button>
+      <button type="button" onClick={onClose} className="rounded-xl border px-4 py-2">关闭</button>
+      {tab==='vision'&&!minimized&&<button type="submit" form="customer-vision-form" disabled={debugMode||records.isLoading||records.isError} className="rounded-xl bg-[var(--qsl-accent)] px-4 py-2 font-semibold text-[var(--qsl-accent-ink)] disabled:opacity-40">保存验光单</button>}
+    </>}>
     {error&&<OperationStatus role="alert">{error}</OperationStatus>}{saving&&<OperationStatus loading>正在保存档案</OperationStatus>}
     <div className="flex flex-nowrap overflow-x-auto border-b border-[#D9DDD4] pb-0">{sections.map(([key,label])=><button key={key} type="button" onClick={()=>{setTab(key);setDraft({})}} className={`whitespace-nowrap px-4 py-3 text-sm ${tab===key?'border-b-2 border-[var(--qsl-accent)] bg-[var(--qsl-accent-soft-85)] font-semibold':'hover:bg-[#F5F7EF]'}`}>{label}</button>)}</div>
     {minimized?<button onClick={()=>setMinimized(false)} className="mt-5 rounded-xl border px-4 py-2">展开详情</button>:<div className="min-h-[420px] py-5">
@@ -43,7 +47,7 @@ export function CustomerDetailModal({customer,onClose,debugMode}:{customer:Custo
       {tab==='extensions'&&<ExtensionPanel customerId={customer.id} debugMode={debugMode} items={items} refresh={()=>records.refetch()} />}
       {['sales','history','repairs','referrals','health'].includes(tab)&&<CustomerRecordPanel section={tab} items={items} customer={customer} loading={records.isLoading} error={records.isError} debugMode={debugMode} refresh={()=>records.refetch()}/>}
     </div>}
-    <div className="flex justify-end gap-2 border-t pt-4"><button onClick={()=>setMinimized(v=>!v)} className="rounded-xl border px-4 py-2">{minimized?'展开':'最小化'}</button><button onClick={onClose} className="rounded-xl bg-[#171916] px-4 py-2 text-white">关闭</button></div>
+
   </Modal>;
 }
 function HomeInfo({number,title,rows}:{number:string;title:string;rows:[string,string][]}){return <section className="rounded-2xl border border-[#DDE7DF] bg-white p-4 shadow-sm"><div className="mb-3 flex items-center gap-2"><span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#58C2B3] text-xs font-bold text-white">{number}</span><h3 className="font-semibold text-[#087D70]">{title}</h3></div>{rows.map(([label,value])=><div key={label} className="flex gap-3 py-1 text-sm"><span className="w-20 shrink-0 text-[#73796F]">{label}</span><span className="min-w-0 break-words">{value||'—'}</span></div>)}</section>}

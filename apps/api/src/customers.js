@@ -722,6 +722,23 @@ export async function handleCustomers({ req, res, url, user, pool, send, readJso
       const { rows } = await pool.query('SELECT id, payload, created_at, updated_at FROM customer.detail_records WHERE customer_id=$1 AND section=$2 ORDER BY created_at DESC', [customerId, section]);
       send(res, 200, { items: rows }); return true;
     }
+    if (req.method === 'DELETE' && section === 'vision') {
+      if (!canDelete) { send(res, 403, { error: 'Forbidden' }); return true; }
+      let body;
+      try { body = await readJson(req, 1024); }
+      catch { send(res, 400, { error: 'Invalid JSON' }); return true; }
+      if (!uuidRe.test(body?.recordId)) {
+        send(res, 400, { error: 'Invalid record id' }); return true;
+      }
+      const { rowCount } = await pool.query(
+        `DELETE FROM customer.detail_records AS record USING customer.profiles AS profile
+         WHERE record.id=$1 AND record.customer_id=$2 AND record.section='vision'
+           AND profile.id=record.customer_id AND profile.store_id=ANY($3::text[])`,
+        [body.recordId, customerId, actor.store_ids],
+      );
+      send(res, rowCount ? 200 : 404, rowCount ? { deleted: true } : { error: 'Record not found' });
+      return true;
+    }
     const validVision = payload => section !== 'vision' || Object.entries(payload).every(([key, value]) => {
       if (key.length > 160 || typeof value !== 'string') return false;
       if (!value.startsWith('data:')) return value.length <= 12000;
