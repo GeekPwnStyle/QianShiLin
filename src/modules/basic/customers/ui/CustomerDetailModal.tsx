@@ -28,7 +28,7 @@ export function CustomerDetailModal({customer,onClose,debugMode}:{customer:Custo
   const items=records.data??[];
   const save=async()=>{if(!customer||debugMode)return;setSaving(true);setError('');try{const r=await fetch(`${api}/${customer.id}/detail/${section}`,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(draft)});if(!r.ok)throw new Error((await r.json()).error??'保存失败');setDraft({});await qc.invalidateQueries({queryKey:['customer-detail',customer.id,section]})}catch(e){setError(e instanceof Error?e.message:'保存失败')}finally{setSaving(false)}};
   if(!customer)return null;
-  return <Modal open onClose={onClose} title={`顾客全景档案 · ${customer.name}`} subtitle={`${customer.memberNo} · ${customer.storeName}`} maxWidthClass="max-w-[min(1640px,98vw)]">
+  return <Modal open onClose={onClose} title={`顾客全景档案 · ${customer.name}`} subtitle={`${customer.memberNo} · ${customer.storeName}`} fixedViewportSize>
     {error&&<OperationStatus role="alert">{error}</OperationStatus>}{saving&&<OperationStatus loading>正在保存档案</OperationStatus>}
     <div className="flex flex-nowrap overflow-x-auto border-b border-[#D9DDD4] pb-0">{sections.map(([key,label])=><button key={key} type="button" onClick={()=>{setTab(key);setDraft({})}} className={`whitespace-nowrap px-4 py-3 text-sm ${tab===key?'border-b-2 border-[var(--qsl-accent)] bg-[var(--qsl-accent-soft-85)] font-semibold':'hover:bg-[#F5F7EF]'}`}>{label}</button>)}</div>
     {minimized?<button onClick={()=>setMinimized(false)} className="mt-5 rounded-xl border px-4 py-2">展开详情</button>:<div className="min-h-[420px] py-5">

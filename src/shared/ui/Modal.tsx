@@ -8,6 +8,7 @@ interface ModalProps {
   title: string;
   subtitle?: string;
   maxWidthClass?: string;
+  fixedViewportSize?: boolean;
   children: React.ReactNode;
   footer?: React.ReactNode;
 }
@@ -18,13 +19,12 @@ export const Modal: React.FC<ModalProps> = ({
   title,
   subtitle,
   maxWidthClass = 'max-w-2xl',
+  fixedViewportSize = false,
   children,
   footer,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
-  const onCloseRef = useRef(onClose);
-  onCloseRef.current = onClose;
 
   useEffect(() => {
     if (!open) return;
@@ -39,7 +39,7 @@ export const Modal: React.FC<ModalProps> = ({
       const container = containerRef.current;
       if (!container) return;
       const focusable = container.querySelectorAll<HTMLElement>(
-        'input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), [href], [tabindex]:not([tabindex="-1"])'
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
       );
       if (focusable.length > 0) {
         focusable[0].focus();
@@ -51,7 +51,7 @@ export const Modal: React.FC<ModalProps> = ({
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault();
-        onCloseRef.current();
+        onClose();
         return;
       }
       if (e.key === 'Tab' && containerRef.current) {
@@ -81,13 +81,13 @@ export const Modal: React.FC<ModalProps> = ({
       document.body.style.overflow = prevBodyOverflow;
       previousFocusRef.current?.focus();
     };
-  }, [open]);
+  }, [open, onClose]);
 
   if (!open) return null;
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[#171916]/35 backdrop-blur-[5px]"
+      className={`fixed inset-0 z-[100] flex items-center justify-center bg-[#171916]/35 backdrop-blur-[5px] ${fixedViewportSize ? '' : 'p-4'}`}
       role="dialog"
       aria-modal="true"
       aria-labelledby="qsl-modal-title"
@@ -98,7 +98,9 @@ export const Modal: React.FC<ModalProps> = ({
       <div
         ref={containerRef}
         tabIndex={-1}
-        className={`w-full ${maxWidthClass} qsl-modal-panel rounded-[24px] flex flex-col max-h-[calc(100dvh-2rem)] overflow-hidden outline-none`}
+        className={`qsl-modal-panel rounded-[24px] flex flex-col overflow-hidden outline-none ${
+          fixedViewportSize ? 'w-[80dvw] h-[80dvh]' : `w-full ${maxWidthClass} max-h-[calc(100dvh-2rem)]`
+        }`}
       >
         <div className="flex items-start justify-between gap-4 px-6 py-5 shrink-0 border-b border-[#171916]/[0.08]">
           <div className="min-w-0">
