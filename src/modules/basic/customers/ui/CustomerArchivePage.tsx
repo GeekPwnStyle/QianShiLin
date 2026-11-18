@@ -635,7 +635,7 @@ export const CustomerArchivePage: React.FC = () => {
                           }
                         />
                       </td>
-                      <td className="px-4 py-3.5 whitespace-nowrap"><button type="button" onClick={()=>setDetailCustomer(m)} className="rounded-lg border border-[#D9DDD4] px-3 py-1.5 text-xs font-medium hover:bg-[var(--qsl-accent-soft-85)]">查看详情</button></td>
+                      <td className="px-4 py-3.5 whitespace-nowrap"><button type="button" onClick={()=>setDetailCustomer(m)} className="rounded-lg border border-[var(--qsl-accent-border)] bg-[var(--qsl-accent)] px-3 py-1.5 text-xs font-semibold text-[var(--qsl-accent-ink)] transition-colors hover:bg-[var(--qsl-accent-hover)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--qsl-accent-border)]">查看详情</button></td>
                       <td className="sticky left-0 bg-white px-4 py-3.5 font-semibold text-[#171916]">
                         <div className="flex items-center gap-2.5 whitespace-nowrap">
                           {m.avatarUrl ? (
