@@ -4,6 +4,7 @@ import { Download, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useAuth } from '@/src/modules/auth/application/AuthContext';
 import { Modal } from '@/src/shared/ui/Modal';
 import { OperationStatus } from '@/src/shared/ui/OperationStatus';
+import { PaginationBar } from '@/src/shared/ui/PaginationBar';
 
 const columns = [
   ['name','员工姓名'], ['role','角色'], ['department','部门'], ['limit','整单调价权限（元）'],
@@ -39,7 +40,7 @@ export function StaffArchivePage() {
   const [sync, setSync] = useState(false);
   const [target, setTarget] = useState('');
   const [page, setPage] = useState(1);
-  const [size, setSize] = useState(50);
+  const [size, setSize] = useState(10);
   const [sort, setSort] = useState<{key:Key; desc:boolean}>({key:'name',desc:false});
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<{text:string;error?:boolean}>();
@@ -116,13 +117,17 @@ export function StaffArchivePage() {
       </table>
       {!shown.length && <div className="p-10 text-center text-[#73796F]">{debugMode ? '演示模式暂无员工档案' : query.isPending ? '正在加载员工档案…' : query.isError ? '员工档案加载失败' : '暂无符合条件的员工档案'}</div>}
     </div>
-    <div className="flex flex-wrap items-center justify-end gap-2 border-t p-3">
-      <span>共 {filtered.length} 条 · 已选 {selected.length} 条</span>
-      <button type="button" className={button} disabled={currentPage <= 1} onClick={() => setPage(currentPage - 1)}>上一页</button>
-      <span>{currentPage} / {pages} 页</span>
-      <button type="button" className={button} disabled={currentPage >= pages} onClick={() => setPage(currentPage + 1)}>下一页</button>
-      <select aria-label="每页条数" className={input} value={size} onChange={event => {setSize(Number(event.target.value)); setPage(1);}}>{[20,50,100].map(value => <option key={value} value={value}>{value} 条/页</option>)}</select>
-    </div>
+    <PaginationBar
+      total={filtered.length}
+      page={currentPage}
+      pageSize={size}
+      onPageChange={setPage}
+      onPageSizeChange={(next) => {
+        setSize(next);
+        setPage(1);
+      }}
+      summaryExtra={<span>已选 {selected.length} 条</span>}
+    />
     {editing && <Modal open title={editing.id ? '编辑员工档案' : '新增员工档案'} onClose={() => {if (!busy) setEditing(null);}}>
       <form className="grid gap-3 sm:grid-cols-2" onSubmit={event => {event.preventDefault(); void mutate('', editing.id ? 'PATCH' : 'POST', {...editing,storeId:editing.store_id}, '已保存');}}>
         <label className="grid gap-1">所属门店<select required className={input} value={editing.store_id} onChange={event => setEditing({...editing,store_id:event.target.value})}>{stores.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
