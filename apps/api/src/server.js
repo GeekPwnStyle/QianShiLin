@@ -7,6 +7,7 @@ import { handlePurchase } from './purchase.js';
 import { handleManualInbound } from './manual-inbound.js';
 import { handleSystemAccess } from './system-access.js';
 import { handleNotices } from './notices.js';
+import { handleStaff } from './staff.js';
 import { handleCustomers } from './customers.js';
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL, max: 10 });
@@ -122,6 +123,9 @@ const server = http.createServer(async (req, res) => {
     if (path.startsWith('/notices/')) {
       const user = await sessionUser(getToken(req));
       if (await handleNotices({ req, res, url, user, pool, send, readJson })) return;
+    }
+    if (path === '/staff') {
+      return await handleStaff({ req, res, url, user: await sessionUser(getToken(req)), pool, send, readJson });
     }
     if (path === '/customers' || path.startsWith('/customers/')) {
       const user = await sessionUser(getToken(req));

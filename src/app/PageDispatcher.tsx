@@ -11,6 +11,7 @@ import { FinanceLedgerPage } from '@/src/modules/finance/ui/FinanceLedgerPage';
 import { InventoryQueryPage } from '@/src/modules/inventory/ui/InventoryQueryPage';
 import { FollowupNotificationPage } from '@/src/modules/members/followup/notifications/ui/FollowupNotificationPage';
 import type { NotificationCategory } from '@/src/modules/members/followup/notifications/domain/notification';
+import { StaffArchivePage } from '@/src/modules/basic/staff/ui/StaffArchivePage';
 import { CustomerArchivePage } from '@/src/modules/basic/customers/ui/CustomerArchivePage';
 import { MemberProfilePage } from '@/src/modules/members/member-profile/ui/MemberProfilePage';
 import { ProcessingOrderPage } from '@/src/modules/processing/ui/ProcessingOrderPage';
@@ -40,6 +41,7 @@ export const PageDispatcher: React.FC = () => {
     return <WorkbenchPage />;
   }
 
+  if (activeNode.id === 'basic.staff') return <StaffArchivePage />;
   if (activeNode.id === 'basic.customers') return <CustomerArchivePage />;
 
   switch (activeNode.pageKind) {
