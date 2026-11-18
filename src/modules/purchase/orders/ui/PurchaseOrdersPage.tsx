@@ -116,7 +116,7 @@ export const PurchaseOrdersPage: React.FC = () => {
     <div className="flex gap-2 border-b border-[#D9DDD4] pb-2">
       {(['mine', 'branch'] as const).map(key => <button key={key} type="button"
         disabled={key === 'branch' && !otherStores.length}
-        className={`px-4 py-2 rounded-full text-sm cursor-pointer ${view === key ? 'bg-[#171916] text-white' : 'text-[#5F645D] hover:bg-white'}`}
+        className={`px-4 py-2 rounded-full text-sm cursor-pointer ${view === key ? 'bg-[var(--qsl-nav-active-bg)] text-[var(--qsl-nav-active-ink)]' : 'text-[#5F645D] hover:bg-white'}`}
         onClick={() => { setView(key); setPage(1); }}>{key === 'mine' ? '本店采购订货单' : '分店采购订货单'}</button>)}
     </div>
     <div className="flex flex-wrap gap-2 items-center rounded-[18px] border border-[#D9DDD4] bg-white p-4">

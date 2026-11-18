@@ -31,7 +31,7 @@ export const OperationLogsPage:React.FC = () => {
     <form className="flex flex-wrap items-end gap-3 rounded-[20px] border border-[#D9DDD4] bg-white p-4" onSubmit={event=>{event.preventDefault();setPage(1);setSearch(draft.trim());}}>
       <label className="text-xs text-[#6D736A]">选择月份<input aria-label="选择月份" type="month" value={month} onChange={event=>{setMonth(event.target.value);setPage(1);}} className="mt-1 block h-10 rounded-xl border border-[#D9DDD4] bg-[#F8F9F5] px-3 text-sm text-[#171916]" /></label>
       <label className="flex h-10 min-w-[230px] flex-1 items-center gap-2 rounded-xl border border-[#D9DDD4] bg-[#F8F9F5] px-3"><Search className="h-4 w-4 text-[#73796F]"/><input aria-label="搜索日志" placeholder="项目 / 操作 / 操作人" value={draft} onChange={event=>setDraft(event.target.value)} className="w-full bg-transparent text-sm outline-none" /></label>
-      <button type="submit" className="h-10 rounded-xl bg-[#171916] px-5 text-sm text-white">搜索</button>
+      <button type="submit" className="h-10 rounded-xl bg-[var(--qsl-brand-dark)] hover:bg-[var(--qsl-brand-dark-hover)] px-5 text-sm text-white cursor-pointer transition-colors">搜索</button>
     </form>
     {logs.isLoading ? <LoadingSkeleton/> : logs.isError ? <ErrorState message={logs.error.message} onRetry={()=>logs.refetch()}/> : <section className="overflow-hidden rounded-[20px] border border-[#D9DDD4] bg-white">
       <div className="flex items-center justify-between border-b border-[#E5E8E0] px-5 py-4"><h3 className="font-semibold">审计记录</h3><span className="text-xs text-[#73796F]">共 {logs.data?.total ?? 0} 条</span></div>

@@ -3,11 +3,13 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowRight,
   Camera,
+  Check,
   ChevronDown,
   HelpCircle,
   LayoutGrid,
   LogOut,
   Menu,
+  Palette,
   RotateCcw,
   Search,
   Shield,
@@ -42,7 +44,7 @@ import { BrandLogoMark } from '@/src/shared/ui/BrandLogoMark';
 import { Select } from '@/src/shared/ui/Select';
 import { StatusLabel } from '@/src/shared/ui/StatusLabel';
 import { ModuleIcon } from '@/src/widgets/top-navigation/ModuleIcon';
-import { SYSTEM_THEMES } from '@/src/shared/theme/themes';
+import { SYSTEM_THEMES, SYSTEM_THEME_MAP, type ThemeKey } from '@/src/shared/theme/themes';
 import { NoticeBell } from '@/src/modules/system/notices/ui/NoticeBell';
 
 interface DragNavPayload {
@@ -70,6 +72,7 @@ export const TopHeader: React.FC = () => {
     logout,
     updateTheme,
     themeSaving,
+    profileSaving,
     profileError,
     updateAvatar,
     resetAvatar,
@@ -97,6 +100,8 @@ export const TopHeader: React.FC = () => {
   const [avatarError, setAvatarError] = useState<string | null>(null);
   const [initialsDraft, setInitialsDraft] = useState(session.avatarInitials);
   const [dragOverModuleId, setDragOverModuleId] = useState<string | null>(null);
+  const [themeSavedHint, setThemeSavedHint] = useState(false);
+  const themeHintTimerRef = useRef<number | null>(null);
 
   // Expandable inline search in header
   const [searchExpanded, setSearchExpanded] = useState(false);
@@ -195,8 +200,35 @@ export const TopHeader: React.FC = () => {
     return () => {
       window.removeEventListener('keydown', onKeyDown);
       document.removeEventListener('mousedown', onMouseDown);
+      if (themeHintTimerRef.current) {
+        window.clearTimeout(themeHintTimerRef.current);
+      }
     };
   }, []);
+
+  const handleSelectTheme = async (themeKey: ThemeKey) => {
+    const result = await updateTheme(themeKey);
+    if (result.ok) {
+      setThemeSavedHint(true);
+      if (themeHintTimerRef.current) {
+        window.clearTimeout(themeHintTimerRef.current);
+      }
+      themeHintTimerRef.current = window.setTimeout(() => {
+        setThemeSavedHint(false);
+      }, 1800);
+    }
+  };
+
+  const commitInitialsDraft = () => {
+    const trimmed = initialsDraft.trim();
+    if (!trimmed) {
+      setInitialsDraft(session.avatarInitials);
+      return;
+    }
+    if (trimmed !== session.avatarInitials) {
+      void updateAvatar({ avatarInitials: trimmed });
+    }
+  };
 
   const handleSelectSearchNode = (node: NavNode) => {
     navigateToNode(node);
@@ -344,7 +376,7 @@ export const TopHeader: React.FC = () => {
               className={`h-9 px-3 xl:px-3.5 rounded-full text-[14px] 2xl:text-[15px] leading-none inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 select-none border border-transparent transition-colors duration-150 cursor-pointer ${
                 workbenchDeveloped
                   ? activeNode.id === 'workbench'
-                    ? 'font-bold bg-[#171916] text-white'
+                    ? 'font-bold bg-[var(--qsl-nav-active-bg)] text-[var(--qsl-nav-active-ink)]'
                     : 'font-bold bg-transparent text-[#5F645D] hover:text-[#171916] hover:bg-[#F1F2EE]'
                   : activeNode.id === 'workbench'
                     ? 'font-medium bg-[#E4E7E0] text-[#5F645D] grayscale'
@@ -408,12 +440,12 @@ export const TopHeader: React.FC = () => {
                   }
                   className={`h-9 px-3 xl:px-3.5 rounded-full text-[14px] 2xl:text-[15px] leading-none inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 select-none border transition-colors duration-150 cursor-grab active:cursor-grabbing ${
                     isDropTarget
-                      ? 'font-bold bg-[#D7FF00] text-[#171916] border-[#171916] ring-2 ring-[#171916]/25'
+                      ? 'font-bold bg-[var(--qsl-accent)] text-[var(--qsl-accent-ink)] border-[var(--qsl-accent-border)] ring-2 ring-[#171916]/20'
                       : isBeingDragged
                         ? 'font-bold opacity-50 border-dashed border-[#171916] bg-[#F1F2EE] text-[#171916]'
                         : isDeveloped
                           ? isActive
-                            ? 'font-bold bg-[#171916] text-white border-transparent'
+                            ? 'font-bold bg-[var(--qsl-nav-active-bg)] text-[var(--qsl-nav-active-ink)] border-transparent'
                             : showDropHint
                               ? 'font-bold bg-[#F8F9F5] text-[#171916] border-dashed border-[#171916]/40'
                               : 'font-bold bg-transparent text-[#5F645D] border-transparent hover:text-[#171916] hover:bg-[#F1F2EE]'
@@ -437,10 +469,10 @@ export const TopHeader: React.FC = () => {
                 aria-expanded={allModulesOpen}
                 className={`h-9 px-2.5 xl:px-3 rounded-full text-[13px] xl:text-[14px] font-bold leading-none whitespace-nowrap shrink-0 select-none inline-flex items-center justify-center gap-1.5 border transition-colors duration-150 cursor-pointer ml-0.5 ${
                   allModulesOpen
-                    ? 'bg-[#D7FF00] text-[#171916] border-[#171916]'
+                    ? 'bg-[var(--qsl-accent)] text-[var(--qsl-accent-ink)] border-[var(--qsl-accent-border)]'
                     : activeOutsideTopBar
                       ? activeModuleDeveloped
-                        ? 'bg-[#ECF9A8] text-[#171916] border-[#171916]'
+                        ? 'bg-[var(--qsl-accent-soft)] text-[#171916] border-[var(--qsl-accent-soft-border)]'
                         : 'bg-[#EAECE6] text-[#5F645D] border-[#C5CAC0]'
                       : 'bg-[#F8F9F5] text-[#171916] border-[#D9DDD4] hover:border-[#171916]'
                 }`}
@@ -621,16 +653,67 @@ export const TopHeader: React.FC = () => {
                 </button>
 
                 {accountMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-60 qsl-glass-popover rounded-2xl p-2 z-50">
-                    <div className="px-3 py-2 border-b border-[#171916]/[0.08] mb-1 flex items-center gap-2.5">
+                  <div className="absolute right-0 mt-2 w-68 qsl-glass-popover rounded-2xl p-2 z-50">
+                    <div className="px-3 py-2.5 border-b border-[#171916]/[0.08] mb-1.5 flex items-center gap-2.5">
                       <UserAvatar session={session} size="md" />
                       <div className="min-w-0">
                         <div className="text-[15px] font-bold text-[#171916] truncate">
                           {session.displayName}
                         </div>
-                        <div className="text-[13px] text-[#5F645D] truncate">
-                          {session.roleName}
+                        <div className="text-[12px] text-[#5F645D] truncate">
+                          {session.title && session.title !== session.roleName
+                            ? `${session.roleName} · ${session.title}`
+                            : session.roleName}
                         </div>
+                      </div>
+                    </div>
+
+                    {/* Quick System Theme Switcher */}
+                    <div className="px-3 py-2 mb-1.5 rounded-xl bg-[#F8F9F5]/85 border border-[#171916]/[0.06]">
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <span className="inline-flex items-center gap-1.5 text-[12px] font-medium text-[#5F645D]">
+                          <Palette className="w-3.5 h-3.5" />
+                          <span>系统主题色</span>
+                        </span>
+                        <span className="text-[11px] text-[#73796F]">
+                          {themeSaving
+                            ? '保存中…'
+                            : themeSavedHint
+                              ? '已保存'
+                              : SYSTEM_THEME_MAP[session.themeKey]?.name}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between gap-1">
+                        {SYSTEM_THEMES.map((theme) => {
+                          const active = session.themeKey === theme.key;
+                          const isLightSwatch = theme.key === 'pure_white';
+                          return (
+                            <button
+                              key={theme.key}
+                              type="button"
+                              disabled={themeSaving}
+                              title={`${theme.name}：${theme.subtitle}`}
+                              aria-label={`切换到${theme.name}主题`}
+                              onClick={() => void handleSelectTheme(theme.key)}
+                              style={{ backgroundColor: theme.accentHex }}
+                              className={`w-6 h-6 rounded-full inline-flex items-center justify-center transition-transform cursor-pointer disabled:opacity-60 ${
+                                active
+                                  ? 'ring-2 ring-[#171916] ring-offset-1 scale-110 border border-[#171916]/25'
+                                  : isLightSwatch
+                                    ? 'border border-[#AEB4AA] hover:scale-110'
+                                    : 'border border-black/15 hover:scale-110'
+                              }`}
+                            >
+                              {active && (
+                                <Check
+                                  className="w-3 h-3"
+                                  style={{ color: theme.accentInkHex }}
+                                  strokeWidth={3}
+                                />
+                              )}
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
 
@@ -643,7 +726,7 @@ export const TopHeader: React.FC = () => {
                       className="w-full text-left px-3 py-2.5 rounded-xl text-[14px] font-medium text-[#171916] hover:bg-white/60 flex items-center gap-2.5 cursor-pointer"
                     >
                       <User className="w-4 h-4 text-[#5F645D]" />
-                      <span>个人信息</span>
+                      <span>个人信息与主题偏好</span>
                     </button>
 
                     <button
@@ -682,10 +765,11 @@ export const TopHeader: React.FC = () => {
                 <UserAvatar session={session} size="xl" />
                 <button
                   type="button"
+                  disabled={profileSaving}
                   onClick={() => avatarFileInputRef.current?.click()}
                   aria-label="更换头像图片"
                   title="点击上传自定义头像"
-                  className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-[#171916] text-[#D7FF00] border-2 border-white inline-flex items-center justify-center cursor-pointer hover:scale-105 transition-transform"
+                  className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-[var(--qsl-brand-dark)] text-[var(--qsl-accent-on-dark)] border-2 border-white inline-flex items-center justify-center cursor-pointer hover:scale-105 transition-transform disabled:opacity-60"
                 >
                   <Camera className="w-3.5 h-3.5" />
                 </button>
@@ -702,20 +786,22 @@ export const TopHeader: React.FC = () => {
                 <div className="flex flex-wrap items-center gap-1.5">
                   <button
                     type="button"
+                    disabled={profileSaving}
                     onClick={() => avatarFileInputRef.current?.click()}
-                    className="h-8 px-3 rounded-full bg-[#171916] text-white text-[13px] font-medium inline-flex items-center gap-1.5 hover:bg-[#2F332D] transition-colors cursor-pointer"
+                    className="h-8 px-3 rounded-full bg-[var(--qsl-brand-dark)] text-white text-[13px] font-medium inline-flex items-center gap-1.5 hover:bg-[var(--qsl-brand-dark-hover)] transition-colors cursor-pointer disabled:opacity-60"
                   >
                     <Upload className="w-3.5 h-3.5" />
-                    <span>上传图片</span>
+                    <span>{profileSaving ? '保存中…' : '上传图片'}</span>
                   </button>
                   <button
                     type="button"
+                    disabled={profileSaving}
                     onClick={() => {
                       setAvatarError(null);
-                      resetAvatar();
+                      void resetAvatar();
                     }}
                     title="恢复默认文字头像"
-                    className="h-8 px-2.5 rounded-full bg-white/80 border border-[#171916]/12 text-[#5F645D] hover:text-[#171916] text-[13px] inline-flex items-center gap-1 transition-colors cursor-pointer"
+                    className="h-8 px-2.5 rounded-full bg-white/80 border border-[#171916]/12 text-[#5F645D] hover:text-[#171916] text-[13px] inline-flex items-center gap-1 transition-colors cursor-pointer disabled:opacity-60"
                   >
                     <RotateCcw className="w-3 h-3" />
                     <span>恢复默认</span>
@@ -734,17 +820,18 @@ export const TopHeader: React.FC = () => {
                         <button
                           key={presetKey}
                           type="button"
+                          disabled={profileSaving}
                           title={`使用「${preset.label}」风格`}
                           aria-label={`使用${preset.label}头像配色`}
                           onClick={() => {
                             setAvatarError(null);
-                            updateAvatar({
+                            void updateAvatar({
                               avatarUrl: null,
                               avatarColorPreset: presetKey,
                             });
                           }}
                           style={{ backgroundColor: preset.swatchCss }}
-                          className={`w-5 h-5 rounded-full border transition-transform cursor-pointer ${
+                          className={`w-5 h-5 rounded-full border transition-transform cursor-pointer disabled:opacity-60 ${
                             active
                               ? 'ring-2 ring-[#171916] ring-offset-1 scale-110 border-white'
                               : 'border-[#171916]/20 hover:scale-110'
@@ -760,11 +847,11 @@ export const TopHeader: React.FC = () => {
                     value={initialsDraft}
                     aria-label="自定义头像文字缩写"
                     placeholder="缩写"
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setInitialsDraft(val);
-                      if (val.trim()) {
-                        updateAvatar({ avatarInitials: val.trim() });
+                    onChange={(e) => setInitialsDraft(e.target.value)}
+                    onBlur={commitInitialsDraft}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.currentTarget.blur();
                       }
                     }}
                     className="w-14 h-7 px-2 rounded-lg bg-white/85 border border-[#171916]/12 text-[13px] text-center font-semibold text-[#171916] outline-none focus:border-[#171916]"
@@ -806,29 +893,75 @@ export const TopHeader: React.FC = () => {
                   />
                 </div>
               </div>
-              <div className="col-span-2 sm:col-span-4 pt-2.5 border-t border-[#171916]/[0.07] flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                <span className="text-[13px] text-[#73796F] shrink-0">当前数据范围与门店</span>
-                <span className="font-medium text-[#171916]">{session.currentStoreName}</span>
-                {session.authorizedStores.length > 0 && (
-                  <span className="text-[13px] text-[#5F645D]">
-                    （授权门店：{session.authorizedStores.map((s) => s.name).join('、')}）
-                  </span>
+              <div className="col-span-2 sm:col-span-4 pt-2.5 border-t border-[#171916]/[0.07] flex flex-wrap items-baseline gap-x-4 gap-y-1">
+                <div className="flex flex-wrap items-baseline gap-x-2">
+                  <span className="text-[13px] text-[#73796F] shrink-0">当前数据范围与门店</span>
+                  <span className="font-medium text-[#171916]">{session.currentStoreName}</span>
+                  {session.authorizedStores.length > 0 && (
+                    <span className="text-[13px] text-[#5F645D]">
+                      （授权门店：{session.authorizedStores.map((s) => s.name).join('、')}）
+                    </span>
+                  )}
+                </div>
+                {session.email && (
+                  <div className="flex items-baseline gap-1.5 text-[13px] text-[#5F645D]">
+                    <span className="text-[#73796F]">企业邮箱</span>
+                    <span className="font-mono">{session.email}</span>
+                  </div>
                 )}
               </div>
             </div>
           </div>
 
-          <section className="space-y-3" aria-label="主题色设置">
-            <h3 className="text-[17px] font-bold">主题色设置</h3>
-            <p className="text-sm text-[#73796F]">选择后立即应用，并自动保存到当前账号。</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {SYSTEM_THEMES.map(theme => <button key={theme.key} type="button" disabled={themeSaving} aria-pressed={session.themeKey === theme.key} onClick={() => void updateTheme(theme.key)} className={`flex items-center gap-3 rounded-xl border p-4 text-left disabled:opacity-60 ${session.themeKey === theme.key ? 'border-[#171916] ring-1 ring-[#171916]' : 'border-[#D9DDD4]'}`}>
-                <span className="h-9 w-9 shrink-0 rounded-lg border border-black/10" style={{background: theme.accentHex}} />
-                <span><span className="block font-semibold">{theme.name}</span><span className="block text-xs text-[#73796F]">{theme.subtitle}</span></span>
-                {session.themeKey === theme.key && <span className="ml-auto text-xs shrink-0">已选</span>}
-              </button>)}
+          {/* Compact System Theme Setting */}
+          <section
+            aria-label="主题色设置"
+            className="px-4 py-3 rounded-2xl bg-white/65 border border-[#171916]/[0.08] space-y-2"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2 shrink-0">
+                <Palette className="w-4 h-4 text-[#5F645D]" />
+                <span className="text-[14px] font-semibold text-[#171916]">系统主题色</span>
+                <span className="text-[12px] text-[#73796F]">
+                  {themeSaving
+                    ? '保存中…'
+                    : themeSavedHint
+                      ? '已保存并同步'
+                      : SYSTEM_THEME_MAP[session.themeKey]?.name}
+                </span>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-1.5">
+                {SYSTEM_THEMES.map((theme) => {
+                  const active = session.themeKey === theme.key;
+                  const isLightSwatch = theme.key === 'pure_white';
+                  return (
+                    <button
+                      key={theme.key}
+                      type="button"
+                      disabled={themeSaving}
+                      aria-pressed={active}
+                      title={`${theme.name}（${theme.subtitle}）`}
+                      onClick={() => void handleSelectTheme(theme.key)}
+                      className={`h-7 px-2.5 rounded-full border text-[12px] inline-flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-60 ${
+                        active
+                          ? 'bg-[var(--qsl-accent-soft)] border-[#171916] text-[#171916] font-semibold shadow-2xs'
+                          : 'bg-white/85 border-[#D9DDD4] text-[#5F645D] hover:border-[#171916]/45 hover:text-[#171916]'
+                      }`}
+                    >
+                      <span
+                        className={`w-3 h-3 rounded-full shrink-0 inline-flex items-center justify-center ${
+                          isLightSwatch ? 'border border-[#AEB4AA]' : 'border border-black/15'
+                        }`}
+                        style={{ backgroundColor: theme.accentHex }}
+                      />
+                      <span>{theme.name}</span>
+                      {active && <Check className="w-3 h-3 text-[#171916] shrink-0" strokeWidth={2.5} />}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-            {themeSaving && <OperationStatus role="status" loading>正在保存主题…</OperationStatus>}
             {profileError && <OperationStatus role="alert">{profileError}</OperationStatus>}
           </section>
 

@@ -57,7 +57,7 @@ export const UserAssignmentsPage: React.FC = () => {
   if (users.isError) return <ErrorState message={users.error.message} onRetry={() => users.refetch()} />;
   return <div className="space-y-5">
     <div><h2 className="text-[25px] font-semibold text-[#171916]">用户权限分配</h2><p className="mt-1 text-sm text-[#6D736A]">按菜单核对员工的实际权限，编辑时逐项调整角色授权内的操作。</p></div>
-    <div className="rounded-xl border border-[#E0E4DB] bg-[#F7F9F0] px-4 py-3 text-xs text-[#5F645D]">员工权限继承角色，只能收紧；超级管理员权限锁定。门店范围由服务端强制校验，变更写入操作审计。</div>
+    <div className="rounded-xl border border-[var(--qsl-accent-soft-border)] bg-[var(--qsl-accent-soft-35)] px-4 py-3 text-xs text-[#5F645D]">员工权限继承角色，只能收紧；超级管理员权限锁定。门店范围由服务端强制校验，变更写入操作审计。</div>
     {notice && <OperationStatus role="status">{notice}</OperationStatus>}
     {error && <OperationStatus role="alert">{error}</OperationStatus>}
     <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[260px_minmax(0,1fr)]"><AccessMenuTree selected={selected} onSelect={setSelected} /><div className="space-y-3"><label className="flex max-w-sm items-center gap-2 rounded-xl border border-[#D9DDD4] bg-white px-3 py-2"><Search size={15} /><input aria-label="搜索员工" value={filter} onChange={e => setFilter(e.target.value)} placeholder="姓名 / 账号 / 角色" className="w-full text-sm outline-none" /></label><AccessSummaryTable subjects={filtered} selected={selected} nameOf={u => u.display_name} subtitleOf={u => u.role_name} codesOf={u => u.permissions.filter(code => !u.permission_denies.includes(code))} onEdit={user => { setError(''); setDraft({ user, roleId: user.role_id, storeIds: [...user.store_ids], denies: [...user.permission_denies] }); }} /></div></div>
