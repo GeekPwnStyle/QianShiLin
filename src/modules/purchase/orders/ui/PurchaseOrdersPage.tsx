@@ -1,6 +1,6 @@
 import { OperationStatus } from '@/src/shared/ui/OperationStatus';
 import React, { useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Download, Plus, Search } from 'lucide-react';
 import { appRepositories } from '@/src/app/composition/container';
 import { useAuth } from '@/src/modules/auth/application/AuthContext';
@@ -62,6 +62,7 @@ export const PurchaseOrdersPage: React.FC = () => {
   const otherStores = dataScope.authorizedStoreIds.filter(id => id !== currentStore);
   const selectedStore = view === 'mine' ? (currentStore === 'all' ? '' : currentStore) : otherStores[0] ?? '';
   const list = useQuery({ queryKey: ['purchase-orders', view, selectedStore, page, pageSize, search],
+    placeholderData: keepPreviousData,
     queryFn: () => request<Page>(`/purchase/orders?page=${page}&pageSize=${pageSize}&storeId=${encodeURIComponent(selectedStore)}&search=${encodeURIComponent(search)}`) });
   const detail = useQuery({ queryKey: ['purchase-order', detailId], enabled: Boolean(detailId),
     queryFn: () => request<Order>(`/purchase/orders/${detailId}`) });
@@ -135,10 +136,23 @@ export const PurchaseOrdersPage: React.FC = () => {
       }}>导出当前页</Button>
     </div>
     {notice && <OperationStatus role="status">{notice}</OperationStatus>}
-    {list.isLoading ? <LoadingSkeleton /> : list.isError ? <ErrorState message={list.error.message} onRetry={() => list.refetch()} />
-      : list.data?.items.length ? <DataTable columns={columns} rows={list.data.items} total={list.data.total}
-        page={page} pageSize={pageSize} onPageChange={setPage}
-        onPageSizeChange={next => { setPageSize(next); setPage(1); }} /> : <EmptyState mode={search ? 'filtered' : 'initial'} />}
+    {list.isError && !list.data ? (
+      <ErrorState message={list.error.message} onRetry={() => list.refetch()} />
+    ) : !list.isLoading && !list.isFetching && !list.data?.items.length ? (
+      <EmptyState mode={search ? 'filtered' : 'initial'} />
+    ) : (
+      <DataTable
+        columns={columns}
+        rows={list.data?.items ?? []}
+        total={list.data?.total ?? 0}
+        page={page}
+        pageSize={pageSize}
+        loading={list.isLoading || list.isFetching}
+        loadingLabel="正在从数据库加载采购订货单…"
+        onPageChange={setPage}
+        onPageSizeChange={next => { setPageSize(next); setPage(1); }}
+      />
+    )}
     <Modal open={createOpen} onClose={() => setCreateOpen(false)} title={`新增${orderType === 'single' ? '单品' : '系列'}采购订货单`}
       maxWidthClass="max-w-5xl" footer={<><Button onClick={() => { setNote(''); setLines([]); }}>重置</Button>
         <Button variant="primary" loading={saving} onClick={save}>保存草稿</Button></>}>

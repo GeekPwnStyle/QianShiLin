@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ArrowDown, ArrowUp, ArrowUpDown, Columns3 } from 'lucide-react';
 import { Button } from './Button';
 import { PaginationBar } from './PaginationBar';
+import { TableLoadingOverlay, TableLoadingRows } from './StateViews';
 
 export interface TableColumn<T> {
   key: string;
@@ -31,6 +32,9 @@ interface DataTableProps<T extends { id: string }> {
   onSelectionChange?: (ids: string[]) => void;
   showColumnSettings?: boolean;
   extraToolbar?: React.ReactNode;
+  loading?: boolean;
+  loadingLabel?: string;
+  emptyLabel?: string;
 }
 
 export function DataTable<T extends { id: string }>({
@@ -50,6 +54,9 @@ export function DataTable<T extends { id: string }>({
   onSelectionChange,
   showColumnSettings = true,
   extraToolbar,
+  loading = false,
+  loadingLabel,
+  emptyLabel = '暂无符合条件的数据',
 }: DataTableProps<T>) {
   const [hiddenCols, setHiddenCols] = useState<Record<string, boolean>>(() => {
     const initial: Record<string, boolean> = {};
@@ -69,6 +76,7 @@ export function DataTable<T extends { id: string }>({
       : rows;
 
   const visibleColumns = columns.filter((c) => !hiddenCols[c.key]);
+  const totalColSpan = visibleColumns.length + (selectable ? 1 : 0);
   const allOnPageSelected =
     displayedRows.length > 0 && displayedRows.every((r) => selectedIds.includes(r.id));
 
@@ -168,110 +176,123 @@ export function DataTable<T extends { id: string }>({
         </div>
       )}
 
-      <div className="overflow-x-auto qsl-scroll">
-        <table className="w-full border-collapse text-left">
-          <thead>
-            <tr className="border-b border-[#E5E8E0] bg-[#F8F9F5]/70">
-              {selectable && (
-                <th className="w-11 px-4 py-3 text-center sticky left-0 bg-[#F8F9F5] z-10">
-                  <input
-                    type="checkbox"
-                    aria-label="全选本页"
-                    checked={allOnPageSelected}
-                    onChange={toggleAll}
-                    className="accent-[#171916] w-4 h-4 cursor-pointer"
-                  />
-                </th>
-              )}
-              {visibleColumns.map((col, idx) => {
-                const isSorted = sortBy === col.key;
-                const alignClass =
-                  col.align === 'right'
-                    ? 'text-right'
-                    : col.align === 'center'
-                      ? 'text-center'
-                      : 'text-left';
-                const stickyClass =
-                  col.sticky && idx === 0
-                    ? `sticky ${selectable ? 'left-11' : 'left-0'} bg-[#F8F9F5] z-10`
-                    : '';
-                return (
-                  <th
-                    key={col.key}
-                    style={col.width ? { minWidth: col.width } : undefined}
-                    className={`px-4 py-3.5 text-[14px] font-semibold text-[#5F645D] whitespace-nowrap ${alignClass} ${stickyClass}`}
-                  >
-                    {col.sortable && onSortChange ? (
-                      <button
-                        type="button"
-                        onClick={() => onSortChange(col.key)}
-                        className="inline-flex items-center gap-1 hover:text-[#171916] cursor-pointer"
-                      >
-                        <span>{col.header}</span>
-                        {isSorted ? (
-                          sortOrder === 'asc' ? (
-                            <ArrowUp className="w-3.5 h-3.5 text-[#171916]" />
-                          ) : (
-                            <ArrowDown className="w-3.5 h-3.5 text-[#171916]" />
-                          )
-                        ) : (
-                          <ArrowUpDown className="w-3 h-3 opacity-45" />
-                        )}
-                      </button>
-                    ) : (
-                      col.header
-                    )}
+      <div className="relative">
+        <div className="overflow-x-auto qsl-scroll">
+          <table className="w-full border-collapse text-left">
+            <thead>
+              <tr className="border-b border-[#E5E8E0] bg-[#F8F9F5]/70">
+                {selectable && (
+                  <th className="w-11 px-4 py-3 text-center sticky left-0 bg-[#F8F9F5] z-10">
+                    <input
+                      type="checkbox"
+                      aria-label="全选本页"
+                      checked={allOnPageSelected}
+                      onChange={toggleAll}
+                      className="accent-[#171916] w-4 h-4 cursor-pointer"
+                    />
                   </th>
-                );
-              })}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[#E5E8E0]">
-            {displayedRows.map((row) => {
-              const checked = selectedIds.includes(row.id);
-              return (
-                <tr
-                  key={row.id}
-                  className={`h-[50px] transition-colors ${
-                    checked ? 'bg-[var(--qsl-accent-soft-35)]' : 'hover:bg-[#F8F9F5]'
-                  }`}
-                >
-                  {selectable && (
-                    <td className="w-11 px-4 py-2 text-center sticky left-0 bg-white z-10">
-                      <input
-                        type="checkbox"
-                        aria-label={`选择行 ${row.id}`}
-                        checked={checked}
-                        onChange={() => toggleRow(row.id)}
-                        className="accent-[#171916] w-4 h-4 cursor-pointer"
-                      />
-                    </td>
-                  )}
-                  {visibleColumns.map((col, idx) => {
-                    const alignClass =
-                      col.align === 'right'
-                        ? 'text-right tabular-nums'
-                        : col.align === 'center'
-                          ? 'text-center'
-                          : 'text-left';
-                    const stickyClass =
-                      col.sticky && idx === 0
-                        ? `sticky ${selectable ? 'left-11' : 'left-0'} bg-white z-10`
-                        : '';
-                    return (
-                      <td
-                        key={col.key}
-                        className={`px-4 py-2.5 text-[15px] text-[#171916] whitespace-nowrap ${alignClass} ${stickyClass}`}
-                      >
-                        {col.render(row)}
-                      </td>
-                    );
-                  })}
+                )}
+                {visibleColumns.map((col, idx) => {
+                  const isSorted = sortBy === col.key;
+                  const alignClass =
+                    col.align === 'right'
+                      ? 'text-right'
+                      : col.align === 'center'
+                        ? 'text-center'
+                        : 'text-left';
+                  const stickyClass =
+                    col.sticky && idx === 0
+                      ? `sticky ${selectable ? 'left-11' : 'left-0'} bg-[#F8F9F5] z-10`
+                      : '';
+                  return (
+                    <th
+                      key={col.key}
+                      style={col.width ? { minWidth: col.width } : undefined}
+                      className={`px-4 py-3.5 text-[14px] font-semibold text-[#5F645D] whitespace-nowrap ${alignClass} ${stickyClass}`}
+                    >
+                      {col.sortable && onSortChange ? (
+                        <button
+                          type="button"
+                          onClick={() => onSortChange(col.key)}
+                          className="inline-flex items-center gap-1 hover:text-[#171916] cursor-pointer"
+                        >
+                          <span>{col.header}</span>
+                          {isSorted ? (
+                            sortOrder === 'asc' ? (
+                              <ArrowUp className="w-3.5 h-3.5 text-[#171916]" />
+                            ) : (
+                              <ArrowDown className="w-3.5 h-3.5 text-[#171916]" />
+                            )
+                          ) : (
+                            <ArrowUpDown className="w-3 h-3 opacity-45" />
+                          )}
+                        </button>
+                      ) : (
+                        col.header
+                      )}
+                    </th>
+                  );
+                })}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#E5E8E0]">
+              {loading && displayedRows.length === 0 ? (
+                <TableLoadingRows colSpan={Math.max(1, totalColSpan)} label={loadingLabel} />
+              ) : displayedRows.length === 0 ? (
+                <tr>
+                  <td colSpan={Math.max(1, totalColSpan)} className="px-4 py-12 text-center text-sm text-[#73796F]">
+                    {emptyLabel}
+                  </td>
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
+              ) : (
+                displayedRows.map((row) => {
+                  const checked = selectedIds.includes(row.id);
+                  return (
+                    <tr
+                      key={row.id}
+                      className={`h-[50px] transition-colors ${
+                        checked ? 'bg-[var(--qsl-accent-soft-35)]' : 'hover:bg-[#F8F9F5]'
+                      }`}
+                    >
+                      {selectable && (
+                        <td className="w-11 px-4 py-2 text-center sticky left-0 bg-white z-10">
+                          <input
+                            type="checkbox"
+                            aria-label={`选择行 ${row.id}`}
+                            checked={checked}
+                            onChange={() => toggleRow(row.id)}
+                            className="accent-[#171916] w-4 h-4 cursor-pointer"
+                          />
+                        </td>
+                      )}
+                      {visibleColumns.map((col, idx) => {
+                        const alignClass =
+                          col.align === 'right'
+                            ? 'text-right tabular-nums'
+                            : col.align === 'center'
+                              ? 'text-center'
+                              : 'text-left';
+                        const stickyClass =
+                          col.sticky && idx === 0
+                            ? `sticky ${selectable ? 'left-11' : 'left-0'} bg-white z-10`
+                            : '';
+                        return (
+                          <td
+                            key={col.key}
+                            className={`px-4 py-2.5 text-[15px] text-[#171916] whitespace-nowrap ${alignClass} ${stickyClass}`}
+                          >
+                            {col.render(row)}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+        {loading && displayedRows.length > 0 && <TableLoadingOverlay label={loadingLabel} />}
       </div>
 
       <PaginationBar

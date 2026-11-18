@@ -3,19 +3,128 @@ import { AlertCircle, Inbox, Lock, SearchX, RefreshCw } from 'lucide-react';
 import { Button } from './Button';
 import { HelpTooltip } from './HelpTooltip';
 
-export const LoadingSkeleton: React.FC<{ rows?: number }> = ({ rows = 6 }) => (
-  <div className="bg-white border border-[#D9DDD4] rounded-[20px] p-6 space-y-4" aria-busy="true" aria-label="正在加载数据">
-    <div className="flex items-center justify-between gap-4">
-      <div className="h-4 w-48 bg-[#EAECE6] rounded animate-pulse" />
-      <div className="h-4 w-24 bg-[#EAECE6] rounded animate-pulse" />
+export const OpticalLoaderCore: React.FC<{
+  label?: string;
+  subLabel?: string;
+  compact?: boolean;
+}> = ({
+  label = '正在从数据库加载数据…',
+  subLabel = '记录较多时可能需要几秒，请稍候',
+  compact = false,
+}) => (
+  <div
+    className={`inline-flex items-center ${compact ? 'gap-3' : 'flex-col gap-2.5 text-center'}`}
+    role="status"
+    aria-live="polite"
+  >
+    <div
+      aria-hidden="true"
+      className={`relative flex items-center justify-center shrink-0 ${compact ? 'h-8 w-8' : 'h-11 w-11'}`}
+    >
+      <span className="absolute inset-0 rounded-full border-2 border-[var(--qsl-accent-soft)]" />
+      <span
+        className="qsl-loader-orbit-cw absolute inset-0 rounded-full border-2 border-transparent border-t-[var(--qsl-brand-dark)] border-r-[var(--qsl-accent-soft-ink)]"
+      />
+      <span
+        className="qsl-loader-orbit-ccw absolute inset-[6px] rounded-full border-2 border-transparent border-b-[var(--qsl-accent-soft-ink)] opacity-80"
+      />
+      <span
+        className={`qsl-loader-core-pulse rounded-full bg-[var(--qsl-brand-dark)] ${compact ? 'h-1.5 w-1.5' : 'h-2 w-2'}`}
+      />
     </div>
-    <div className="border-t border-[#E5E8E0] pt-4 space-y-3">
+    <div className={compact ? 'text-left' : 'text-center'}>
+      <div className={`${compact ? 'text-sm' : 'text-[14px]'} font-semibold text-[#171916]`}>
+        {label}
+      </div>
+      {subLabel && (
+        <div className="mt-0.5 text-xs text-[#73796F]">
+          {subLabel}
+        </div>
+      )}
+    </div>
+  </div>
+);
+
+export const TableLoadingOverlay: React.FC<{
+  label?: string;
+  subLabel?: string;
+}> = ({
+  label = '正在从数据库同步最新数据…',
+  subLabel = '记录较多时请稍候，无需重复点击',
+}) => (
+  <div
+    aria-busy="true"
+    aria-label={label}
+    className="pointer-events-auto absolute inset-0 z-20 flex flex-col items-center justify-center bg-white/78 backdrop-blur-[1.5px]"
+  >
+    <div className="absolute inset-x-0 top-0 h-[2.5px] overflow-hidden bg-[var(--qsl-accent-soft-45)]">
+      <div className="qsl-table-sweep h-full w-2/5 rounded-full bg-gradient-to-r from-transparent via-[var(--qsl-brand-dark)] to-transparent" />
+    </div>
+    <div className="mx-4 rounded-2xl border border-[#D9DDD4] bg-white px-6 py-4 shadow-[0_14px_34px_-8px_rgba(23,25,22,0.12)]">
+      <OpticalLoaderCore label={label} subLabel={subLabel} />
+    </div>
+  </div>
+);
+
+export const TableLoadingRows: React.FC<{
+  colSpan: number;
+  rows?: number;
+  label?: string;
+  subLabel?: string;
+}> = ({
+  colSpan,
+  rows = 6,
+  label = '正在从数据库加载数据…',
+  subLabel = '记录较多时可能需要几秒，请稍候',
+}) => (
+  <tr>
+    <td colSpan={colSpan} className="p-0 align-top">
+      <div className="relative min-h-[260px] w-full overflow-hidden bg-white">
+        <div className="divide-y divide-[#ECEFE7] px-5 py-2" aria-hidden="true">
+          {Array.from({ length: rows }).map((_, idx) => (
+            <div
+              key={idx}
+              className="qsl-skeleton-bar flex h-11 items-center gap-4"
+              style={{ animationDelay: `${idx * 90}ms` }}
+            >
+              <div className="h-3.5 w-20 rounded bg-[#EAECE6]" />
+              <div className="h-3.5 w-32 rounded bg-[#EEF0EA]" />
+              <div className="h-3.5 w-24 rounded bg-[#EAECE6]" />
+              <div className="h-3.5 flex-1 rounded bg-[#F2F4EE]" />
+              <div className="h-3.5 w-28 rounded bg-[#EAECE6]" />
+            </div>
+          ))}
+        </div>
+        <TableLoadingOverlay label={label} subLabel={subLabel} />
+      </div>
+    </td>
+  </tr>
+);
+
+export const LoadingSkeleton: React.FC<{ rows?: number; label?: string }> = ({
+  rows = 6,
+  label = '正在加载数据…',
+}) => (
+  <div className="relative overflow-hidden bg-white border border-[#D9DDD4] rounded-[20px] p-6 space-y-4" aria-busy="true" aria-label={label}>
+    <div className="absolute inset-x-0 top-0 h-[2.5px] overflow-hidden bg-[var(--qsl-accent-soft-45)]">
+      <div className="qsl-table-sweep h-full w-2/5 rounded-full bg-gradient-to-r from-transparent via-[var(--qsl-brand-dark)] to-transparent" />
+    </div>
+    <div className="flex items-center justify-between gap-4">
+      <OpticalLoaderCore compact label={label} subLabel="" />
+      <div className="h-3.5 w-24 bg-[#EAECE6] rounded qsl-skeleton-bar" />
+    </div>
+    <div className="border-t border-[#E5E8E0] pt-4 space-y-2.5">
       {Array.from({ length: rows }).map((_, idx) => (
-        <div key={idx} className="h-10 bg-[#F8F9F5] rounded-lg animate-pulse" />
+        <div
+          key={idx}
+          className="h-10 bg-[#F8F9F5] rounded-lg qsl-skeleton-bar"
+          style={{ animationDelay: `${idx * 85}ms` }}
+        />
       ))}
     </div>
   </div>
 );
+
 
 export const EmptyState: React.FC<{
   mode: 'initial' | 'filtered';

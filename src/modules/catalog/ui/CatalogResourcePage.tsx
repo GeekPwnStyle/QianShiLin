@@ -1,13 +1,13 @@
 import { OperationStatus } from '@/src/shared/ui/OperationStatus';
 import React, { useRef, useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Download, Plus, Search, Upload } from 'lucide-react';
 import { downloadCatalogCsv, importRows } from '../application/catalogCsv';
 import { useAuth } from '@/src/modules/auth/application/AuthContext';
 import { Button } from '@/src/shared/ui/Button';
 import { DataTable, type TableColumn } from '@/src/shared/ui/DataTable';
 import { Modal } from '@/src/shared/ui/Modal';
-import { EmptyState, ErrorState, LoadingSkeleton } from '@/src/shared/ui/StateViews';
+import { EmptyState, ErrorState } from '@/src/shared/ui/StateViews';
 import { StatusLabel } from '@/src/shared/ui/StatusLabel';
 
 export type ResourceName = 'brands' | 'suppliers' | 'warehouses';
@@ -64,6 +64,7 @@ export const CatalogResourcePage: React.FC<{ config: CatalogConfig }> = ({ confi
   const queryKey = ['catalog', config.resource, page, pageSize, search];
   const query = useQuery({
     queryKey,
+    placeholderData: keepPreviousData,
     queryFn: () => api<PageResult>(`/${config.resource}?page=${page}&pageSize=${pageSize}&search=${encodeURIComponent(search)}`),
   });
   const save = useMutation({
@@ -161,10 +162,23 @@ export const CatalogResourcePage: React.FC<{ config: CatalogConfig }> = ({ confi
     </div>
     {message && <OperationStatus role="status">{message}</OperationStatus>}
     {remove.error && <OperationStatus role="alert">{remove.error.message}</OperationStatus>}
-    {query.isLoading ? <LoadingSkeleton /> : query.isError ? <ErrorState message={query.error.message} onRetry={() => query.refetch()} />
-      : query.data?.items.length ? <DataTable columns={columns} rows={query.data.items} total={query.data.total}
-          page={page} pageSize={pageSize} onPageChange={setPage}
-          onPageSizeChange={next => { setPageSize(next); setPage(1); }} /> : <EmptyState mode={search ? 'filtered' : 'initial'} />}
+    {query.isError && !query.data ? (
+      <ErrorState message={query.error.message} onRetry={() => query.refetch()} />
+    ) : !query.isLoading && !query.isFetching && !query.data?.items.length ? (
+      <EmptyState mode={search ? 'filtered' : 'initial'} />
+    ) : (
+      <DataTable
+        columns={columns}
+        rows={query.data?.items ?? []}
+        total={query.data?.total ?? 0}
+        page={page}
+        pageSize={pageSize}
+        loading={query.isLoading || query.isFetching}
+        loadingLabel={`正在从数据库加载${config.title}…`}
+        onPageChange={setPage}
+        onPageSizeChange={next => { setPageSize(next); setPage(1); }}
+      />
+    )}
     <Modal open={form !== null} onClose={() => setForm(null)} title={`${editing ? '编辑' : '新增'}${config.title}`}
       maxWidthClass="max-w-2xl" footer={<><Button onClick={() => setForm(null)}>取消</Button>
         <Button variant="primary" loading={save.isPending} onClick={() => {

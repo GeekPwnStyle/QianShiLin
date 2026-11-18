@@ -8,7 +8,7 @@ import { ACCESS_TREE, withAction, type AccessAction } from '@/src/modules/system
 import { AccessMenuTree, AccessSummaryTable, PermissionEditor } from '@/src/modules/system/access-matrix/ui/AccessMatrix';
 import type { NavNode } from '@/src/modules/navigation/domain/menuRegistry';
 import { Select } from '@/src/shared/ui/Select';
-import { ErrorState, LoadingSkeleton, NoPermissionState } from '@/src/shared/ui/StateViews';
+import { ErrorState, NoPermissionState } from '@/src/shared/ui/StateViews';
 
 type UserAccess = {
   id: string;
@@ -125,8 +125,7 @@ export const UserAssignmentsPage: React.FC = () => {
   }, [users.data, draft]);
 
   if (!canManage) return <NoPermissionState moduleLabel="用户权限分配" requiredPermission="system.user.manage" />;
-  if (users.isLoading) return <LoadingSkeleton />;
-  if (users.isError) return <ErrorState message={users.error.message} onRetry={() => users.refetch()} />;
+  if (users.isError && !users.data) return <ErrorState message={users.error.message} onRetry={() => users.refetch()} />;
 
   return (
     <div className="space-y-5">
@@ -181,6 +180,8 @@ export const UserAssignmentsPage: React.FC = () => {
           <AccessSummaryTable
             subjects={filtered}
             selected={selected}
+            loading={users.isLoading || users.isFetching}
+            loadingLabel="正在从数据库加载用户权限列表…"
             nameOf={(u) => u.display_name}
             metaOf={(u) => {
               const parts = [`@${u.username}`];

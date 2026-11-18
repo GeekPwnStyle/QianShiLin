@@ -31,6 +31,36 @@ export async function handleSystemAccess({ req, res, url, user, pool, send, read
   const canUser = actor?.identity_type === 'admin' && actor.permissions.includes('system.user.manage') && !actor.permission_denies.includes('system.user.manage');
   if (!actor) { send(res,403,{ error: 'Forbidden' }); return true; }
 
+  if (path === '/system/operation-logs/facets' && req.method === 'GET') {
+    if (actor.identity_type !== 'admin' || !actor.permissions.includes('system.read') || actor.permission_denies.includes('system.read')) {
+      send(res,403,{ error: 'Forbidden' }); return true;
+    }
+    const [rolesRes, logRolesRes, categoriesRes, actionsRes, clientsRes] = await Promise.all([
+      pool.query(`SELECT id, name FROM identity.roles ORDER BY id`),
+      pool.query(`SELECT DISTINCT actor_role_id, actor_role_name FROM identity.operation_log WHERE COALESCE(actor_role_name, '') <> ''`),
+      pool.query(`SELECT DISTINCT category FROM identity.operation_log WHERE COALESCE(category, '') <> '' ORDER BY category`),
+      pool.query(`SELECT DISTINCT category, action FROM identity.operation_log WHERE COALESCE(action, '') <> '' ORDER BY category, action`),
+      pool.query(`SELECT DISTINCT client_type FROM identity.operation_log WHERE COALESCE(client_type, '') <> '' ORDER BY client_type`),
+    ]);
+    const roleMap = new Map();
+    for (const r of rolesRes.rows) {
+      roleMap.set(r.id, { id: r.id, name: r.name });
+    }
+    for (const r of logRolesRes.rows) {
+      const key = r.actor_role_id || r.actor_role_name;
+      if (key && !roleMap.has(key) && !Array.from(roleMap.values()).some(item => item.name === r.actor_role_name)) {
+        roleMap.set(key, { id: key, name: r.actor_role_name });
+      }
+    }
+    send(res,200,{
+      roles: Array.from(roleMap.values()),
+      categories: categoriesRes.rows.map(r => r.category),
+      actions: actionsRes.rows.map(r => ({ category: r.category, action: r.action })),
+      clientTypes: clientsRes.rows.map(r => r.client_type),
+    });
+    return true;
+  }
+
   if (path === '/system/operation-logs' && req.method === 'GET') {
     if (actor.identity_type !== 'admin' || !actor.permissions.includes('system.read') || actor.permission_denies.includes('system.read')) {
       send(res,403,{ error: 'Forbidden' }); return true;
@@ -38,15 +68,72 @@ export async function handleSystemAccess({ req, res, url, user, pool, send, read
     const page = Math.min(10000,Math.max(1,Number.parseInt(url.searchParams.get('page') ?? '1',10) || 1));
     const pageSize = Math.min(100,Math.max(1,Number.parseInt(url.searchParams.get('pageSize') ?? '20',10) || 20));
     const search = (url.searchParams.get('search') ?? '').trim().slice(0,120);
-    const month = url.searchParams.get('month') ?? '';
+    const month = (url.searchParams.get('month') ?? '').trim();
+    const startDate = (url.searchParams.get('startDate') ?? '').trim();
+    const endDate = (url.searchParams.get('endDate') ?? '').trim();
+    const roleFilter = (url.searchParams.get('role') ?? url.searchParams.get('roleId') ?? '').trim().slice(0,120);
+    const category = (url.searchParams.get('category') ?? '').trim().slice(0,80);
+    const action = (url.searchParams.get('action') ?? '').trim().slice(0,120);
+    const clientType = (url.searchParams.get('clientType') ?? '').trim().slice(0,80);
+
+    const dateOrDatetimeRe = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2})?)?$/;
     if (month && !/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) { send(res,400,{error:'Invalid month'}); return true; }
-    const values=[month ? `${month}-01` : null,search ? `%${search.replace(/[\\%_]/g,'\\$&')}%` : null];
-    const where=`WHERE ($1::date IS NULL OR (l.created_at >= $1::date AND l.created_at < $1::date + interval '1 month'))
-      AND ($2::text IS NULL OR u.display_name ILIKE $2 ESCAPE '\\' OR l.category ILIKE $2 ESCAPE '\\' OR l.action ILIKE $2 ESCAPE '\\')`;
-    const count=await pool.query(`SELECT count(*)::int AS total FROM identity.operation_log l LEFT JOIN identity.users u ON u.id=l.actor_user_id ${where}`,values);
-    const {rows}=await pool.query(`SELECT l.id,l.category,l.action,l.target,l.details,l.ip_address,l.client_type,l.created_at,l.actor_role_id,l.actor_role_name,
-      u.display_name AS actor_name FROM identity.operation_log l LEFT JOIN identity.users u ON u.id=l.actor_user_id ${where}
-      ORDER BY l.created_at DESC,l.id DESC LIMIT $3 OFFSET $4`,[...values,pageSize,(page-1)*pageSize]);
+    if (startDate && !dateOrDatetimeRe.test(startDate)) { send(res,400,{error:'Invalid startDate'}); return true; }
+    if (endDate && !dateOrDatetimeRe.test(endDate)) { send(res,400,{error:'Invalid endDate'}); return true; }
+
+    const clauses = [];
+    const values = [];
+    if (month && !startDate && !endDate) {
+      values.push(`${month}-01`);
+      clauses.push(`l.created_at >= ($${values.length}::date::timestamp AT TIME ZONE 'Asia/Shanghai') AND l.created_at < (($${values.length}::date + interval '1 month')::timestamp AT TIME ZONE 'Asia/Shanghai')`);
+    }
+    if (startDate) {
+      const normalized = startDate.length === 10 ? `${startDate} 00:00:00` : startDate.replace('T', ' ');
+      values.push(normalized);
+      clauses.push(`l.created_at >= ($${values.length}::timestamp AT TIME ZONE 'Asia/Shanghai')`);
+    }
+    if (endDate) {
+      if (endDate.length === 10) {
+        values.push(endDate);
+        clauses.push(`l.created_at < (($${values.length}::date + interval '1 day')::timestamp AT TIME ZONE 'Asia/Shanghai')`);
+      } else {
+        const normalized = endDate.replace('T', ' ');
+        values.push(normalized);
+        clauses.push(`l.created_at <= ($${values.length}::timestamp AT TIME ZONE 'Asia/Shanghai')`);
+      }
+    }
+    if (roleFilter) {
+      values.push(roleFilter);
+      clauses.push(`(l.actor_role_id = $${values.length} OR l.actor_role_name = $${values.length})`);
+    }
+    if (category) {
+      values.push(category);
+      clauses.push(`l.category = $${values.length}`);
+    }
+    if (action) {
+      values.push(action);
+      clauses.push(`l.action = $${values.length}`);
+    }
+    if (clientType) {
+      values.push(clientType);
+      clauses.push(`l.client_type = $${values.length}`);
+    }
+    if (search) {
+      values.push(`%${search.replace(/[\\%_]/g,'\\$&')}%`);
+      const p = `$${values.length}`;
+      clauses.push(`(u.display_name ILIKE ${p} ESCAPE '\\' OR u.username ILIKE ${p} ESCAPE '\\' OR l.category ILIKE ${p} ESCAPE '\\' OR l.action ILIKE ${p} ESCAPE '\\' OR COALESCE(l.actor_role_name,'') ILIKE ${p} ESCAPE '\\' OR COALESCE(l.target,'') ILIKE ${p} ESCAPE '\\' OR COALESCE(l.ip_address::text,'') ILIKE ${p} ESCAPE '\\' OR l.details::text ILIKE ${p} ESCAPE '\\')`);
+    }
+    const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
+    const fromClause = `FROM identity.operation_log l LEFT JOIN identity.users u ON u.id=l.actor_user_id`;
+    const count = await pool.query(`SELECT count(*)::int AS total ${fromClause} ${where}`, values);
+    const limitIdx = values.length + 1;
+    const offsetIdx = values.length + 2;
+    const { rows } = await pool.query(
+      `SELECT l.id,l.category,l.action,l.target,l.details,l.ip_address,l.client_type,l.created_at,l.actor_role_id,l.actor_role_name,
+        u.display_name AS actor_name, u.username AS actor_username ${fromClause} ${where}
+       ORDER BY l.created_at DESC,l.id DESC LIMIT $${limitIdx} OFFSET $${offsetIdx}`,
+      [...values, pageSize, (page - 1) * pageSize]
+    );
     const regions = new Map();
     const items = await Promise.all(rows.map(async row => {
       if (!regions.has(row.ip_address)) regions.set(row.ip_address, resolveIpRegion(row.ip_address));
