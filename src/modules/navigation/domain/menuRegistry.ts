@@ -138,6 +138,7 @@ const RAW_MODULES: RawNodeInput[] = [
             nodeType: 'page',
             favoritable: true,
             pageKind: 'product_list',
+            implemented: true,
           },
           {
             id: 'basic.product.categories',
@@ -146,6 +147,7 @@ const RAW_MODULES: RawNodeInput[] = [
             permission: 'basic.product.read',
             nodeType: 'page',
             pageKind: 'master_data',
+            implemented: true,
           },
           {
             id: 'basic.product.tags',
@@ -154,6 +156,7 @@ const RAW_MODULES: RawNodeInput[] = [
             permission: 'basic.product.read',
             nodeType: 'page',
             pageKind: 'master_data',
+            implemented: true,
           },
           {
             id: 'basic.product.lens_surcharge',
@@ -162,6 +165,7 @@ const RAW_MODULES: RawNodeInput[] = [
             permission: 'basic.product.read',
             nodeType: 'page',
             pageKind: 'master_data',
+            implemented: true,
           },
         ],
       },
@@ -172,6 +176,7 @@ const RAW_MODULES: RawNodeInput[] = [
         permission: 'basic.customer.read',
         nodeType: 'page',
         pageKind: 'master_data',
+        implemented: true,
       },
       {
         id: 'basic.staff',

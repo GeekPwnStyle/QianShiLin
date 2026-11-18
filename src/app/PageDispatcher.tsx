@@ -1,6 +1,9 @@
 import React from 'react';
 import { useNavigation } from '@/src/modules/navigation/application/NavigationContext';
 import { ProductListPage } from '@/src/modules/basic/products/ui/ProductListPage';
+import { ProductCategoriesPage } from '@/src/modules/basic/products/ui/ProductCategoriesPage';
+import { ProductTagsPage } from '@/src/modules/basic/products/ui/ProductTagsPage';
+import { LensSurchargePage } from '@/src/modules/basic/products/ui/LensSurchargePage';
 import { BrandPage } from '@/src/modules/basic/brands/ui/BrandPage';
 import { SupplierPage } from '@/src/modules/basic/suppliers/ui/SupplierPage';
 import { WarehousePage } from '@/src/modules/system/warehouses/ui/WarehousePage';
@@ -43,6 +46,9 @@ export const PageDispatcher: React.FC = () => {
 
   if (activeNode.id === 'basic.staff') return <StaffArchivePage />;
   if (activeNode.id === 'basic.customers') return <CustomerArchivePage />;
+  if (activeNode.id === 'basic.product.categories') return <ProductCategoriesPage />;
+  if (activeNode.id === 'basic.product.tags') return <ProductTagsPage />;
+  if (activeNode.id === 'basic.product.lens_surcharge') return <LensSurchargePage />;
 
   switch (activeNode.pageKind) {
     case 'catalog_brand': return <BrandPage />;

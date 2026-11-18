@@ -192,6 +192,12 @@ export async function handleSystemAccess({ req, res, url, user, pool, send, read
       }
       const { rows: updated }=await client.query(`UPDATE identity.user_access SET role_id=$2,store_ids=$3,permission_denies=$4,
         updated_at=now(),updated_by=$5 WHERE user_id=$1 RETURNING *`,[id,body.roleId,body.storeIds,body.permissionDenies,user.id]);
+      await client.query(
+        `UPDATE staff.profiles
+         SET data = jsonb_set(jsonb_set(data, '{role}', to_jsonb($2::text)), '{roleId}', to_jsonb($3::text))
+         WHERE user_id = $1`,
+        [id, role.name, role.id]
+      );
       await client.query(`INSERT INTO identity.access_audit(actor_user_id,target_kind,target_id,before_state,after_state)
         VALUES($1,'user',$2,to_jsonb($3::json),to_jsonb($4::json))`,
         [user.id,id,JSON.stringify(target),JSON.stringify(updated[0])]);

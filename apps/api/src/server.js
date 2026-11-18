@@ -9,6 +9,7 @@ import { handleSystemAccess } from './system-access.js';
 import { handleNotices } from './notices.js';
 import { handleStaff } from './staff.js';
 import { handleCustomers } from './customers.js';
+import { handleProducts } from './products.js';
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL, max: 10 });
 const cookieName = 'qsl_session';
@@ -130,6 +131,16 @@ const server = http.createServer(async (req, res) => {
     if (path === '/customers' || path.startsWith('/customers/')) {
       const user = await sessionUser(getToken(req));
       if (await handleCustomers({ req, res, url, user, pool, send, readJson, clientIp })) return;
+    }
+    if (
+      path === '/products' || path.startsWith('/products/') ||
+      path === '/product-categories' || path.startsWith('/product-categories/') ||
+      path === '/product-tags' || path.startsWith('/product-tags/') ||
+      path === '/product-dictionaries' || path.startsWith('/product-dictionaries/') ||
+      path === '/lens-surcharges' || path.startsWith('/lens-surcharges/')
+    ) {
+      const user = await sessionUser(getToken(req));
+      if (await handleProducts({ req, res, url, user, pool, send, readJson, clientIp })) return;
     }
     send(res, 404, { error: 'Not found' });
   } catch (error) {

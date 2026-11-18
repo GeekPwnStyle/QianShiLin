@@ -48,7 +48,7 @@ export const UserAssignmentsPage: React.FC = () => {
     if (!draft) return;
     setSaving(true); setError(''); setNotice('');
     try { await request(`/system/users/${draft.user.id}`, 'PUT', { roleId: draft.roleId, storeIds: draft.storeIds, permissionDenies: draft.denies });
-      await cache.invalidateQueries({ queryKey: ['system-users'] }); setDraft(null); setNotice('员工角色、门店范围及个人权限已保存。');
+      await Promise.all([cache.invalidateQueries({ queryKey: ['system-users'] }), cache.invalidateQueries({ queryKey: ['staff'] })]); setDraft(null); setNotice('员工角色、门店范围及个人权限已保存。');
     } catch (cause) { setError(cause instanceof Error ? cause.message : '保存失败'); } finally { setSaving(false); }
   };
   useEffect(() => { if (draft && users.data && !users.data.some(u => u.id === draft.user.id)) setDraft(null); }, [users.data, draft]);
