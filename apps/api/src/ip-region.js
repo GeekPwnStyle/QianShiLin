@@ -30,10 +30,15 @@ export function lookupIpRegion(raw) {
   try {
     const region = searcher.search(ip);
     if (!region) return null;
-    const fields = [region.country, region.province, region.city, region.isp]
-      .filter(value => value && value !== '0');
-    if (fields[0] === '中国' && region.province) fields.shift();
-    return [...new Set(fields)].join(' ') || null;
+    const clean = value => typeof value === 'string' && value.trim() !== '0' ? value.trim() : '';
+    const country = clean(region.country);
+    const province = clean(region.province);
+    const city = clean(region.city);
+    const isp = clean(region.isp);
+    const locality = [...new Set([province, city].filter(Boolean))].join(country === '中国' ? '' : ' ');
+    const location = country === '中国' && locality ? locality : [country, locality].filter(Boolean).join(' ');
+    const detail = country === '中国' && !city ? (province ? '城市未收录' : '省市未收录') : '';
+    return [...new Set([location, isp, detail].filter(Boolean))].join(' · ') || null;
   } catch {
     return null;
   }
