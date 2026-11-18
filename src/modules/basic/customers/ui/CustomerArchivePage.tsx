@@ -1,54 +1,855 @@
-import React, { useMemo, useState } from 'react';
-import { Search, Users, UserRoundPlus, SlidersHorizontal, Plus, Download, Upload } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
-import { appRepositories } from '@/src/app/composition/container';
+import React, { useCallback, useMemo, useState } from 'react';
+import {
+  Download,
+  Plus,
+  Search,
+  SlidersHorizontal,
+  Trash2,
+  Upload,
+  Users,
+} from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/src/modules/auth/application/AuthContext';
-import type { MemberProfile } from '@/src/modules/members/member-profile/domain/member';
+import {
+  CUSTOMER_TIER_OPTIONS,
+  customersApi,
+  type CustomerProfile,
+} from '@/src/modules/basic/customers/infrastructure/customersApi';
+import { CustomerFormModal } from '@/src/modules/basic/customers/ui/CustomerFormModal';
 import { maskPhone } from '@/src/shared/lib/format';
-import { Modal } from '@/src/shared/ui/Modal';
-import { LoadingSkeleton, ErrorState } from '@/src/shared/ui/StateViews';
+import { OperationStatus } from '@/src/shared/ui/OperationStatus';
+import { ErrorState, LoadingSkeleton } from '@/src/shared/ui/StateViews';
+
+type ToggleableColumnKey =
+  | 'birthday'
+  | 'ageGroup'
+  | 'medicalIdNo'
+  | 'relatedAccount'
+  | 'source'
+  | 'refundableAmount'
+  | 'storedValueBalance'
+  | 'pointsBalance'
+  | 'address'
+  | 'customerType'
+  | 'wechatFollowed'
+  | 'tags'
+  | 'createdAt'
+  | 'remark';
+
+const TOGGLEABLE_COLUMNS: Array<{ key: ToggleableColumnKey; label: string }> = [
+  { key: 'birthday', label: '生日' },
+  { key: 'ageGroup', label: '年龄段' },
+  { key: 'medicalIdNo', label: '医保/证件号' },
+  { key: 'relatedAccount', label: '关联账号' },
+  { key: 'source', label: '顾客来源' },
+  { key: 'refundableAmount', label: '可退金额' },
+  { key: 'storedValueBalance', label: '余额' },
+  { key: 'pointsBalance', label: '积分' },
+  { key: 'address', label: '地址' },
+  { key: 'customerType', label: '类型' },
+  { key: 'wechatFollowed', label: '是否关注公众号' },
+  { key: 'tags', label: '标签' },
+  { key: 'createdAt', label: '注册时间' },
+  { key: 'remark', label: '备注' },
+];
 
 export const CustomerArchivePage: React.FC = () => {
-  const { session, currentRole, dataScope } = useAuth();
+  const queryClient = useQueryClient();
+  const { session, currentRole, dataScope, debugMode, hasPermission } = useAuth();
+
   const [keyword, setKeyword] = useState('');
   const [store, setStore] = useState('all');
   const [gender, setGender] = useState('all');
   const [tier, setTier] = useState('all');
-  const [selected, setSelected] = useState<MemberProfile | null>(null);
   const [page, setPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [createOpen, setCreateOpen] = useState(false);
-  const [draft, setDraft] = useState({name:'',phone:'',gender:'女' as '男'|'女',age:26});
-  const [viewRows, setViewRows] = useState<MemberProfile[] | null>(null);
   const [extraFilters, setExtraFilters] = useState(false);
   const [columnsOpen, setColumnsOpen] = useState(false);
-  const [hiddenColumns, setHiddenColumns] = useState<string[]>([]);
-  const [notice, setNotice] = useState('');
-  const { data, isLoading, isError, refetch } = useQuery({ queryKey: ['customer-archive', session.userId, session.currentStoreId], queryFn: () => appRepositories.members.queryMembers({page:1,pageSize:1000},dataScope) });
-  const rows = useMemo(() => (viewRows ?? data?.items ?? []).filter(m => (store === 'all' || m.storeId === store) && (gender === 'all' || m.gender === gender) && (tier === 'all' || m.tier === tier) && (!keyword.trim() || [m.name,m.memberNo,m.phone,m.guideName].some(v => v.includes(keyword.trim())))),[data,viewRows,store,gender,tier,keyword]);
-  const shown = rows.slice((page-1)*20,page*20);
-  const phone = (value:string) => maskPhone(value,Boolean(currentRole?.sensitiveFields.viewPlaintextPhone));
-  const exportCsv = () => { const headers=['姓名','手机号','性别','年龄','会员等级','会员卡号','注册门店','导购绑定','余额','积分','标签']; const cells=rows.map(m=>[m.name,phone(m.phone),m.gender,String(m.age),m.tier,m.memberNo,m.storeName,m.guideName,m.storedValueBalance,String(m.pointsBalance),m.tags.join('、')]); const csv='\ufeff'+[headers,...cells].map(row=>row.map(x=>'"'+String(x).replaceAll('"','""')+'"').join(',')).join('\r\n'); const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download='客户档案.csv';a.click();URL.revokeObjectURL(a.href); };
-  const changeRows = (next:MemberProfile[]) => {setViewRows(next);setSelectedIds([]);};
-  return <div className="space-y-5">
-    <header className="rounded-[24px] border border-[#D9DDD4] bg-white p-6 md:p-8"><div className="flex items-center gap-3"><span className="rounded-2xl bg-[var(--qsl-accent-soft-85)] p-3"><Users className="h-6 w-6"/></span><div><h1 className="text-2xl font-bold">客户档案</h1><p className="mt-1 text-sm text-[#73796F]">按门店查看顾客基础资料、会员等级与到店记录</p></div></div><div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-4"><div className="rounded-2xl bg-[#F8F9F5] p-4"><p className="text-xs text-[#73796F]">当前可见顾客</p><strong className="mt-2 block text-2xl">{data?.total ?? '—'}</strong></div><div className="rounded-2xl bg-[#F8F9F5] p-4"><p className="text-xs text-[#73796F]">筛选结果</p><strong className="mt-2 block text-2xl">{rows.length}</strong></div><div className="rounded-2xl bg-[#F8F9F5] p-4"><p className="text-xs text-[#73796F]">本页人数</p><strong className="mt-2 block text-2xl">{shown.length}</strong></div><div className="rounded-2xl bg-[#F8F9F5] p-4"><p className="text-xs text-[#73796F]">资料来源</p><strong className="mt-2 block text-sm">当前会员档案库</strong></div></div></header>
-    <div className="flex flex-wrap items-center gap-2 rounded-[20px] border border-[#D9DDD4] bg-white p-4 text-sm">
-      <button type="button" onClick={()=>setCreateOpen(true)} className="rounded-lg bg-[var(--qsl-accent)] text-[var(--qsl-accent-ink)] border border-[var(--qsl-accent-border)] hover:bg-[var(--qsl-accent-hover)] font-medium px-3 py-2 cursor-pointer transition-colors"><Plus className="mr-1 inline h-4 w-4"/>新增</button>
-      <button type="button" onClick={()=>{if(!selectedIds.length)return; if(window.confirm(`删除选中的 ${selectedIds.length} 条演示顾客资料？`)){changeRows((viewRows??data?.items??[]).filter(m=>!selectedIds.includes(m.id)));setNotice('已从当前演示列表移除')}}} disabled={!selectedIds.length} className="rounded-lg bg-red-600 px-3 py-2 text-white disabled:opacity-40 cursor-pointer">批量删除</button>
-      <button type="button" onClick={()=>{if(!selectedIds.length)return;const date=new Date().toISOString().slice(0,10);changeRows((viewRows??data?.items??[]).map(m=>selectedIds.includes(m.id)?{...m,lastVisitDate:date}:m));setNotice('已更新当前演示列表的到店时间')}} disabled={!selectedIds.length} className="rounded-lg bg-[var(--qsl-brand-dark)] hover:bg-[var(--qsl-brand-dark-hover)] px-3 py-2 text-white disabled:opacity-40 cursor-pointer transition-colors">更新到店时间</button>
-      <button type="button" onClick={()=>setNotice('子账号关系尚未接入数据模型，暂不能执行绑定或解绑')} className="rounded-lg bg-[var(--qsl-brand-dark)] hover:bg-[var(--qsl-brand-dark-hover)] px-3 py-2 text-white cursor-pointer transition-colors">子账号操作⌄</button>
-      <button type="button" onClick={()=>setNotice('顾客合并需要服务端冲突校验，当前尚未开放')} className="rounded-lg bg-[var(--qsl-brand-dark)] hover:bg-[var(--qsl-brand-dark-hover)] px-3 py-2 text-white cursor-pointer transition-colors">合并顾客资料</button>
-      <span className="flex-1"/><button onClick={()=>{const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,%EF%BB%BF%E5%A7%93%E5%90%8D,%E6%89%8B%E6%9C%BA%E5%8F%B7,%E6%80%A7%E5%88%AB,%E5%B9%B4%E9%BE%84,%E4%BC%9A%E5%91%98%E7%AD%89%E7%BA%A7,%E6%B3%A8%E5%86%8C%E9%97%A8%E5%BA%97';a.download='客户档案导入模板.csv';a.click()}} className="rounded-lg border px-3 py-2"><Download className="mr-1 inline h-4 w-4"/>导入模板下载</button>
-      <button onClick={()=>setNotice('导入需完成字段映射与校验，当前尚未开放')} className="rounded-lg border px-3 py-2"><Upload className="mr-1 inline h-4 w-4"/>导入</button>
-      <button onClick={exportCsv} className="rounded-lg border px-3 py-2"><Download className="mr-1 inline h-4 w-4"/>导出</button>
-      <button onClick={()=>setExtraFilters(!extraFilters)} className="rounded-lg border px-3 py-2">筛选搜索</button><button onClick={()=>setColumnsOpen(!columnsOpen)} className="rounded-lg border px-3 py-2">设置表头</button>
+  const [hiddenColumns, setHiddenColumns] = useState<ToggleableColumnKey[]>([]);
+
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
+  const [editingCustomer, setEditingCustomer] = useState<CustomerProfile | null>(null);
+
+  const [batchBusy, setBatchBusy] = useState(false);
+  const [statusNotice, setStatusNotice] = useState<{
+    key: number;
+    role: 'status' | 'alert';
+    text: string;
+  } | null>(null);
+
+  const showToast = useCallback((text: string, role: 'status' | 'alert' = 'status') => {
+    setStatusNotice({ key: Date.now(), role, text });
+  }, []);
+
+  const {
+    data,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
+    queryKey: ['customer-archive', session.userId, session.currentStoreId, debugMode],
+    queryFn: () =>
+      customersApi.list({ page: 1, pageSize: 500 }, dataScope, debugMode),
+  });
+
+  const {
+    data: tagList = [],
+    isFetching: tagsFetching,
+    refetch: refetchTags,
+  } = useQuery({
+    queryKey: ['customer-tags', debugMode],
+    queryFn: () => customersApi.listTags(debugMode),
+  });
+
+  const allowPlainPhone = Boolean(currentRole?.sensitiveFields.viewPlaintextPhone);
+
+  const displayPhone = useCallback(
+    (item: CustomerProfile) => {
+      if (item.phoneMasked || item.phone.includes('****')) return item.phone;
+      return maskPhone(item.phone, allowPlainPhone);
+    },
+    [allowPlainPhone]
+  );
+
+  const allItems = data?.items ?? [];
+
+  const rows = useMemo(() => {
+    const kw = keyword.trim().toLowerCase();
+    return allItems.filter((m) => {
+      if (store !== 'all' && m.storeId !== store) return false;
+      if (gender !== 'all' && m.gender !== gender) return false;
+      if (tier !== 'all' && m.tier !== tier) return false;
+      if (
+        kw &&
+        ![m.name, m.memberNo, m.phone, m.guideName, m.medicalIdNo, ...m.tags].some((v) =>
+          v.toLowerCase().includes(kw)
+        )
+      ) {
+        return false;
+      }
+      return true;
+    });
+  }, [allItems, store, gender, tier, keyword]);
+
+  const pageSize = 20;
+  const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const shown = rows.slice((safePage - 1) * pageSize, safePage * pageSize);
+
+  const canCreate = hasPermission('basic.customer.create') || hasPermission('basic.customer.read');
+  const canUpdate = hasPermission('basic.customer.update') || hasPermission('basic.customer.read');
+  const canDelete =
+    hasPermission('basic.customer.delete') ||
+    session.identityType === 'admin' ||
+    session.subRole === 'store_manager';
+
+  const defaultStoreId =
+    session.currentStoreId !== 'all'
+      ? session.currentStoreId
+      : session.authorizedStores[0]?.id ?? 'store_hq_01';
+
+  const isColVisible = (key: ToggleableColumnKey) => !hiddenColumns.includes(key);
+
+  const toggleColumn = (key: ToggleableColumnKey) => {
+    setHiddenColumns((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
+    );
+  };
+
+  const openCreateModal = useCallback(() => {
+    setModalMode('create');
+    setEditingCustomer(null);
+    setModalOpen(true);
+  }, []);
+
+  const openEditModal = useCallback((customer: CustomerProfile) => {
+    setModalMode('edit');
+    setEditingCustomer(customer);
+    setModalOpen(true);
+  }, []);
+
+  const closeFormModal = useCallback(() => {
+    setModalOpen(false);
+  }, []);
+
+  const handleSaved = useCallback(
+    (savedItem: CustomerProfile, action: 'close' | 'edit_more') => {
+      void queryClient.invalidateQueries({ queryKey: ['customer-archive'] });
+      void queryClient.invalidateQueries({ queryKey: ['members'] });
+
+      if (action === 'edit_more') {
+        setModalMode('edit');
+        setEditingCustomer(savedItem);
+        setModalOpen(true);
+        showToast(`顾客「${savedItem.name}」已保存，可继续查看或编辑其他信息`);
+        return;
+      }
+
+      setModalOpen(false);
+      showToast(
+        modalMode === 'create'
+          ? `已新增顾客「${savedItem.name}」并存入数据库`
+          : `顾客「${savedItem.name}」资料已更新`
+      );
+    },
+    [modalMode, queryClient, showToast]
+  );
+
+  const handleBatchDelete = async () => {
+    if (!selectedIds.length || !canDelete) return;
+    if (!window.confirm(`确认从数据库删除选中的 ${selectedIds.length} 条顾客资料？`)) return;
+    setBatchBusy(true);
+    try {
+      const res = await customersApi.batchDelete(selectedIds, debugMode);
+      setSelectedIds([]);
+      await queryClient.invalidateQueries({ queryKey: ['customer-archive'] });
+      showToast(`已删除 ${res.deletedCount} 条顾客资料`);
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : '批量删除失败', 'alert');
+    } finally {
+      setBatchBusy(false);
+    }
+  };
+
+  const handleBatchVisit = async () => {
+    if (!selectedIds.length || !canUpdate) return;
+    setBatchBusy(true);
+    try {
+      const res = await customersApi.batchVisit(selectedIds, debugMode);
+      setSelectedIds([]);
+      await queryClient.invalidateQueries({ queryKey: ['customer-archive'] });
+      showToast(`已更新 ${res.updatedCount} 位顾客到店时间为 ${res.visitDate}`);
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : '更新到店时间失败', 'alert');
+    } finally {
+      setBatchBusy(false);
+    }
+  };
+
+  const allShownSelected = shown.length > 0 && shown.every((m) => selectedIds.includes(m.id));
+  const toggleSelectAllShown = () => {
+    if (allShownSelected) {
+      const shownSet = new Set(shown.map((m) => m.id));
+      setSelectedIds((prev) => prev.filter((id) => !shownSet.has(id)));
+    } else {
+      setSelectedIds((prev) => [...new Set([...prev, ...shown.map((m) => m.id)])]);
+    }
+  };
+
+  const exportCsv = () => {
+    const headers = [
+      '姓名',
+      '手机号',
+      '性别',
+      '生日',
+      '年龄',
+      '年龄段',
+      '地址',
+      '备注',
+      '会员卡号',
+      '会员等级',
+      '医保/证件号',
+      '标签',
+      '注册门店',
+      '导购绑定',
+      '余额',
+      '积分',
+      '到店次数',
+      '最近到店',
+    ];
+    const cells = rows.map((m) => [
+      m.name,
+      displayPhone(m),
+      m.gender,
+      m.birthday || '',
+      String(m.age),
+      m.ageGroup || '',
+      m.address || '',
+      m.remark || '',
+      m.memberNo,
+      m.tier,
+      m.medicalIdNo || '',
+      m.tags.join('、'),
+      m.storeName,
+      m.guideName,
+      m.storedValueBalance,
+      String(m.pointsBalance),
+      String(m.visitCount),
+      m.lastVisitDate,
+    ]);
+    const csv =
+      '\ufeff' +
+      [headers, ...cells]
+        .map((row) => row.map((x) => `"${String(x).replaceAll('"', '""')}"`).join(','))
+        .join('\r\n');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    a.download = '客户档案.csv';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+
+  const downloadImportTemplate = () => {
+    const headers = [
+      '姓名',
+      '手机号',
+      '性别',
+      '生日',
+      '年龄',
+      '年龄段',
+      '地址',
+      '备注',
+      '会员卡号',
+      '会员等级',
+      '医保/证件号',
+      '标签',
+      '注册门店',
+    ];
+    const sample = [
+      '张示例',
+      '13800000001',
+      '女',
+      '1995-06-15',
+      '31',
+      '青年（18-35岁）',
+      '杭州市西湖区文三路100号',
+      '首次到店验光',
+      '',
+      '银卡会员',
+      '',
+      'VIP复购',
+      session.authorizedStores[0]?.name ?? '杭州西湖旗舰店',
+    ];
+    const csv = '\ufeff' + [headers, sample].map((r) => r.map((c) => `"${c}"`).join(',')).join('\r\n');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    a.download = '客户档案导入模板.csv';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+
+  return (
+    <div className="space-y-5">
+      {statusNotice && (
+        <OperationStatus key={statusNotice.key} role={statusNotice.role}>
+          {statusNotice.text}
+        </OperationStatus>
+      )}
+
+      <header className="rounded-[24px] border border-[#D9DDD4] bg-white p-6 md:p-8">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <span className="rounded-2xl bg-[var(--qsl-accent-soft-85)] p-3 text-[#171916]">
+              <Users className="h-6 w-6" />
+            </span>
+            <div>
+              <h1 className="text-2xl font-bold text-[#171916]">客户档案</h1>
+              <p className="mt-1 text-sm text-[#73796F]">
+                按门店查看、录入与维护顾客资料、会员卡信息及标签分类
+              </p>
+            </div>
+          </div>
+          {canCreate && (
+            <button
+              type="button"
+              onClick={openCreateModal}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--qsl-accent)] text-[var(--qsl-accent-ink)] border border-[var(--qsl-accent-border)] hover:bg-[var(--qsl-accent-hover)] font-semibold px-4 py-2.5 text-sm cursor-pointer transition-colors"
+            >
+              <Plus className="h-4 w-4" />
+              <span>新增顾客资料</span>
+            </button>
+          )}
+        </div>
+
+        <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-4">
+          <div className="rounded-2xl bg-[#F8F9F5] p-4">
+            <p className="text-xs text-[#73796F]">当前可见顾客</p>
+            <strong className="mt-2 block text-2xl tabular-nums">
+              {data?.total ?? '—'}
+            </strong>
+          </div>
+          <div className="rounded-2xl bg-[#F8F9F5] p-4">
+            <p className="text-xs text-[#73796F]">筛选结果</p>
+            <strong className="mt-2 block text-2xl tabular-nums">{rows.length}</strong>
+          </div>
+          <div className="rounded-2xl bg-[#F8F9F5] p-4">
+            <p className="text-xs text-[#73796F]">本页人数</p>
+            <strong className="mt-2 block text-2xl tabular-nums">{shown.length}</strong>
+          </div>
+          <div className="rounded-2xl bg-[#F8F9F5] p-4">
+            <p className="text-xs text-[#73796F]">数据来源</p>
+            <strong className="mt-2 block text-sm">
+              {debugMode ? '本地调试演示库' : 'PostgreSQL 顾客档案库'}
+            </strong>
+          </div>
+        </div>
+      </header>
+
+      <div className="flex flex-wrap items-center gap-2 rounded-[20px] border border-[#D9DDD4] bg-white p-4 text-sm">
+        <button
+          type="button"
+          onClick={openCreateModal}
+          disabled={!canCreate}
+          className="rounded-lg bg-[var(--qsl-accent)] text-[var(--qsl-accent-ink)] border border-[var(--qsl-accent-border)] hover:bg-[var(--qsl-accent-hover)] font-medium px-3 py-2 cursor-pointer transition-colors disabled:opacity-40"
+        >
+          <Plus className="mr-1 inline h-4 w-4" />
+          新增
+        </button>
+
+        <button
+          type="button"
+          onClick={() => void handleBatchDelete()}
+          disabled={!selectedIds.length || !canDelete || batchBusy}
+          className="rounded-lg bg-red-600 hover:bg-red-700 px-3 py-2 text-white disabled:opacity-40 cursor-pointer transition-colors inline-flex items-center gap-1"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+          <span>批量删除</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => void handleBatchVisit()}
+          disabled={!selectedIds.length || !canUpdate || batchBusy}
+          className="rounded-lg bg-[var(--qsl-brand-dark)] hover:bg-[var(--qsl-brand-dark-hover)] px-3 py-2 text-white disabled:opacity-40 cursor-pointer transition-colors"
+        >
+          更新到店时间
+        </button>
+
+        <button
+          type="button"
+          onClick={() => showToast('子账号家庭成员绑定将在后续版本开放，可先在编辑页记录「关联账号」')}
+          className="rounded-lg bg-[var(--qsl-brand-dark)] hover:bg-[var(--qsl-brand-dark-hover)] px-3 py-2 text-white cursor-pointer transition-colors"
+        >
+          子账号操作⌄
+        </button>
+
+        <button
+          type="button"
+          onClick={() => showToast('顾客合并需要服务端冲突校验，当前暂未开放')}
+          className="rounded-lg bg-[var(--qsl-brand-dark)] hover:bg-[var(--qsl-brand-dark-hover)] px-3 py-2 text-white cursor-pointer transition-colors"
+        >
+          合并顾客资料
+        </button>
+
+        <span className="flex-1" />
+
+        <button
+          type="button"
+          onClick={downloadImportTemplate}
+          className="rounded-lg border border-[#D9DDD4] hover:border-[#171916] px-3 py-2 cursor-pointer transition-colors"
+        >
+          <Download className="mr-1 inline h-4 w-4" />
+          导入模板下载
+        </button>
+
+        <button
+          type="button"
+          onClick={() => showToast('批量导入解析需完成字段映射校验，当前请点击「新增」录入')}
+          className="rounded-lg border border-[#D9DDD4] hover:border-[#171916] px-3 py-2 cursor-pointer transition-colors"
+        >
+          <Upload className="mr-1 inline h-4 w-4" />
+          导入
+        </button>
+
+        <button
+          type="button"
+          onClick={exportCsv}
+          className="rounded-lg border border-[#D9DDD4] hover:border-[#171916] px-3 py-2 cursor-pointer transition-colors"
+        >
+          <Download className="mr-1 inline h-4 w-4" />
+          导出
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setExtraFilters((v) => !v)}
+          className={`rounded-lg border px-3 py-2 cursor-pointer transition-colors ${
+            extraFilters
+              ? 'border-[#171916] bg-[var(--qsl-accent-soft-55)] font-medium'
+              : 'border-[#D9DDD4] hover:border-[#171916]'
+          }`}
+        >
+          筛选搜索
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setColumnsOpen((v) => !v)}
+          className={`rounded-lg border px-3 py-2 cursor-pointer transition-colors ${
+            columnsOpen
+              ? 'border-[#171916] bg-[var(--qsl-accent-soft-55)] font-medium'
+              : 'border-[#D9DDD4] hover:border-[#171916]'
+          }`}
+        >
+          设置表头
+        </button>
+      </div>
+
+      {extraFilters && (
+        <div className="rounded-xl border border-[#D9DDD4] bg-white px-4 py-3 text-sm text-[#5F645D]">
+          支持按姓名、手机号、会员卡号、导购员、证件号以及标签关键词检索，并可叠加门店、性别和会员等级过滤。
+        </div>
+      )}
+
+      {columnsOpen && (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-[#D9DDD4] bg-white p-4 text-sm">
+          <span className="font-medium text-[#171916]">显示列：</span>
+          {TOGGLEABLE_COLUMNS.map((col) => (
+            <label key={col.key} className="inline-flex items-center gap-1.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={isColVisible(col.key)}
+                onChange={() => toggleColumn(col.key)}
+              />
+              <span>{col.label}</span>
+            </label>
+          ))}
+        </div>
+      )}
+
+      <section className="rounded-[24px] border border-[#D9DDD4] bg-white p-5">
+        <div className="mb-4 flex items-center gap-2 font-semibold text-[#171916]">
+          <SlidersHorizontal className="h-4 w-4" />
+          筛选顾客
+        </div>
+        <div className="grid gap-3 md:grid-cols-4">
+          <label className="relative md:col-span-1">
+            <Search className="absolute left-3 top-3 h-4 w-4 text-[#73796F]" />
+            <input
+              aria-label="搜索顾客"
+              value={keyword}
+              onChange={(e) => {
+                setKeyword(e.target.value);
+                setPage(1);
+              }}
+              placeholder="姓名 / 手机号 / 卡号 / 导购 / 标签"
+              className="h-10 w-full rounded-xl border border-[#D9DDD4] pl-9 pr-3 text-sm outline-none focus:border-[#171916]"
+            />
+          </label>
+          <select
+            aria-label="筛选门店"
+            value={store}
+            onChange={(e) => {
+              setStore(e.target.value);
+              setPage(1);
+            }}
+            className="h-10 rounded-xl border border-[#D9DDD4] px-3 text-sm outline-none focus:border-[#171916]"
+          >
+            <option value="all">全部授权门店</option>
+            {session.authorizedStores.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+          <select
+            aria-label="筛选性别"
+            value={gender}
+            onChange={(e) => {
+              setGender(e.target.value);
+              setPage(1);
+            }}
+            className="h-10 rounded-xl border border-[#D9DDD4] px-3 text-sm outline-none focus:border-[#171916]"
+          >
+            <option value="all">全部性别</option>
+            <option value="男">男</option>
+            <option value="女">女</option>
+          </select>
+          <select
+            aria-label="筛选会员等级"
+            value={tier}
+            onChange={(e) => {
+              setTier(e.target.value);
+              setPage(1);
+            }}
+            className="h-10 rounded-xl border border-[#D9DDD4] px-3 text-sm outline-none focus:border-[#171916]"
+          >
+            <option value="all">全部等级</option>
+            {CUSTOMER_TIER_OPTIONS.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </select>
+        </div>
+      </section>
+
+      <section className="overflow-hidden rounded-[24px] border border-[#D9DDD4] bg-white">
+        <div className="flex items-center justify-between border-b border-[#E7EAE2] px-5 py-4">
+          <h2 className="font-semibold text-[#171916]">顾客列表</h2>
+          <span className="text-sm text-[#73796F]">
+            共 {rows.length} 条 · 已勾选 {selectedIds.length} 条
+          </span>
+        </div>
+
+        {isLoading ? (
+          <div className="p-5">
+            <LoadingSkeleton />
+          </div>
+        ) : isError ? (
+          <div className="p-5">
+            <ErrorState onRetry={() => void refetch()} />
+          </div>
+        ) : (
+          <>
+            <div className="overflow-x-auto qsl-scroll">
+              <table className="w-full min-w-[1680px] text-left text-sm">
+                <thead className="bg-[#F8F9F5] text-[#5F645D]">
+                  <tr>
+                    <th className="whitespace-nowrap px-4 py-3 font-medium">
+                      <input
+                        type="checkbox"
+                        aria-label="全选当前页"
+                        checked={allShownSelected}
+                        onChange={toggleSelectAllShown}
+                      />
+                    </th>
+                    <th className="sticky left-0 z-10 bg-[#F8F9F5] whitespace-nowrap px-4 py-3 font-medium">
+                      顾客姓名
+                    </th>
+                    <th className="whitespace-nowrap px-4 py-3 font-medium">手机号</th>
+                    <th className="whitespace-nowrap px-4 py-3 font-medium">性别</th>
+                    {isColVisible('birthday') && (
+                      <th className="whitespace-nowrap px-4 py-3 font-medium">生日</th>
+                    )}
+                    <th className="whitespace-nowrap px-4 py-3 font-medium">年龄</th>
+                    {isColVisible('ageGroup') && (
+                      <th className="whitespace-nowrap px-4 py-3 font-medium">年龄段</th>
+                    )}
+                    <th className="whitespace-nowrap px-4 py-3 font-medium">会员等级</th>
+                    <th className="whitespace-nowrap px-4 py-3 font-medium">会员卡号</th>
+                    {isColVisible('medicalIdNo') && (
+                      <th className="whitespace-nowrap px-4 py-3 font-medium">医保/证件号</th>
+                    )}
+                    <th className="whitespace-nowrap px-4 py-3 font-medium">注册门店</th>
+                    {isColVisible('relatedAccount') && (
+                      <th className="whitespace-nowrap px-4 py-3 font-medium">关联账号</th>
+                    )}
+                    {isColVisible('source') && (
+                      <th className="whitespace-nowrap px-4 py-3 font-medium">顾客来源</th>
+                    )}
+                    <th className="whitespace-nowrap px-4 py-3 font-medium">导购绑定</th>
+                    {isColVisible('refundableAmount') && (
+                      <th className="whitespace-nowrap px-4 py-3 font-medium">可退金额</th>
+                    )}
+                    {isColVisible('storedValueBalance') && (
+                      <th className="whitespace-nowrap px-4 py-3 font-medium">余额</th>
+                    )}
+                    {isColVisible('pointsBalance') && (
+                      <th className="whitespace-nowrap px-4 py-3 font-medium">积分</th>
+                    )}
+                    {isColVisible('address') && (
+                      <th className="whitespace-nowrap px-4 py-3 font-medium">地址</th>
+                    )}
+                    {isColVisible('customerType') && (
+                      <th className="whitespace-nowrap px-4 py-3 font-medium">类型</th>
+                    )}
+                    {isColVisible('wechatFollowed') && (
+                      <th className="whitespace-nowrap px-4 py-3 font-medium">是否关注公众号</th>
+                    )}
+                    {isColVisible('tags') && (
+                      <th className="whitespace-nowrap px-4 py-3 font-medium">标签</th>
+                    )}
+                    {isColVisible('createdAt') && (
+                      <th className="whitespace-nowrap px-4 py-3 font-medium">注册时间</th>
+                    )}
+                    {isColVisible('remark') && (
+                      <th className="whitespace-nowrap px-4 py-3 font-medium">备注</th>
+                    )}
+                    <th className="whitespace-nowrap px-4 py-3 font-medium">到店次数</th>
+                    <th className="whitespace-nowrap px-4 py-3 font-medium">最近到店</th>
+                    <th className="whitespace-nowrap px-4 py-3 font-medium">操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {shown.map((m) => (
+                    <tr key={m.id} className="border-t border-[#EEF0E9] hover:bg-[#FBFCF7]">
+                      <td className="px-4 py-3.5">
+                        <input
+                          type="checkbox"
+                          aria-label={`选择${m.name}`}
+                          checked={selectedIds.includes(m.id)}
+                          onChange={() =>
+                            setSelectedIds((v) =>
+                              v.includes(m.id) ? v.filter((id) => id !== m.id) : [...v, m.id]
+                            )
+                          }
+                        />
+                      </td>
+                      <td className="sticky left-0 bg-white px-4 py-3.5 font-semibold text-[#171916]">
+                        <div className="flex items-center gap-2.5 whitespace-nowrap">
+                          {m.avatarUrl ? (
+                            <img
+                              src={m.avatarUrl}
+                              alt={m.name}
+                              className="h-8 w-8 rounded-full object-cover border border-[#D9DDD4] shrink-0"
+                            />
+                          ) : (
+                            <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--qsl-accent-soft-85)] text-xs font-bold text-[#171916]">
+                              {m.name.slice(0, 1)}
+                            </span>
+                          )}
+                          <span>{m.name}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3.5 font-mono whitespace-nowrap">{displayPhone(m)}</td>
+                      <td className="px-4 py-3.5 whitespace-nowrap">{m.gender}</td>
+                      {isColVisible('birthday') && (
+                        <td className="px-4 py-3.5 whitespace-nowrap font-mono text-[#5F645D]">
+                          {m.birthday || '—'}
+                        </td>
+                      )}
+                      <td className="px-4 py-3.5 whitespace-nowrap tabular-nums">{m.age} 岁</td>
+                      {isColVisible('ageGroup') && (
+                        <td className="px-4 py-3.5 whitespace-nowrap text-[#5F645D]">
+                          {m.ageGroup || '—'}
+                        </td>
+                      )}
+                      <td className="px-4 py-3.5 whitespace-nowrap">
+                        <span className="inline-flex items-center rounded-md bg-[#F4F6F0] px-2 py-0.5 text-xs font-medium text-[#171916]">
+                          {m.tier}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3.5 font-mono whitespace-nowrap">{m.memberNo}</td>
+                      {isColVisible('medicalIdNo') && (
+                        <td className="px-4 py-3.5 font-mono whitespace-nowrap text-[#5F645D]">
+                          {m.medicalIdNo || '—'}
+                        </td>
+                      )}
+                      <td className="px-4 py-3.5 whitespace-nowrap">{m.storeName}</td>
+                      {isColVisible('relatedAccount') && (
+                        <td className="px-4 py-3.5 whitespace-nowrap text-[#5F645D]">
+                          {m.relatedAccount || '—'}
+                        </td>
+                      )}
+                      {isColVisible('source') && (
+                        <td className="px-4 py-3.5 whitespace-nowrap text-[#5F645D]">
+                          {m.source || '—'}
+                        </td>
+                      )}
+                      <td className="px-4 py-3.5 whitespace-nowrap">{m.guideName || '—'}</td>
+                      {isColVisible('refundableAmount') && (
+                        <td className="px-4 py-3.5 whitespace-nowrap tabular-nums">
+                          {m.refundableAmount}
+                        </td>
+                      )}
+                      {isColVisible('storedValueBalance') && (
+                        <td className="px-4 py-3.5 whitespace-nowrap tabular-nums">
+                          {m.storedValueBalance}
+                        </td>
+                      )}
+                      {isColVisible('pointsBalance') && (
+                        <td className="px-4 py-3.5 whitespace-nowrap tabular-nums">
+                          {m.pointsBalance}
+                        </td>
+                      )}
+                      {isColVisible('address') && (
+                        <td className="px-4 py-3.5 max-w-[200px] truncate text-[#5F645D]" title={m.address}>
+                          {m.address || '—'}
+                        </td>
+                      )}
+                      {isColVisible('customerType') && (
+                        <td className="px-4 py-3.5 whitespace-nowrap text-[#5F645D]">
+                          {m.customerType || '—'}
+                        </td>
+                      )}
+                      {isColVisible('wechatFollowed') && (
+                        <td className="px-4 py-3.5 whitespace-nowrap">
+                          {m.wechatFollowed ? '已关注' : '未关注'}
+                        </td>
+                      )}
+                      {isColVisible('tags') && (
+                        <td className="px-4 py-3.5 whitespace-nowrap">
+                          {m.tags.length > 0 ? (
+                            <div className="flex flex-wrap gap-1">
+                              {m.tags.map((t) => (
+                                <span
+                                  key={t}
+                                  className="inline-block rounded-md bg-[var(--qsl-accent-soft)] border border-[var(--qsl-accent-soft-border)] px-1.5 py-0.5 text-xs text-[#171916]"
+                                >
+                                  {t}
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-[#8A9086]">—</span>
+                          )}
+                        </td>
+                      )}
+                      {isColVisible('createdAt') && (
+                        <td className="px-4 py-3.5 whitespace-nowrap font-mono text-xs text-[#5F645D]">
+                          {m.createdAt ? m.createdAt.slice(0, 10) : '—'}
+                        </td>
+                      )}
+                      {isColVisible('remark') && (
+                        <td className="px-4 py-3.5 max-w-[220px] truncate text-[#5F645D]" title={m.remark}>
+                          {m.remark || '—'}
+                        </td>
+                      )}
+                      <td className="px-4 py-3.5 whitespace-nowrap tabular-nums">{m.visitCount}</td>
+                      <td className="px-4 py-3.5 whitespace-nowrap font-mono">
+                        {m.lastVisitDate || '—'}
+                      </td>
+                      <td className="px-4 py-3.5 whitespace-nowrap">
+                        <button
+                          type="button"
+                          onClick={() => openEditModal(m)}
+                          className="rounded-lg border border-[#D9DDD4] px-3 py-1.5 text-xs font-medium hover:bg-[var(--qsl-accent-soft-85)] hover:border-[#171916] cursor-pointer transition-colors"
+                        >
+                          查看/编辑
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {rows.length === 0 && (
+                <div className="py-12 text-center text-[#73796F]">没有符合条件的顾客</div>
+              )}
+            </div>
+
+            <div className="flex items-center justify-between border-t border-[#E7EAE2] px-5 py-4 text-sm">
+              <span>
+                第 {safePage} / {totalPages} 页
+              </span>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  disabled={safePage <= 1}
+                  onClick={() => setPage(safePage - 1)}
+                  className="rounded-lg border border-[#D9DDD4] px-3 py-1 disabled:opacity-40 cursor-pointer"
+                >
+                  上一页
+                </button>
+                <button
+                  type="button"
+                  disabled={safePage >= totalPages}
+                  onClick={() => setPage(safePage + 1)}
+                  className="rounded-lg border border-[#D9DDD4] px-3 py-1 disabled:opacity-40 cursor-pointer"
+                >
+                  下一页
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+      </section>
+
+      <CustomerFormModal
+        open={modalOpen}
+        mode={modalMode}
+        initialCustomer={editingCustomer}
+        authorizedStores={session.authorizedStores}
+        defaultStoreId={defaultStoreId}
+        defaultGuideName={session.displayName}
+        debugMode={debugMode}
+        tags={tagList}
+        tagsFetching={tagsFetching}
+        onRefreshTags={refetchTags}
+        onClose={closeFormModal}
+        onSaved={handleSaved}
+      />
     </div>
-    {notice&&<div role="status" className="rounded-xl border bg-white px-4 py-2 text-sm">{notice}<button onClick={()=>setNotice('')} className="ml-3">关闭</button></div>}
-    {extraFilters&&<div className="rounded-xl border bg-white p-4 text-sm">可使用下方姓名、手机号、门店、性别与会员等级筛选。</div>}
-    {columnsOpen&&<div className="flex flex-wrap gap-3 rounded-xl border bg-white p-4 text-sm">{['关联账号','顾客来源','可退金额','余额','积分','地址','类型','是否关注公众号','标签','注册时间','备注'].map(h=><label key={h}><input type="checkbox" checked={!hiddenColumns.includes(h)} onChange={()=>setHiddenColumns(v=>v.includes(h)?v.filter(x=>x!==h):[...v,h])}/> {h}</label>)}</div>}
-    <section className="rounded-[24px] border border-[#D9DDD4] bg-white p-5"><div className="mb-4 flex items-center gap-2 font-semibold"><SlidersHorizontal className="h-4 w-4"/>筛选顾客</div><div className="grid gap-3 md:grid-cols-4"><label className="relative md:col-span-1"><Search className="absolute left-3 top-3 h-4 w-4 text-[#73796F]"/><input aria-label="搜索顾客" value={keyword} onChange={e=>{setKeyword(e.target.value);setPage(1)}} placeholder="姓名 / 手机号 / 编号 / 导购" className="h-10 w-full rounded-xl border border-[#D9DDD4] pl-9 pr-3"/></label><select aria-label="筛选门店" value={store} onChange={e=>{setStore(e.target.value);setPage(1)}} className="h-10 rounded-xl border border-[#D9DDD4] px-3"><option value="all">全部授权门店</option>{session.authorizedStores.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select><select aria-label="筛选性别" value={gender} onChange={e=>{setGender(e.target.value);setPage(1)}} className="h-10 rounded-xl border border-[#D9DDD4] px-3"><option value="all">全部性别</option><option>男</option><option>女</option></select><select aria-label="筛选会员等级" value={tier} onChange={e=>{setTier(e.target.value);setPage(1)}} className="h-10 rounded-xl border border-[#D9DDD4] px-3"><option value="all">全部等级</option><option>银卡会员</option><option>金卡会员</option><option>黑卡会员</option><option>青少年护眼会员</option></select></div></section>
-    <section className="overflow-hidden rounded-[24px] border border-[#D9DDD4] bg-white"><div className="flex items-center justify-between border-b border-[#E7EAE2] px-5 py-4"><h2 className="font-semibold">顾客列表</h2><span className="text-sm text-[#73796F]">共 {rows.length} 条 · 横向滚动查看更多列；— 表示当前档案尚无该字段</span></div>{isLoading?<div className="p-5"><LoadingSkeleton/></div>:isError?<div className="p-5"><ErrorState onRetry={()=>void refetch()}/></div>:<><div className="overflow-x-auto"><table className="w-full min-w-[2350px] text-left text-sm"><thead className="bg-[#F8F9F5] text-[#5F645D]"><tr>{['选择','顾客姓名','手机号','性别','年龄','会员等级','会员卡号','注册门店','关联账号','顾客来源','导购绑定','可退金额','余额','积分','地址','类型','是否关注公众号','标签','注册时间','备注','到店次数','最近到店','操作'].map(h=><th key={h} className="whitespace-nowrap px-4 py-3 font-medium">{h}</th>)}</tr></thead><tbody>{shown.map(m=><tr key={m.id} className="border-t border-[#EEF0E9] hover:bg-[#FBFCF7]"><td className="px-4"><input type="checkbox" aria-label={`选择${m.name}`} checked={selectedIds.includes(m.id)} onChange={()=>setSelectedIds(v=>v.includes(m.id)?v.filter(id=>id!==m.id):[...v,m.id])}/></td><td className="sticky left-0 bg-white px-4 py-4 font-semibold">{m.name}</td><td className="px-4 py-4 font-mono">{phone(m.phone)}</td><td className="px-4 py-4">{m.gender}</td><td className="px-4 py-4">{m.age}</td><td className="px-4 py-4">{m.tier}</td><td className="px-4 py-4 font-mono">{m.memberNo}</td><td className="px-4 py-4">{m.storeName}</td><td className="px-4 py-4 text-[#8A9086]">—</td><td className="px-4 py-4 text-[#8A9086]">—</td><td className="px-4 py-4">{m.guideName}</td><td className="px-4 py-4 text-[#8A9086]">—</td><td className="px-4 py-4">{m.storedValueBalance}</td><td className="px-4 py-4">{m.pointsBalance}</td><td className="px-4 py-4 text-[#8A9086]">—</td><td className="px-4 py-4 text-[#8A9086]">—</td><td className="px-4 py-4 text-[#8A9086]">—</td><td className="px-4 py-4">{m.tags.join('、') || '—'}</td><td className="px-4 py-4 text-[#8A9086]">—</td><td className="px-4 py-4 text-[#8A9086]">—</td><td className="px-4 py-4">{m.visitCount}</td><td className="px-4 py-4">{m.lastVisitDate}</td><td className="px-4 py-4"><button type="button" onClick={()=>setSelected(m)} className="rounded-lg border border-[#D9DDD4] px-3 py-1.5 hover:bg-[var(--qsl-accent-soft-85)]">查看详情</button></td></tr>)}</tbody></table>{rows.length===0&&<div className="py-12 text-center text-[#73796F]">没有符合条件的顾客</div>}</div><div className="flex items-center justify-between border-t border-[#E7EAE2] px-5 py-4 text-sm"><span>第 {page} / {Math.max(1,Math.ceil(rows.length/20))} 页</span><div className="flex gap-2"><button disabled={page<=1} onClick={()=>setPage(page-1)} className="rounded-lg border px-3 py-1 disabled:opacity-40">上一页</button><button disabled={page*20>=rows.length} onClick={()=>setPage(page+1)} className="rounded-lg border px-3 py-1 disabled:opacity-40">下一页</button></div></div></>}</section>
-    <Modal open={createOpen} onClose={()=>setCreateOpen(false)} title="新增顾客资料" maxWidthClass="max-w-xl"><form className="grid gap-4" onSubmit={async e=>{e.preventDefault();if(!draft.name.trim()||!/^1\d{10}$/.test(draft.phone)){setNotice('请输入姓名和有效的 11 位手机号');return}const existing=viewRows??data?.items??[];const created=await appRepositories.members.createMember({...draft,name:draft.name.trim(),tier:'银卡会员',storeId:session.currentStoreId==='all'?session.authorizedStores[0]?.id??'store_hq_01':session.currentStoreId,storeName:session.currentStoreName,guideName:session.displayName,tags:[]},dataScope);changeRows([created,...existing]);setCreateOpen(false);setDraft({name:'',phone:'',gender:'女',age:26});setNotice('顾客已新增到演示档案库')}}><input aria-label="顾客姓名" placeholder="顾客姓名" value={draft.name} onChange={e=>setDraft({...draft,name:e.target.value})} className="rounded-xl border p-3"/><input aria-label="手机号" placeholder="手机号" value={draft.phone} onChange={e=>setDraft({...draft,phone:e.target.value})} className="rounded-xl border p-3"/><select aria-label="性别" value={draft.gender} onChange={e=>setDraft({...draft,gender:e.target.value as '男'|'女'})} className="rounded-xl border p-3"><option>女</option><option>男</option></select><input aria-label="年龄" type="number" min="1" max="120" value={draft.age} onChange={e=>setDraft({...draft,age:Number(e.target.value)})} className="rounded-xl border p-3"/><button type="submit" className="rounded-xl bg-[var(--qsl-accent)] text-[var(--qsl-accent-ink)] border border-[var(--qsl-accent-border)] hover:bg-[var(--qsl-accent-hover)] p-3 font-semibold cursor-pointer transition-colors">保存</button></form></Modal>
-    <Modal open={Boolean(selected)} onClose={()=>setSelected(null)} title={`顾客资料 · ${selected?.name??''}`} subtitle={selected?.memberNo} maxWidthClass="max-w-4xl">{selected&&<div className="grid gap-4 sm:grid-cols-2"><div className="rounded-2xl bg-[#F8F9F5] p-5"><h3 className="mb-4 flex items-center gap-2 font-semibold"><UserRoundPlus className="h-4 w-4"/>基本资料</h3>{[['姓名',selected.name],['手机号',phone(selected.phone)],['性别',selected.gender],['年龄',`${selected.age} 岁`],['会员等级',selected.tier]].map(([a,b])=><p key={a} className="flex justify-between border-b border-[#E7EAE2] py-2 text-sm"><span className="text-[#73796F]">{a}</span><span>{b}</span></p>)}</div><div className="rounded-2xl bg-[#F8F9F5] p-5"><h3 className="mb-4 font-semibold">门店与到店</h3>{[['注册门店',selected.storeName],['导购绑定',selected.guideName],['到店次数',String(selected.visitCount)],['最近到店',selected.lastVisitDate],['下次复查',selected.nextReviewDate]].map(([a,b])=><p key={a} className="flex justify-between border-b border-[#E7EAE2] py-2 text-sm"><span className="text-[#73796F]">{a}</span><span>{b}</span></p>)}</div></div>}</Modal>
-  </div>;
+  );
 };

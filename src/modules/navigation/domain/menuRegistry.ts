@@ -172,6 +172,7 @@ const RAW_MODULES: RawNodeInput[] = [
         permission: 'basic.customer.read',
         nodeType: 'page',
         pageKind: 'master_data',
+        implemented: true,
       },
       {
         id: 'basic.staff',

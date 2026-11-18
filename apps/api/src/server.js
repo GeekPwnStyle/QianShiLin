@@ -7,6 +7,7 @@ import { handlePurchase } from './purchase.js';
 import { handleManualInbound } from './manual-inbound.js';
 import { handleSystemAccess } from './system-access.js';
 import { handleNotices } from './notices.js';
+import { handleCustomers } from './customers.js';
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL, max: 10 });
 const cookieName = 'qsl_session';
@@ -121,6 +122,10 @@ const server = http.createServer(async (req, res) => {
     if (path.startsWith('/notices/')) {
       const user = await sessionUser(getToken(req));
       if (await handleNotices({ req, res, url, user, pool, send, readJson })) return;
+    }
+    if (path === '/customers' || path.startsWith('/customers/')) {
+      const user = await sessionUser(getToken(req));
+      if (await handleCustomers({ req, res, url, user, pool, send, readJson, clientIp })) return;
     }
     send(res, 404, { error: 'Not found' });
   } catch (error) {
