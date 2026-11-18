@@ -722,6 +722,13 @@ export async function handleCustomers({ req, res, url, user, pool, send, readJso
       const { rows } = await pool.query('SELECT id, payload, created_at, updated_at FROM customer.detail_records WHERE customer_id=$1 AND section=$2 ORDER BY created_at DESC', [customerId, section]);
       send(res, 200, { items: rows }); return true;
     }
+    if (req.method === 'PATCH') {
+      if (!canUpdate) { send(res,403,{error:'Forbidden'}); return true; }
+      let body; try { body=await readJson(req,65536); } catch { send(res,400,{error:'Invalid JSON'}); return true; }
+      if (!uuidRe.test(body?.recordId) || !body.payload || typeof body.payload !== 'object' || Array.isArray(body.payload) || JSON.stringify(body.payload).length>16000) { send(res,400,{error:'Invalid detail payload'}); return true; }
+      const {rows}=await pool.query('UPDATE customer.detail_records SET payload=$4::jsonb,updated_at=now() WHERE id=$3 AND customer_id=$1 AND section=$2 RETURNING id,payload,created_at,updated_at',[customerId,section,body.recordId,JSON.stringify(body.payload)]);
+      if(!rows.length){send(res,404,{error:'Record not found'});return true;} send(res,200,{item:rows[0]});return true;
+    }
     if (req.method === 'POST') {
       if (!canUpdate) { send(res, 403, { error: 'Forbidden' }); return true; }
       let body; try { body=await readJson(req, 65536); } catch { send(res, 400, {error:'Invalid JSON'}); return true; }
