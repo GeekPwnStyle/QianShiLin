@@ -722,17 +722,29 @@ export async function handleCustomers({ req, res, url, user, pool, send, readJso
       const { rows } = await pool.query('SELECT id, payload, created_at, updated_at FROM customer.detail_records WHERE customer_id=$1 AND section=$2 ORDER BY created_at DESC', [customerId, section]);
       send(res, 200, { items: rows }); return true;
     }
+    const validVision = payload => section !== 'vision' || Object.entries(payload).every(([key, value]) => {
+      if (key.length > 160 || typeof value !== 'string') return false;
+      if (!value.startsWith('data:')) return value.length <= 12000;
+      const match = /^data:(image\/(?:png|jpeg|webp)|application\/json);base64,([A-Za-z0-9+/]+={0,2})$/.exec(value);
+      if (!match || match[2].length % 4 !== 0) return false;
+      const bytes = Buffer.from(match[2], 'base64');
+      if (!bytes.length || bytes.length > 2097152) return false;
+      if (match[1] === 'application/json') {
+        try { JSON.parse(bytes.toString('utf8')); } catch { return false; }
+      }
+      return true;
+    });
     if (req.method === 'PATCH') {
       if (!canUpdate) { send(res,403,{error:'Forbidden'}); return true; }
-      let body; try { body=await readJson(req,65536); } catch { send(res,400,{error:'Invalid JSON'}); return true; }
-      if (!uuidRe.test(body?.recordId) || !body.payload || typeof body.payload !== 'object' || Array.isArray(body.payload) || JSON.stringify(body.payload).length>16000) { send(res,400,{error:'Invalid detail payload'}); return true; }
+      let body; try { body=await readJson(req,section === 'vision' ? 12582912 : 65536); } catch { send(res,400,{error:'Invalid JSON'}); return true; }
+      if (!uuidRe.test(body?.recordId) || !body.payload || typeof body.payload !== 'object' || Array.isArray(body.payload) || !validVision(body.payload) || JSON.stringify(body.payload).length>(section === 'vision' ? 12000000 : 16000)) { send(res,400,{error:'Invalid detail payload'}); return true; }
       const {rows}=await pool.query('UPDATE customer.detail_records SET payload=$4::jsonb,updated_at=now() WHERE id=$3 AND customer_id=$1 AND section=$2 RETURNING id,payload,created_at,updated_at',[customerId,section,body.recordId,JSON.stringify(body.payload)]);
       if(!rows.length){send(res,404,{error:'Record not found'});return true;} send(res,200,{item:rows[0]});return true;
     }
     if (req.method === 'POST') {
       if (!canUpdate) { send(res, 403, { error: 'Forbidden' }); return true; }
-      let body; try { body=await readJson(req, 65536); } catch { send(res, 400, {error:'Invalid JSON'}); return true; }
-      if (!body || typeof body !== 'object' || Array.isArray(body) || JSON.stringify(body).length > 16000) { send(res,400,{error:'Invalid detail payload'}); return true; }
+      let body; try { body=await readJson(req, section === 'vision' ? 12582912 : 65536); } catch { send(res, 400, {error:'Invalid JSON'}); return true; }
+      if (!body || typeof body !== 'object' || Array.isArray(body) || !validVision(body) || JSON.stringify(body).length > (section === 'vision' ? 12000000 : 16000)) { send(res,400,{error:'Invalid detail payload'}); return true; }
       const { rows } = await pool.query('INSERT INTO customer.detail_records(customer_id,section,payload,created_by) VALUES($1,$2,$3::jsonb,$4) RETURNING id,payload,created_at,updated_at', [customerId,section,JSON.stringify(body),user.id]);
       send(res,201,{item:rows[0]}); return true;
     }
