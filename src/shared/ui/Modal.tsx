@@ -9,6 +9,7 @@ interface ModalProps {
   subtitle?: string;
   maxWidthClass?: string;
   fixedViewportSize?: boolean;
+  frosted?: boolean;
   children: React.ReactNode;
   footer?: React.ReactNode;
 }
@@ -20,6 +21,7 @@ export const Modal: React.FC<ModalProps> = ({
   subtitle,
   maxWidthClass = 'max-w-2xl',
   fixedViewportSize = false,
+  frosted = false,
   children,
   footer,
 }) => {
@@ -110,6 +112,11 @@ export const Modal: React.FC<ModalProps> = ({
       <div
         ref={containerRef}
         tabIndex={-1}
+        style={frosted ? {
+          background: 'rgba(255, 255, 255, 0.93)',
+          backdropFilter: 'blur(12px) saturate(110%)',
+          WebkitBackdropFilter: 'blur(12px) saturate(110%)',
+        } : undefined}
         className={`qsl-font-main qsl-modal-panel rounded-[24px] flex flex-col overflow-hidden outline-none ${
           fixedViewportSize ? 'w-[80dvw] h-[80dvh]' : `w-full ${maxWidthClass} max-h-[calc(100dvh-2rem)]`
         }`}

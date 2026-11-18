@@ -764,6 +764,7 @@ export const TopHeader: React.FC = () => {
         title="个人信息与角色详情"
         subtitle={`当前登录账号：${session.username}`}
         maxWidthClass="max-w-5xl"
+        frosted
       >
         <div className="space-y-5 text-[15px]">
           {/* Avatar Editor + Basic Account Details */}
