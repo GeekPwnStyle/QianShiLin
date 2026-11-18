@@ -6,6 +6,7 @@ import { PRESET_SESSIONS } from '@/src/modules/auth/domain/identity';
 import { Modal } from '@/src/shared/ui/Modal';
 import { OperationStatus } from '@/src/shared/ui/OperationStatus';
 import { PaginationBar } from '@/src/shared/ui/PaginationBar';
+import { Select } from '@/src/shared/ui/Select';
 
 const columns = [
   ['name', '员工姓名'],
@@ -53,7 +54,8 @@ type StaffListResponse = {
 };
 
 const DEBUG_STAFF_KEY = 'qsl_debug_staff_v1';
-const input = 'rounded-lg border border-[#D9DDD4] bg-white px-2.5 py-1.5 outline-none focus:border-[var(--qsl-accent-border)]';
+const input = 'h-10 rounded-full border border-[#D9DDD4] bg-white px-4 text-sm outline-none transition-colors hover:border-[#9DA498] focus:border-[#171916] focus:ring-2 focus:ring-[#171916]/[0.08]';
+const toolbarInput = 'h-9 rounded-lg border border-[#D9DDD4] bg-white px-3 text-sm outline-none focus:border-[var(--qsl-accent-border)]';
 const button = 'inline-flex items-center gap-1.5 rounded-lg border border-[#D9DDD4] bg-white px-3 py-1.5 font-medium text-[#171916] hover:bg-[#F5F7F2] disabled:opacity-40 cursor-pointer';
 const primary = 'inline-flex items-center gap-1.5 rounded-lg border border-[var(--qsl-accent-border)] bg-[var(--qsl-accent)] px-3 py-1.5 font-medium text-[var(--qsl-accent-ink)] hover:bg-[var(--qsl-accent-hover)] disabled:opacity-40 cursor-pointer';
 const api = `${import.meta.env.BASE_URL}api/staff`;
@@ -280,17 +282,16 @@ export function StaffArchivePage() {
   }
 
   function openCreateModal() {
-    const defaultRole = roleOptions.find((r) => r.id === 'role_store_guide') ?? roleOptions[0];
     setStatus(undefined);
     setEditing({
       id: '',
       store_id: store || stores[0]?.id || '',
-      role_id: defaultRole?.id ?? '',
+      role_id: '',
       createUserAccount: canManageUsers,
       newUsername: '',
       newPassword: '',
       data: {
-        role: defaultRole?.name ?? '',
+        role: '',
         loginStatus: '正常',
       },
     });
@@ -316,6 +317,14 @@ export function StaffArchivePage() {
   function submitEditing(event: React.FormEvent) {
     event.preventDefault();
     if (!editing) return;
+    if (!editing.store_id) {
+      setStatus({ text: '请选择所属门店', error: true });
+      return;
+    }
+    if (!editing.role_id) {
+      setStatus({ text: '请选择员工角色', error: true });
+      return;
+    }
     const isCreate = !editing.id;
     const payload = {
       id: editing.id,
@@ -392,7 +401,7 @@ export function StaffArchivePage() {
             导出
           </button>
           <input
-            className={input + ' min-w-0'}
+            className={toolbarInput + ' min-w-0'}
             aria-label="模糊搜索"
             placeholder="姓名 / 账号 / 部门 / 电话"
             value={search}
@@ -416,39 +425,39 @@ export function StaffArchivePage() {
       </div>
 
       {filters && (
-        <div className="flex flex-wrap gap-2 border-b border-[#E5E8E0] bg-[#FAFBF8] p-3">
-          <select
-            aria-label="门店"
-            className={input}
+        <div className="flex flex-wrap items-center gap-2.5 border-b border-[#E5E8E0] bg-[#FAFBF8] p-3">
+          <Select
+            variant="compact"
+            ariaLabel="门店筛选"
+            placeholder="全部授权门店"
+            className="w-48"
+            buttonClassName="w-full rounded-full px-3.5 bg-white"
             value={store}
-            onChange={(event) => {
-              setStore(event.target.value);
+            onChange={(next) => {
+              setStore(next);
               setPage(1);
             }}
-          >
-            <option value="">全部授权门店</option>
-            {stores.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.name}
-              </option>
-            ))}
-          </select>
-          <select
-            aria-label="角色"
-            className={input}
+            options={[
+              { value: '', label: '全部授权门店' },
+              ...stores.map((item) => ({ value: item.id, label: item.name })),
+            ]}
+          />
+          <Select
+            variant="compact"
+            ariaLabel="角色筛选"
+            placeholder="全部角色"
+            className="w-48"
+            buttonClassName="w-full rounded-full px-3.5 bg-white"
             value={roleFilter}
-            onChange={(event) => {
-              setRoleFilter(event.target.value);
+            onChange={(next) => {
+              setRoleFilter(next);
               setPage(1);
             }}
-          >
-            <option value="">全部角色</option>
-            {filterRoleNames.map((value) => (
-              <option key={value} value={value}>
-                {value}
-              </option>
-            ))}
-          </select>
+            options={[
+              { value: '', label: '全部角色' },
+              ...filterRoleNames.map((value) => ({ value, label: value })),
+            ]}
+          />
         </div>
       )}
 
@@ -609,33 +618,28 @@ export function StaffArchivePage() {
             if (!busy) setEditing(null);
           }}
         >
-          <form className="grid gap-3 sm:grid-cols-2" onSubmit={submitEditing}>
-            <label className="grid gap-1">
+          <form className="grid gap-3.5 sm:grid-cols-2" onSubmit={submitEditing}>
+            <div className="grid gap-1.5">
               <span className="text-xs font-medium text-[#4A4F47]">所属门店 *</span>
-              <select
-                required
-                className={input}
+              <Select
+                variant="arc"
+                ariaLabel="所属门店"
+                placeholder="请选择所属门店"
                 value={editing.store_id}
-                onChange={(event) => setEditing({ ...editing, store_id: event.target.value })}
-              >
-                {stores.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.name}
-                  </option>
-                ))}
-              </select>
-            </label>
+                onChange={(nextStore) => setEditing({ ...editing, store_id: nextStore })}
+                options={stores.map((item) => ({ value: item.id, label: item.name }))}
+              />
+            </div>
 
-            <label className="grid gap-1">
+            <div className="grid gap-1.5">
               <span className="text-xs font-medium text-[#4A4F47]">员工角色 *</span>
-              <select
-                required
-                aria-label="员工角色"
-                className={input}
+              <Select
+                variant="arc"
+                ariaLabel="员工角色"
+                placeholder="请选择员工角色"
                 value={editing.role_id ?? ''}
                 disabled={editing.username === 'admin' || (Boolean(editing.user_id) && !canManageUsers)}
-                onChange={(event) => {
-                  const nextRoleId = event.target.value;
+                onChange={(nextRoleId) => {
                   const matched = roleOptions.find((r) => r.id === nextRoleId);
                   setEditing({
                     ...editing,
@@ -643,56 +647,78 @@ export function StaffArchivePage() {
                     data: { ...editing.data, role: matched?.name ?? '' },
                   });
                 }}
-              >
-                <option value="">请选择员工角色</option>
-                {roleOptions.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.name}
-                  </option>
-                ))}
-              </select>
+                options={roleOptions.map((r) => ({
+                  value: r.id,
+                  label: r.name,
+                  description: r.description,
+                }))}
+              />
               {editing.username === 'admin' && (
                 <span className="text-[11px] text-[#73796F]">超级管理员角色受系统基线保护</span>
               )}
               {Boolean(editing.user_id) && editing.username !== 'admin' && !canManageUsers && (
                 <span className="text-[11px] text-[#73796F]">调整已绑定账号的角色需具备「用户权限管理」权限</span>
               )}
-            </label>
+            </div>
 
             {columns
               .filter(([key]) => key !== 'role')
               .map(([key, label]) => {
                 const setVal = (value: string) =>
                   setEditing({ ...editing, data: { ...editing.data, [key]: value } });
+
+                if (key === 'gender') {
+                  return (
+                    <div key={key} className="grid gap-1.5">
+                      <span className="text-xs font-medium text-[#4A4F47]">{label}</span>
+                      <Select
+                        variant="arc"
+                        ariaLabel="性别"
+                        placeholder="请选择性别"
+                        value={editing.data.gender ?? ''}
+                        onChange={setVal}
+                        options={[
+                          { value: '男', label: '男' },
+                          { value: '女', label: '女' },
+                        ]}
+                      />
+                    </div>
+                  );
+                }
+
+                if (key === 'loginStatus') {
+                  return (
+                    <div key={key} className="grid gap-1.5">
+                      <span className="text-xs font-medium text-[#4A4F47]">{label}</span>
+                      <Select
+                        variant="arc"
+                        ariaLabel="登录限制备注"
+                        placeholder="请选择登录状态"
+                        value={editing.data.loginStatus ?? ''}
+                        disabled={editing.username === 'admin'}
+                        onChange={setVal}
+                        options={[
+                          { value: '正常', label: '正常' },
+                          { value: '限制', label: '限制' },
+                        ]}
+                      />
+                    </div>
+                  );
+                }
+
                 return (
-                  <label key={key} className="grid gap-1">
+                  <label key={key} className="grid gap-1.5">
                     <span className="text-xs font-medium text-[#4A4F47]">
                       {label}
                       {key === 'name' ? ' *' : ''}
                     </span>
-                    {key === 'gender' || key === 'loginStatus' ? (
-                      <select
-                        className={input}
-                        value={editing.data[key] ?? ''}
-                        disabled={key === 'loginStatus' && editing.username === 'admin'}
-                        onChange={(event) => setVal(event.target.value)}
-                      >
-                        {key === 'gender' && <option value="">未填写</option>}
-                        {(key === 'gender' ? ['男', '女'] : ['正常', '限制']).map((value) => (
-                          <option key={value} value={value}>
-                            {value}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <input
-                        className={input}
-                        required={key === 'name'}
-                        maxLength={300}
-                        value={editing.data[key] ?? ''}
-                        onChange={(event) => setVal(event.target.value)}
-                      />
-                    )}
+                    <input
+                      className={input}
+                      required={key === 'name'}
+                      maxLength={300}
+                      value={editing.data[key] ?? ''}
+                      onChange={(event) => setVal(event.target.value)}
+                    />
                   </label>
                 );
               })}
@@ -818,19 +844,15 @@ export function StaffArchivePage() {
             同步选中的 {selected.length} 条档案。同一来源已同步时更新目标门店档案。
           </p>
           <div className="flex flex-wrap items-center gap-2">
-            <select
-              aria-label="目标门店"
-              className={input}
+            <Select
+              variant="arc"
+              ariaLabel="目标门店"
+              placeholder="请选择目标门店"
+              className="w-60"
               value={target}
-              onChange={(event) => setTarget(event.target.value)}
-            >
-              <option value="">请选择目标门店</option>
-              {stores.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name}
-                </option>
-              ))}
-            </select>
+              onChange={setTarget}
+              options={stores.map((item) => ({ value: item.id, label: item.name }))}
+            />
             <button
               type="button"
               className={primary}

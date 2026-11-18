@@ -15,7 +15,7 @@ export interface SelectProps {
   options: SelectOption[];
   placeholder?: string;
   disabled?: boolean;
-  variant?: 'default' | 'white' | 'pill' | 'compact';
+  variant?: 'default' | 'white' | 'pill' | 'compact' | 'arc';
   prefixIcon?: React.ReactNode;
   ariaLabel?: string;
   id?: string;
@@ -43,6 +43,8 @@ const VARIANT_CLASSES: Record<NonNullable<SelectProps['variant']>, string> = {
     'h-9 px-3 rounded-full bg-[#F8F9F5] border border-[#D9DDD4] text-[13px] font-medium text-[#171916] hover:border-[#B8BEB2] hover:bg-white',
   compact:
     'h-9 px-2.5 rounded-[9px] bg-[#F8F9F5] border border-[#D9DDD4] text-[14px] text-[#171916] hover:border-[#B8BEB2]',
+  arc:
+    'w-full h-10 px-4 rounded-full bg-white border border-[#D9DDD4] text-[14px] text-[#171916] hover:border-[#9DA498] shadow-[0_1px_2px_rgba(23,25,22,0.03)]',
 };
 
 export const Select: React.FC<SelectProps> = ({
@@ -311,7 +313,7 @@ export const Select: React.FC<SelectProps> = ({
               width: `${menuPos.width}px`,
               maxHeight: `${menuPos.maxHeight}px`,
             }}
-            className={`z-[120] qsl-glass-popover rounded-[14px] p-1.5 overflow-y-auto qsl-scroll ${
+            className={`z-[120] qsl-glass-popover rounded-[16px] border border-[#171916]/[0.08] p-1.5 shadow-[0_16px_38px_-12px_rgba(23,25,22,0.18)] overflow-y-auto qsl-scroll ${
               menuPos.placement === 'top' ? 'origin-bottom' : 'origin-top'
             } ${popoverClassName}`}
           >
