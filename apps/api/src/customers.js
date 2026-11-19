@@ -1,3 +1,4 @@
+import { customerListCache } from './query-cache.js';
 import { randomBytes } from 'node:crypto';
 
 const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -826,16 +827,23 @@ export async function handleCustomers({ req, res, url, user, pool, send, readJso
         )
     `;
 
-    const countRes = await pool.query(`SELECT count(*)::int AS total FROM customer.profiles ${where}`, values);
-    const { rows } = await pool.query(
-      `SELECT * FROM customer.profiles ${where}
-       ORDER BY created_at DESC, id DESC
-       LIMIT $6 OFFSET $7`,
-      [...values, pageSize, (page - 1) * pageSize]
-    );
+    const cacheKey = JSON.stringify([values, page, pageSize]);
+    const result = await customerListCache.load(cacheKey, async () => {
+      const countRes = await pool.query(`SELECT count(*)::int AS total FROM customer.profiles ${where}`, values);
+      // Page over narrow indexed keys before fetching wide customer rows.
+      const { rows } = await pool.query(
+        `SELECT p.* FROM (
+           SELECT id, created_at FROM customer.profiles ${where}
+           ORDER BY created_at DESC, id DESC LIMIT $6 OFFSET $7
+         ) page JOIN customer.profiles p ON p.id = page.id
+         ORDER BY page.created_at DESC, page.id DESC`,
+        [...values, pageSize, (page - 1) * pageSize]
+      );
+      return { rows, total: countRes.rows[0]?.total ?? 0 };
+    });
     send(res, 200, {
-      items: rows.map((row) => shapeCustomer(row, allowPlaintext)),
-      total: countRes.rows[0]?.total ?? 0,
+      items: result.rows.map((row) => shapeCustomer(row, allowPlaintext)),
+      total: result.total,
       page,
       pageSize,
     });

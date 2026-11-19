@@ -1,3 +1,4 @@
+import { customerListCache } from './query-cache.js';
 import { handleAccount, ensureAccountSchema } from './account.js';
 import http from 'node:http';
 import { randomBytes, createHash } from 'node:crypto';
@@ -147,7 +148,13 @@ const server = http.createServer(async (req, res) => {
     }
     if (path === '/customers' || path.startsWith('/customers/')) {
       const user = await sessionUser(getToken(req));
-      if (await handleCustomers({ req, res, url, user, pool, send, readJson, clientIp })) return;
+      const mutating = !['GET', 'HEAD', 'OPTIONS'].includes(req.method);
+      if (mutating) customerListCache.clear();
+      try {
+        if (await handleCustomers({ req, res, url, user, pool, send, readJson, clientIp })) return;
+      } finally {
+        if (mutating) customerListCache.clear();
+      }
     }
     if (
       path === '/products' || path.startsWith('/products/') ||
