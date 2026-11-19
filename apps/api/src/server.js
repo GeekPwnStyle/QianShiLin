@@ -11,7 +11,22 @@ import { handleStaff } from './staff.js';
 import { handleCustomers } from './customers.js';
 import { handleProducts } from './products.js';
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL, max: 10 });
+const positiveInt = (name, fallback) => {
+  const value = Number(process.env[name] ?? fallback);
+  if (!Number.isSafeInteger(value) || value < 1) throw new Error(`Invalid ${name}`);
+  return value;
+};
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  max: positiveInt('QSL_DB_POOL_MAX', 10),
+  connectionTimeoutMillis: positiveInt('QSL_DB_WAIT_MS', 2000),
+  statement_timeout: positiveInt('QSL_DB_STATEMENT_MS', 15000),
+  lock_timeout: positiveInt('QSL_DB_LOCK_MS', 3000),
+  idle_in_transaction_session_timeout: 15000,
+});
+pool.on('error', error => console.error('Database idle connection error', error.code));
+const maxInFlight = positiveInt('QSL_MAX_IN_FLIGHT', 100);
+let inFlight = 0;
 const cookieName = 'qsl_session';
 const hash = value => createHash('sha256').update(value).digest('hex');
 const clientIp = req => req.headers['x-forwarded-for']?.split(',')[0]?.trim() ?? req.socket.remoteAddress ?? null;
@@ -51,6 +66,8 @@ const sessionUser = async token => {
   return rows[0] ?? null;
 };
 const server = http.createServer(async (req, res) => {
+  if (inFlight >= maxInFlight) return send(res, 503, { error: 'Service busy; retry later' }, { 'Retry-After': '2' });
+  inFlight++;
   try {
     const url = new URL(req.url, 'http://localhost');
     const path = url.pathname;
@@ -147,8 +164,14 @@ const server = http.createServer(async (req, res) => {
     if (error instanceof SyntaxError || error.message === 'Request too large') {
       return send(res, 400, { error: 'Invalid JSON request' });
     }
+    if (['57014', '55P03', '53300'].includes(error.code) || /timeout|connection terminated/i.test(error.message)) {
+      console.error('Database request unavailable', error.code ?? 'timeout');
+      return send(res, 503, { error: 'Service busy; retry later' }, { 'Retry-After': '2' });
+    }
     console.error(error);
     send(res, 500, { error: 'Server error' });
+  } finally {
+    inFlight--;
   }
 });
 server.listen(3001, '0.0.0.0');

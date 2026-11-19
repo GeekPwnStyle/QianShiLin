@@ -63,11 +63,17 @@ export async function handleManualInbound({ req, res, url, user, pool, send, rea
         VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
         [draftNo,body.storeId,body.supplierId,body.businessDate,body.expectedReceiptDate || null,
           body.settlementType,clean(body.externalOrderNo,120),clean(body.note,1000),clean(body.supplierNote,1000),body.freight,user.id]);
-      for (const line of lines) await client.query(`INSERT INTO purchase.manual_inbound_lines
+      const lineValues = [];
+      const placeholders = lines.map(line => {
+        const offset = lineValues.length;
+        lineValues.push(rows[0].id, clean(line.productName,240), clean(line.categoryName,120),
+          clean(line.brand,120), clean(line.series,120), clean(line.model,120),
+          line.purchasePrice, line.retailPrice, line.quantity, clean(line.note,500));
+        return '(' + Array.from({length:10}, (_,i) => '$' + (offset+i+1)).join(',') + ')';
+      });
+      await client.query(`INSERT INTO purchase.manual_inbound_lines
         (draft_id,product_name,category_name,brand,series,model,purchase_price,retail_price,quantity,note)
-        VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
-        [rows[0].id,clean(line.productName,240),clean(line.categoryName,120),clean(line.brand,120),
-          clean(line.series,120),clean(line.model,120),line.purchasePrice,line.retailPrice,line.quantity,clean(line.note,500)]);
+        VALUES ${placeholders.join(',')}`, lineValues);
       await client.query('COMMIT');
       send(res, 201, { ...rows[0], lines }); return true;
     } catch (error) {
