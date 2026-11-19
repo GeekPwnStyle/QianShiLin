@@ -69,4 +69,8 @@ printf 'QIANSHILIN_IMAGE=%s\nQIANSHILIN_API_IMAGE=%s\nQIANSHILIN_DB_PASSWORD=%s\
 chmod 600 "$TEMP_STATE"
 mv -f -- "$TEMP_STATE" "$STATE_FILE"
 trap - EXIT
+# Cleanup is permitted only after a healthy deployment and successful state write.
+if ! bash "$PROJECT_DIR/script/cleanup-old-releases.sh" "$IMAGE" "$API_IMAGE"; then
+  echo "Deployment succeeded; some old resources could not be cleaned up." >&2
+fi
 printf 'Deployed frontend: %s\nDeployed API: %s\nURL: https://zhiarch.org/qian/\nTo push: bash script/release.sh push\n' "$IMAGE" "$API_IMAGE"

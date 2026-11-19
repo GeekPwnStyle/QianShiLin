@@ -1,7 +1,7 @@
 import os,pathlib,subprocess,tempfile
 source=pathlib.Path('script/release.sh').read_text()
 with tempfile.TemporaryDirectory() as temp:
- root=pathlib.Path(temp);(root/'script').mkdir();(root/'script/release.sh').write_text(source);(root/'bin').mkdir();(root/'apps/api').mkdir(parents=True)
+ root=pathlib.Path(temp);(root/'script').mkdir();(root/'script/release.sh').write_text(source);(root/'script/cleanup-old-releases.sh').write_text('#!/bin/bash\necho cleanup >> "$TEST_DOCKER_LOG"\n');(root/'bin').mkdir();(root/'apps/api').mkdir(parents=True)
  docker=root/'bin/docker';docker.write_text('#!/bin/bash\nprintf "%s\\n" "$*" >> "$TEST_DOCKER_LOG"\nif [[ "${TEST_FAIL_UP:-}" == 1 && "$*" == *"up -d"* ]]; then exit 1; fi\n');docker.chmod(0o755)
  state=root/'.env.deploy';state.write_text('QIANSHILIN_IMAGE=previous\nQIANSHILIN_DB_PASSWORD=synthetic-test-only\n')
  env={**os.environ,'PATH':str(root/'bin')+':'+os.environ['PATH'],'TEST_DOCKER_LOG':str(root/'docker.log')}
@@ -11,6 +11,6 @@ with tempfile.TemporaryDirectory() as temp:
  logs=(root/'docker.log').read_text();assert 'build -t '+web in logs and 'build -t '+api in logs;assert 'up -d --no-build --wait' in logs
  r=run('push');assert r.returncode==0,r.stderr
  logs=(root/'docker.log').read_text();assert 'push '+web in logs and 'push '+api in logs
- before=state.read_text();r=run('deploy',{'TEST_FAIL_UP':'1'});assert r.returncode!=0;assert state.read_text()==before
+ before=state.read_text();cleanup_count=(root/'docker.log').read_text().count('cleanup');r=run('deploy',{'TEST_FAIL_UP':'1'});assert r.returncode!=0;assert state.read_text()==before;assert (root/'docker.log').read_text().count('cleanup')==cleanup_count
  state.write_text(before.replace(api,'registry.nat.gmaigc.cn/zhiarch/images/qianshilin-api-v1.0.0:WRONG'));assert run('push').returncode!=0
  print('PASS paired builds, compose no-rebuild, paired push, failed deploy state preservation, mismatched pair rejection')

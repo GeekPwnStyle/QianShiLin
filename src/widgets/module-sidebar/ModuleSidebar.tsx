@@ -173,7 +173,7 @@ export const ModuleSidebar: React.FC = () => {
             value={moduleSearch}
             onChange={(e) => setModuleSearch(e.target.value)}
             placeholder="过滤子菜单"
-            className="w-full h-9 pl-9 pr-3 rounded-full bg-white text-[14px] text-[#171916] placeholder:text-[#73796F] outline-none focus:ring-1 focus:ring-[#171916]"
+            className="w-full h-9 pl-9 pr-3 rounded-full border border-[#D9DDD4] bg-white text-[14px] text-[#171916] placeholder:text-[#73796F] outline-none transition-colors hover:border-[#9DA498] focus:border-[var(--qsl-accent-border)] focus:ring-1 focus:ring-[var(--qsl-accent-border)]"
           />
         </div>
       </div>

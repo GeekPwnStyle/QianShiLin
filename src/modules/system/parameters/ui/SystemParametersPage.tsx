@@ -546,16 +546,16 @@ export const SystemParametersPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-3">
       <SessionPolicySettings />
       {/* Inline Notice Banner */}
       {noticeText && (
         <OperationStatus>{noticeText}</OperationStatus>
       )}
 
-      <section className="rounded-[22px] border border-[#D9DDD4] bg-white p-4 sm:p-5">
+      <section className="rounded-[22px] border border-[#D9DDD4] bg-white px-4 py-3 sm:px-5">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-base font-semibold">界面字号</h2>
+          <div className="flex items-center gap-2"><h2 className="text-base font-semibold">界面字号</h2><HelpTooltip ariaLabel="查看界面字号说明" content="分别调整顶部导航、侧边菜单和主视图区字号。更改立即生效，并保存在当前浏览器；不影响其他用户或设备。点击恢复默认字号可还原。" /></div>
           <button type="button" className="rounded-lg border px-3 py-1.5 text-sm" onClick={() => {
             setNoticeText(saveFonts(defaultFontSizes) ? '界面字号已恢复默认' : '字号已应用，本浏览器无法保存设置');
           }}>恢复默认字号</button>
@@ -570,7 +570,6 @@ export const SystemParametersPage: React.FC = () => {
             </select>
           </label>)}
         </div>
-        <p className="mt-3 text-xs text-[#73796F]">更改立即生效，并保存在当前浏览器。</p>
       </section>
 
       {/* Top Toolbar: Store Scope + Search + Save / Sync Actions */}
