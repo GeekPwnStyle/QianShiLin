@@ -332,8 +332,8 @@ export function StaffArchivePage() {
       roleId: editing.role_id,
       data: editing.data,
       createUserAccount: Boolean(!editing.user_id && editing.createUserAccount),
-      username: editing.newUsername?.trim() || '',
-      password: editing.newPassword || '',
+      username: String(editing.data.name||'').trim(),
+      password: 'Admin@1234',
     };
     void mutate('', isCreate ? 'POST' : 'PATCH', payload, '已保存');
   }
@@ -750,8 +750,8 @@ export function StaffArchivePage() {
                       <input
                         required
                         className={input + ' text-sm'}
-                        placeholder="3-32位字母/数字/下划线/点号"
-                        value={editing.newUsername ?? ''}
+                        placeholder="与真实姓名一致" readOnly
+                        value={String(editing.data.name||'')}
                         onChange={(event) =>
                           setEditing({ ...editing, newUsername: event.target.value })
                         }
@@ -762,8 +762,8 @@ export function StaffArchivePage() {
                       <input
                         type="password"
                         className={input + ' text-sm'}
-                        placeholder="留空则默认 Qsl@123456"
-                        value={editing.newPassword ?? ''}
+                        placeholder="统一初始密码 Admin@1234"
+                        value="Admin@1234" readOnly
                         onChange={(event) =>
                           setEditing({ ...editing, newPassword: event.target.value })
                         }

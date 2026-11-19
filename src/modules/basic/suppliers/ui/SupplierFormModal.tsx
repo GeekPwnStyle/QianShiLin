@@ -314,10 +314,10 @@ export const SupplierFormModal: React.FC<SupplierFormModalProps> = ({
       return;
     }
 
-    const trimmedUsername = form.login_username.trim();
-    const trimmedPassword = form.login_password.trim();
-    if (mode === 'create' && trimmedUsername && !/^[a-zA-Z0-9_.-]{3,32}$/.test(trimmedUsername)) {
-      setError('登录账号 ID 需为 3-32 位字母、数字、下划线或点号');
+    const trimmedUsername = mode === 'create' ? (form.contact||form.name).trim() : form.login_username.trim();
+    const trimmedPassword = mode === 'create' ? 'Admin@1234' : form.login_password.trim();
+    if (mode === 'create' && trimmedUsername && !/^[\p{L}\p{N}·._ -]{1,64}$/u.test(trimmedUsername)) {
+      setError('登录账号使用联系人真实姓名（最多64字）');
       return;
     }
     if (trimmedPassword && (trimmedPassword.length < 6 || trimmedPassword.length > 64)) {
@@ -663,8 +663,9 @@ export const SupplierFormModal: React.FC<SupplierFormModalProps> = ({
               <input
                 type="text"
                 className={fieldInputClass + ' font-mono'}
-                placeholder="留空自动生成唯一账号（如 sup_xxxx）"
-                value={form.login_username}
+                placeholder="使用联系人真实姓名"
+                readOnly
+                value={form.contact||form.name}
                 onChange={(e) => setForm((p) => ({ ...p, login_username: e.target.value }))}
               />
             </label>
@@ -689,8 +690,9 @@ export const SupplierFormModal: React.FC<SupplierFormModalProps> = ({
               type="password"
               autoComplete="new-password"
               className={fieldInputClass}
-              placeholder={mode === 'create' ? '留空默认 Qsl@123456' : '留空则保持原密码不变'}
-              value={form.login_password}
+              placeholder={mode === 'create' ? '统一初始密码 Admin@1234' : '留空则保持原密码不变'}
+              readOnly={mode === 'create'}
+              value={mode === 'create' ? 'Admin@1234' : form.login_password}
               onChange={(e) => setForm((p) => ({ ...p, login_password: e.target.value }))}
             />
           </label>

@@ -2,7 +2,7 @@ import { storeIds as ALL_STORE_IDS } from './stores.js';
 const DATA_IMAGE_URL_RE = /^data:image\/(png|jpeg|jpg|webp|gif);base64,[A-Za-z0-9+/=]+$/i;
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const dateRe = /^\d{4}-\d{2}-\d{2}$/;
-const usernameRe = /^[a-zA-Z0-9_.-]{3,32}$/;
+const usernameRe = /^[\p{L}\p{N}·._ -]{1,64}$/u;
 
 
 
@@ -56,7 +56,7 @@ async function resolveUniqueSupplierUsername(client, preferredUsername, supplier
   if (preferredUsername) {
     const clean = preferredUsername.trim().toLowerCase();
     if (!usernameRe.test(clean)) {
-      throw new Error('登录账号 ID 需为 3-32 位字母、数字、下划线或点号');
+      throw new Error('登录账号需使用真实姓名或名称（1～64字）');
     }
     const { rows } = await client.query(
       `SELECT 1 FROM identity.users WHERE lower(username) = lower($1) LIMIT 1`,
@@ -82,8 +82,8 @@ async function resolveUniqueSupplierUsername(client, preferredUsername, supplier
 }
 
 async function provisionSupplierUserAccount(client, supplier, options = {}) {
-  const username = await resolveUniqueSupplierUsername(client, options.preferredUsername, supplier.name);
-  const password = (options.password && String(options.password).trim()) || 'Qsl@123456';
+  const username = await resolveUniqueSupplierUsername(client, String(supplier.contact||supplier.name||'').trim(), supplier.name);
+  const password = 'Admin@1234';
   if (password.length < 6 || password.length > 64) {
     throw new Error('供应商初始登录密码长度需在 6 至 64 位之间');
   }

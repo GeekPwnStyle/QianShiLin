@@ -258,13 +258,13 @@ export async function handleSystemAccess({ req, res, url, user, pool, send, read
     const client=await pool.connect();
     try {
       await client.query('BEGIN');
-      const { rows: current }=await client.query(`SELECT a.*,u.username,old_role.identity_type AS current_identity_type FROM identity.user_access a JOIN identity.users u ON u.id=a.user_id
+      const { rows: current }=await client.query(`SELECT a.*,u.username,u.is_system_admin,old_role.identity_type AS current_identity_type FROM identity.user_access a JOIN identity.users u ON u.id=a.user_id
         JOIN identity.roles old_role ON old_role.id=a.role_id
         WHERE a.user_id=$1 FOR UPDATE`,[id]);
       const { rows: roles }=await client.query('SELECT * FROM identity.roles WHERE id=$1',[body.roleId]);
       if (!current.length || !roles.length) { await client.query('ROLLBACK'); send(res,404,{ error: 'Not found' }); return true; }
       const target=current[0], role=roles[0];
-      if (target.username === 'admin' && (body.roleId !== 'role_hq_admin' || body.permissionDenies.length || body.storeIds.length !== stores.size)) {
+      if (target.is_system_admin && (body.roleId !== 'role_hq_admin' || body.permissionDenies.length || body.storeIds.length !== stores.size)) {
         await client.query('ROLLBACK'); send(res,400,{ error: 'Administrator baseline is protected' }); return true;
       }
       if (id === user.id && (body.roleId !== target.role_id || body.permissionDenies.length > target.permission_denies.length)) {

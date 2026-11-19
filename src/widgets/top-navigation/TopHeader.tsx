@@ -738,6 +738,7 @@ export const TopHeader: React.FC = () => {
                       <span>个人信息与主题偏好</span>
                     </button>
 
+                    <button type="button" onClick={()=>{setAccountMenuOpen(false);window.dispatchEvent(new Event('qsl-password-reminder'));}} className="w-full rounded-xl px-3 py-2.5 text-left text-sm hover:bg-[#F8F9F5]">修改登录密码</button>
                     <button
                       type="button"
                       onClick={handleLogout}

@@ -4,7 +4,6 @@ import { useAuth } from '@/src/modules/auth/application/AuthContext';
 import { useNavigation } from '@/src/modules/navigation/application/NavigationContext';
 import { Button } from '@/src/shared/ui/Button';
 import { BrandLogoMark } from '@/src/shared/ui/BrandLogoMark';
-import { HelpTooltip } from '@/src/shared/ui/HelpTooltip';
 
 export const LoginView: React.FC = () => {
   const { loginWithCredentials } = useAuth();
@@ -127,7 +126,6 @@ export const LoginView: React.FC = () => {
                 </div>
 
                 {/* External circular ? explanation outside username input */}
-                <HelpTooltip content="请输入管理员分配的登录账号；显示姓名与登录账号可以不同。" />
               </div>
             </div>
 

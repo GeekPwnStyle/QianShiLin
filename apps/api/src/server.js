@@ -1,3 +1,4 @@
+import { changePassword } from './password.js';
 import { refreshStoreRegistry, handleStores } from './stores.js';
 import { handlePricing } from './pricing.js';
 import { handleSessionPolicy } from './session-policy.js';
@@ -50,7 +51,7 @@ const getToken = req => (req.headers.cookie ?? '').split(';').map(x => x.trim())
 const sessionUser = async token => {
   if (!token || !/^[a-f0-9]{64}$/.test(token)) return null;
   await ensureAccountSchema(pool);
-  const { rows } = await pool.query(`SELECT s.last_activity_at + make_interval(mins=>pcy.idle_timeout_minutes) AS idle_expires_at, u.id, u.username, u.display_name, u.email,
+  const { rows } = await pool.query(`SELECT s.last_activity_at + make_interval(mins=>pcy.idle_timeout_minutes) AS idle_expires_at, (SELECT pc.must_change_password FROM identity.password_credentials pc WHERE pc.user_id=u.id) AS must_change_password, u.is_system_admin, u.id, u.username, u.display_name, u.email,
            a.role_id, a.store_ids, a.permission_denies,
            r.name AS role_name, r.identity_type, r.sub_role,
            uca.supplier_id, sup.name AS supplier_name,
@@ -108,7 +109,7 @@ const server = http.createServer(async (req, res) => {
       await ensureAccountSchema(pool);
       const client = await pool.connect();
       try {
-        const { rows } = await client.query(`SELECT u.id, u.username, u.display_name, u.email,
+        const { rows } = await client.query(`SELECT p.must_change_password, u.is_system_admin, u.id, u.username, u.display_name, u.email,
                  a.role_id, a.store_ids, a.permission_denies,
                  r.name AS role_name, r.identity_type, r.sub_role,
                  uca.supplier_id, sup.name AS supplier_name,
@@ -144,6 +145,7 @@ const server = http.createServer(async (req, res) => {
       if (token) await pool.query('DELETE FROM identity.sessions WHERE token_hash=$1', [hash(token)]);
       return send(res, 200, { ok: true }, { 'Set-Cookie': `${cookieName}=; HttpOnly; Secure; SameSite=Lax; Path=/qian/api; Max-Age=0` });
     }
+    if (path === '/account/password') { const token=getToken(req); return await changePassword({req,res,user:await sessionUser(token),pool,send,readJson,tokenHash:token?hash(token):''}); }
     if (path.startsWith('/account/')) {
       const user = await sessionUser(getToken(req));
       if (await handleAccount({ req, res, url, user, pool, send, readJson, clientIp })) return;

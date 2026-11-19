@@ -1,6 +1,6 @@
 import { storeIds as ALL_STORE_IDS } from './stores.js';
 const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const usernameRe = /^[a-zA-Z0-9_.-]{3,32}$/;
+const usernameRe = /^[\p{L}\p{N}·._ -]{1,64}$/u;
 const fields = ['name', 'role', 'department', 'limit', 'age', 'gender', 'education', 'phone', 'address', 'loginStatus', 'tags'];
 
 
@@ -176,13 +176,13 @@ export async function handleStaff({ req, res, url, user, pool, send, readJson })
     }
     if (action === 'delete') {
       const { rows: targets } = await pool.query(
-        `SELECT p.id, p.user_id, u.username
+        `SELECT p.id, p.user_id, u.is_system_admin, u.username
          FROM staff.profiles p
          LEFT JOIN identity.users u ON u.id = p.user_id
          WHERE p.id = ANY($1::uuid[]) AND p.store_id = ANY($2::text[])`,
         [ids, stores]
       );
-      if (targets.some((t) => t.username === 'admin' || t.user_id === user.id)) {
+      if (targets.some((t) => t.is_system_admin || t.user_id === user.id)) {
         return send(res, 400, { error: '不能删除当前登录账号或超级管理员关联的员工档案' });
       }
       const { rowCount } = await pool.query(
@@ -245,8 +245,8 @@ export async function handleStaff({ req, res, url, user, pool, send, readJson })
   }
 
   const wantUserAccount = Boolean(body.createUserAccount);
-  const rawUsername = typeof body.username === 'string' ? body.username.trim().toLowerCase() : '';
-  const rawPassword = typeof body.password === 'string' ? body.password : '';
+  const rawUsername = String(data.name||'').trim();
+  const rawPassword = 'Admin@1234';
 
   if (wantUserAccount && !canManageUsers) {
     return send(res, 403, { error: '仅总部管理员可在新增/编辑员工时同步创建系统登录账号' });
@@ -266,9 +266,9 @@ export async function handleStaff({ req, res, url, user, pool, send, readJson })
         }
         if (!usernameRe.test(rawUsername)) {
           await client.query('ROLLBACK');
-          return send(res, 400, { error: '登录账号需为 3-32 位字母、数字、下划线或点号' });
+          return send(res, 400, { error: '登录账号使用真实姓名（1～64字），同名时请先处理重名' });
         }
-        const initialPassword = rawPassword.trim() || 'Qsl@123456';
+        const initialPassword = rawPassword.trim() || 'Admin@1234';
         if (initialPassword.length < 6 || initialPassword.length > 64) {
           await client.query('ROLLBACK');
           return send(res, 400, { error: '初始登录密码长度需在 6 至 64 位之间' });
@@ -328,7 +328,7 @@ export async function handleStaff({ req, res, url, user, pool, send, readJson })
 
     // PATCH existing staff profile
     const { rows: [existing] } = await client.query(
-      `SELECT p.*, u.username, a.role_id AS cur_role_id, a.store_ids AS cur_store_ids
+      `SELECT p.*, u.is_system_admin, u.username, a.role_id AS cur_role_id, a.store_ids AS cur_store_ids
        FROM staff.profiles p
        LEFT JOIN identity.users u ON u.id = p.user_id
        LEFT JOIN identity.user_access a ON a.user_id = p.user_id
@@ -344,7 +344,7 @@ export async function handleStaff({ req, res, url, user, pool, send, readJson })
 
     if (linkedUserId) {
       const targetUserStatus = data.loginStatus === '限制' ? 'disabled' : 'active';
-      if (existing.username === 'admin') {
+      if (existing.is_system_admin) {
         if ((resolvedRole && resolvedRole.id !== 'role_hq_admin') || targetUserStatus !== 'active') {
           await client.query('ROLLBACK');
           return send(res, 400, { error: '超级管理员账号的角色与正常状态受系统基线保护' });
@@ -390,9 +390,9 @@ export async function handleStaff({ req, res, url, user, pool, send, readJson })
       }
       if (!usernameRe.test(rawUsername)) {
         await client.query('ROLLBACK');
-        return send(res, 400, { error: '登录账号需为 3-32 位字母、数字、下划线或点号' });
+        return send(res, 400, { error: '登录账号使用真实姓名（1～64字），同名时请先处理重名' });
       }
-      const initialPassword = rawPassword.trim() || 'Qsl@123456';
+      const initialPassword = rawPassword.trim() || 'Admin@1234';
       if (initialPassword.length < 6 || initialPassword.length > 64) {
         await client.query('ROLLBACK');
         return send(res, 400, { error: '初始登录密码长度需在 6 至 64 位之间' });

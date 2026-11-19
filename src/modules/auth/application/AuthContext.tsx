@@ -1,3 +1,4 @@
+import { PasswordReminder } from '@/src/modules/auth/ui/PasswordReminder';
 import { refreshStoreProfilesFromServer } from '@/src/modules/system/stores/domain/storeProfile';
 import { useSessionIdle } from './useSessionIdle';
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
@@ -102,6 +103,8 @@ function applySavedDebugPrefs(base: AuthSession): AuthSession {
 }
 
 export interface ServerUser {
+  must_change_password?: boolean;
+  is_system_admin?: boolean;
   id: string;
   username: string;
   display_name?: string | null;
@@ -442,6 +445,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!user.role_id) return { ok: false, error: '账号角色尚未在数据库中配置。' };
       setSession(buildSessionFromServerUser(user));
       setIsAuthenticated(true);
+      if(user.must_change_password) window.dispatchEvent(new Event('qsl-password-reminder'));
       try {
         window.sessionStorage.removeItem(DEBUG_SESSION_KEY);
       } catch {
@@ -637,7 +641,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     resetAllDemoData,
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={value}>{children}<PasswordReminder authenticated={isAuthenticated} /></AuthContext.Provider>;
 };
 
 export function useAuth(): AuthContextValue {
