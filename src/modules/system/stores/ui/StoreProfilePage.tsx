@@ -393,7 +393,7 @@ function createEmptyStoreForm(nextCodeNum: number): StoreFormState {
 type BatchPermChoice = 'keep' | 'true' | 'false';
 
 export const StoreProfilePage: React.FC = () => {
-  const { hasPermission } = useAuth();
+  const { session, hasPermission } = useAuth();
   const canManageStores = hasPermission('system.store.manage');
 
   const [stores, setStores] = useState<StoreProfileRecord[]>(() => loadStoreProfiles());
@@ -531,6 +531,7 @@ export const StoreProfilePage: React.FC = () => {
     const kw = appliedKeyword.trim().toLowerCase();
 
     const list = stores.filter((s) => {
+      if(session.currentStoreId!=='all'&&s.id!==session.currentStoreId)return false;
       if (kw) {
         const hay = [
           s.name,
@@ -1298,77 +1299,27 @@ export const StoreProfilePage: React.FC = () => {
           <div className="relative">
             <Button
               ref={colMenuBtnRef}
+              aria-expanded={colMenuOpen}
+              aria-controls="store-header-options"
               variant="secondary"
               icon={<SlidersHorizontal className="w-4 h-4" />}
               onClick={() => setColMenuOpen((prev) => !prev)}
             >
               设置表头
             </Button>
-            {colMenuOpen && (
-              <div
-                ref={colMenuPopoverRef}
-                className="absolute right-0 mt-2 w-72 qsl-glass-popover rounded-2xl p-3.5 z-40"
-              >
-                <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-[#171916]/[0.08]">
-                  <span className="text-[14px] font-semibold text-[#171916] inline-flex items-center gap-1.5">
-                    <Columns3 className="w-4 h-4" /> 设置显示表头
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setHiddenCols(defaultHiddenColumns())}
-                      className="text-[12px] text-[#5F645D] hover:text-[#171916] cursor-pointer"
-                    >
-                      恢复默认
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setColMenuOpen(false)}
-                      className="text-[13px] font-medium text-[#171916] cursor-pointer"
-                    >
-                      完成
-                    </button>
-                  </div>
-                </div>
-                <input
-                  type="text"
-                  value={colSearch}
-                  onChange={(e) => setColSearch(e.target.value)}
-                  placeholder="筛选列名..."
-                  className="w-full h-8 px-2.5 mb-2 rounded-lg bg-white/80 border border-[#D9DDD4] text-[13px] outline-none focus:border-[#171916]"
-                />
-                <div className="max-h-64 overflow-y-auto qsl-scroll space-y-1">
-                  {ALL_COLUMNS.filter((c) =>
-                    colSearch.trim() ? c.label.includes(colSearch.trim()) : true
-                  ).map((col) => {
-                    const checked = !hiddenCols[col.key];
-                    return (
-                      <label
-                        key={col.key}
-                        className="flex items-center gap-2 text-[14px] text-[#171916] py-1 px-2 rounded-lg hover:bg-white/70 cursor-pointer"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          disabled={col.sticky}
-                          onChange={() =>
-                            setHiddenCols((prev) => ({
-                              ...prev,
-                              [col.key]: checked,
-                            }))
-                          }
-                          className="accent-[#171916]"
-                        />
-                        <span className="truncate">{col.label}</span>
-                      </label>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
+
           </div>
         </div>
       </div>
+
+      {colMenuOpen && (
+        <div id="store-header-options" ref={colMenuPopoverRef} className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-[#E5E8E0] bg-[#F8F9F5] px-4 py-3">
+          {ALL_COLUMNS.filter(col=>!col.sticky).map(col=><label key={col.key} className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap text-[13px] text-[#171916]">
+            <input type="checkbox" checked={!hiddenCols[col.key]} onChange={()=>setHiddenCols(prev=>({...prev,[col.key]:!prev[col.key]}))} className="h-3.5 w-3.5 accent-[var(--qsl-accent)]"/>{col.label}
+          </label>)}
+          <button type="button" onClick={()=>setHiddenCols(defaultHiddenColumns())} className="ml-auto text-xs text-[#73796F] hover:text-[#171916]">恢复默认</button>
+        </div>
+      )}
 
       {/* Connected Wide Store Profile Table */}
       {filteredStores.length === 0 ? (

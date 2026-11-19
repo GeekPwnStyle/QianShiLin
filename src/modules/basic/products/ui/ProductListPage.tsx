@@ -1335,7 +1335,7 @@ export const ProductListPage: React.FC = () => {
         initialProduct={editingProduct}
         copyFromProduct={copyFromProduct}
         meta={meta}
-        defaultStoreId={session.currentStoreId === 'all' ? 'store_hq_01' : session.currentStoreId}
+        defaultStoreId={session.currentStoreId === 'all' ? (session.authorizedStores[0]?.id||'') : session.currentStoreId}
         canSeeCost={canSeeCost}
         canSeeWholesale={canSeeWholesale}
         debugMode={debugMode}

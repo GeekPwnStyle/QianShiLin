@@ -60,7 +60,7 @@ function extendExpiryByYears(current: string, years: number): string {
 export const SystemParametersPage: React.FC = () => {
   const { session } = useAuth();
   const { sizes: fontSizes, save: saveFonts } = useFontSizes();
-  const stores = useMemo(() => loadStoreProfiles(), []);
+  const stores = useMemo(() => loadStoreProfiles().filter(s=>session.currentStoreId==='all'||s.id===session.currentStoreId), [session.currentStoreId]);
 
   const initialStoreId = useMemo(() => {
     if (

@@ -18,7 +18,7 @@ const columns = [
   ['education', '学历'],
   ['phone', '联系电话'],
   ['address', '家庭地址'],
-  ['loginStatus', '登录限制备注'],
+  ['loginStatus', '启用状态'],
   ['tags', '标签'],
 ] as const;
 
@@ -33,6 +33,7 @@ type RoleOption = {
 
 type Row = {
   id: string;
+  created_at?: string | null;
   store_id: string;
   user_id?: string | null;
   username?: string;
@@ -76,7 +77,7 @@ function buildInitialDebugRows(): Row[] {
     .filter((s) => s.identityType !== 'supplier')
     .map((s) => ({
       id: `debug_staff_${s.userId}`,
-      store_id: s.authorizedStores[0]?.id ?? 'store_hq_01',
+      store_id: (s.currentStoreId!=='all'?s.currentStoreId:s.authorizedStores[0]?.id) ?? '',
       user_id: s.userId,
       username: s.username,
       role_id: s.roleId,
@@ -111,7 +112,7 @@ function loadDebugRows(): Row[] {
 export function StaffArchivePage() {
   const { session, allRoles, hasPermission, debugMode } = useAuth();
   const queryClient = useQueryClient();
-  const stores = session.authorizedStores;
+  const stores = session.currentStoreId==='all'?session.authorizedStores:session.authorizedStores.filter(s=>s.id===session.currentStoreId);
 
   const query = useQuery({
     queryKey: ['staff', session.userId],
@@ -499,6 +500,7 @@ export function StaffArchivePage() {
                 />
               </th>
               <th className="p-2.5 whitespace-nowrap">操作</th>
+              <th className="p-2.5 whitespace-nowrap">所属门店</th>
               <th className="p-2.5 whitespace-nowrap">关联登录账号</th>
               {visibleColumns.map(([key, label]) => (
                 <th
@@ -516,7 +518,7 @@ export function StaffArchivePage() {
                   </button>
                 </th>
               ))}
-              <th className="p-2.5 whitespace-nowrap">门店</th>
+              <th className="p-2.5 whitespace-nowrap">原创建时间</th>
             </tr>
           </thead>
           <tbody>
@@ -560,6 +562,7 @@ export function StaffArchivePage() {
                       <Trash2 size={14} />
                     </button>
                   </td>
+                  <td className="whitespace-nowrap p-2.5">{storeName(row.store_id)}</td>
                   <td className="whitespace-nowrap p-2.5">
                     {row.username ? (
                       <span className="inline-flex items-center gap-1 rounded-md border border-[#B7E4C7] bg-[#ECFDF5] px-2 py-0.5 text-xs font-medium text-[#1B4332]">
@@ -573,10 +576,10 @@ export function StaffArchivePage() {
                   </td>
                   {visibleColumns.map(([key]) => (
                     <td key={key} className="max-w-60 truncate p-2.5" title={row.data[key]}>
-                      {row.data[key] || '—'}
+                      {key==='loginStatus'?(row.data[key]==='限制'?'禁用':'已启用'):(row.data[key] || '—')}
                     </td>
                   ))}
-                  <td className="whitespace-nowrap p-2.5">{storeName(row.store_id)}</td>
+                  <td className="whitespace-nowrap p-2.5 tabular-nums">{row.created_at?new Date(row.created_at).toLocaleString('zh-CN',{hour12:false,timeZone:'Asia/Shanghai'}):'—'}</td>
                 </tr>
               );
             })}

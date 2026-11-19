@@ -1,3 +1,4 @@
+import { setActiveStoreScope } from '@/src/infrastructure/http/storeScope';
 import { PasswordReminder } from '@/src/modules/auth/ui/PasswordReminder';
 import { refreshStoreProfilesFromServer } from '@/src/modules/system/stores/domain/storeProfile';
 import { useSessionIdle } from './useSessionIdle';
@@ -253,6 +254,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     ...PRESET_SESSIONS.admin,
     themeKey: loadLastTheme(),
   }));
+  setActiveStoreScope(session.identityType==='supplier'?'all':session.currentStoreId);
   useSessionIdle(isAuthenticated && !debugMode, session.userId, () => { setIsAuthenticated(false); queryClient.clear(); });
   useEffect(() => {
     const update=()=>setSession(prev=>{
@@ -590,6 +592,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const switchStore = (storeId: string) => {
     if (storeId === 'all' && session.identityType === 'admin') {
+      setActiveStoreScope('all');queryClient.clear();
       setSession((prev) => ({
         ...prev,
         currentStoreId: 'all',
@@ -599,6 +602,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     const target = session.authorizedStores.find((s) => s.id === storeId);
     if (!target) return;
+    setActiveStoreScope(target.id);queryClient.clear();
     setSession((prev) => ({
       ...prev,
       currentStoreId: target.id,

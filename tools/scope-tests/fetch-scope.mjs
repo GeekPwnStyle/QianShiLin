@@ -1,0 +1,11 @@
+import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';import {stripTypeScriptTypes} from 'node:module';
+globalThis.location={origin:'https://example.test',href:'https://example.test/qian/'};
+const calls=[];globalThis.window={fetch:async(input,init)=>{calls.push(new URL(input instanceof Request?input.url:String(input),location.href));return {ok:true};}};
+let source=readFileSync('src/infrastructure/http/storeScope.ts','utf8').replaceAll('import.meta.env.BASE_URL','"/qian/"');
+const mod=await import('data:text/javascript,'+encodeURIComponent(stripTypeScriptTypes(source)));mod.installStoreScopeFetch();mod.setActiveStoreScope('store-A');
+await window.fetch('/qian/api/customers?storeId=store-B');assert.equal(calls.at(-1).searchParams.get('storeId'),'store-A');
+await window.fetch('/qian/api/catalog/warehouses');assert.equal(calls.at(-1).searchParams.get('storeId'),'store-A');
+await window.fetch('/qian/api/system/roles');assert.equal(calls.at(-1).searchParams.has('storeId'),false);
+await window.fetch('https://external.test/qian/api/customers');assert.equal(calls.at(-1).searchParams.has('storeId'),false);
+await window.fetch('/qian/api/customers',{method:'POST'});assert.equal(calls.at(-1).searchParams.has('storeId'),false);
+mod.setActiveStoreScope('all');await window.fetch('/qian/api/customers?storeId=store-B');assert.equal(calls.at(-1).searchParams.get('storeId'),'store-B');console.log('PASS selected-store override, shared/auth exclusion, external exclusion, no write rewriting, all-scope local filtering');

@@ -14,14 +14,14 @@ async function api(path:string,method='GET',body?:unknown){const r=await fetch(b
 const input='h-10 w-full rounded-xl border border-[#D9DDD4] bg-white px-3 text-sm outline-none focus:border-[var(--qsl-accent-border)]';
 export function ServicePricingPage({kind}:{kind:'categories'|'items'}){
  const {session,debugMode,hasPermission}=useAuth();const qc=useQueryClient();const items=kind==='items';
- const [store,setStore]=useState(session.currentStoreId==='all'?session.authorizedStores[0]?.id||'':session.currentStoreId);
+ const [store,setStore]=useState(session.currentStoreId==='all'?'':session.currentStoreId);
  const [page,setPage]=useState(1),[size,setSize]=useState(20),[search,setSearch]=useState(''),[draft,setDraft]=useState(''),[category,setCategory]=useState(''),[enabled,setEnabled]=useState('');
  const [selected,setSelected]=useState<string[]>([]),[editor,setEditor]=useState<Partial<Row>|null>(null),[deleting,setDeleting]=useState<string[]|null>(null),[busy,setBusy]=useState(false),[message,setMessage]=useState('');
  const file=useRef<HTMLInputElement>(null);
  const canRead=hasPermission('basic.fee.read')&&!debugMode,canCreate=hasPermission('basic.fee.create'),canUpdate=hasPermission('basic.fee.update'),canDelete=hasPermission('basic.fee.delete');
- const categories=useQuery<Row[]>({queryKey:['pricing','categories-all',store],enabled:canRead&&!!store,queryFn:async()=>{const rows:Row[]=[];for(let p=1;p<=100;p++){const r:Result=await api('/categories?'+new URLSearchParams({storeId:store,page:String(p),pageSize:'100'}));rows.push(...r.items);if(rows.length>=r.total)return rows;}throw new Error('类别过多，请缩小门店范围');}});
+ const categories=useQuery<Row[]>({queryKey:['pricing','categories-all',store],enabled:canRead,queryFn:async()=>{const rows:Row[]=[];for(let p=1;p<=100;p++){const r:Result=await api('/categories?'+new URLSearchParams({storeId:store,page:String(p),pageSize:'100'}));rows.push(...r.items);if(rows.length>=r.total)return rows;}throw new Error('类别过多，请缩小门店范围');}});
  const params=new URLSearchParams({storeId:store,page:String(page),pageSize:String(size),search,...(items?{categoryId:category,enabled}:{})});
- const list=useQuery<Result>({queryKey:['pricing',kind,store,page,size,search,category,enabled],enabled:canRead&&!!store,queryFn:()=>api('/'+kind+'?'+params)});
+ const list=useQuery<Result>({queryKey:['pricing',kind,store,page,size,search,category,enabled],enabled:canRead,queryFn:()=>api('/'+kind+'?'+params)});
  useEffect(()=>{setSelected([]);},[kind,store,page,size,search,category,enabled]);
  const refresh=async()=>{await qc.invalidateQueries({queryKey:['pricing']});setSelected([]);};
  const perform=async(fn:()=>Promise<unknown>,success:string)=>{setBusy(true);setMessage('');try{await fn();setEditor(null);setDeleting(null);setMessage(success);await refresh();}catch(e){setMessage(e instanceof Error?e.message:'操作失败');}finally{setBusy(false);}};
@@ -33,7 +33,7 @@ export function ServicePricingPage({kind}:{kind:'categories'|'items'}){
  const rows=list.data?.items||[];
  return <div className="space-y-3">
   <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-[#D9DDD4] bg-white p-3">
-   <div className="w-40"><Select ariaLabel="所属门店" value={store} onChange={v=>{setStore(v);setCategory('');setPage(1);}} options={session.authorizedStores.map(s=>({value:s.id,label:s.name}))}/></div>
+   <div className="w-40"><Select ariaLabel="所属门店" value={store} onChange={v=>{setStore(v);setCategory('');setPage(1);}} options={(session.currentStoreId==='all'?[{value:'',label:'全部授权门店'},...session.authorizedStores.map(s=>({value:s.id,label:s.name}))]:session.authorizedStores.filter(s=>s.id===session.currentStoreId).map(s=>({value:s.id,label:s.name})))}/></div>
    <form className="flex min-w-[220px] flex-1 gap-2" onSubmit={e=>{e.preventDefault();setSearch(draft.trim());setPage(1);}}><label className="flex min-w-0 flex-1 items-center gap-2 rounded-xl border px-3"><Search className="h-4 w-4 shrink-0 text-[#73796F]"/><input aria-label="搜索名称" className="h-9 min-w-0 w-full bg-transparent text-sm outline-none" placeholder={items?'搜索服务项目':'搜索服务类别'} value={draft} onChange={e=>setDraft(e.target.value)}/></label><Button type="submit" variant="accent" size="sm">搜索</Button></form>
    {items&&<div className="w-32"><Select ariaLabel="启用状态" value={enabled} onChange={v=>{setEnabled(v);setPage(1);}} options={[{value:'',label:'全部状态'},{value:'true',label:'启用'},{value:'false',label:'禁用'}]}/></div>}
    {canCreate&&<Button size="sm" variant="accent" disabled={busy||!store} icon={<Plus className="h-4 w-4"/>} onClick={()=>open()}>新增{items?'项目':'类别'}</Button>}

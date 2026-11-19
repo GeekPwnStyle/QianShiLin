@@ -108,7 +108,9 @@ export async function handleStaff({ req, res, url, user, pool, send, readJson })
     return send(res, 403, { error: '无员工档案权限' });
   }
 
-  const stores = actor.store_ids ?? [];
+  const selectedStore=url.searchParams.get('storeId')==='all'?null:url.searchParams.get('storeId');
+  if(selectedStore&&!actor.store_ids.includes(selectedStore))return send(res,403,{error:'门店超出授权范围'});
+  const stores = req.method==='GET'&&selectedStore?[selectedStore]:(actor.store_ids??[]);
   const canEdit =
     has('basic.staff.update') ||
     (actor.identity_type === 'admin' && has('system.user.manage') && !actor.permission_denies.includes('basic.staff.update'));
@@ -119,7 +121,7 @@ export async function handleStaff({ req, res, url, user, pool, send, readJson })
 
     const [{ rows }, { rows: roles }] = await Promise.all([
       pool.query(
-        `SELECT p.id, p.store_id, p.user_id, p.data,
+        `SELECT p.id, p.store_id, p.user_id, p.data, p.created_at,
                 u.username, u.display_name, u.status AS user_status,
                 a.role_id AS live_role_id, a.store_ids AS user_store_ids,
                 r.name AS live_role_name, r.identity_type AS live_identity_type
@@ -141,6 +143,7 @@ export async function handleStaff({ req, res, url, user, pool, send, readJson })
 
     const shapedRows = rows.map((row) => ({
       id: row.id,
+      created_at: row.created_at,
       store_id: row.store_id,
       user_id: row.user_id ?? null,
       username: row.username ?? '',
@@ -431,7 +434,7 @@ export async function handleStaff({ req, res, url, user, pool, send, readJson })
     }
 
     const { rowCount } = await client.query(
-      `UPDATE staff.profiles SET store_id = $1, user_id = $2, data = $3::jsonb
+      `UPDATE staff.profiles SET store_id = $1, user_id = $2, data = staff.profiles.data || $3::jsonb
        WHERE id = $4 AND store_id = ANY($5::text[])`,
       [body.storeId, linkedUserId, JSON.stringify(data), body.id, stores]
     );

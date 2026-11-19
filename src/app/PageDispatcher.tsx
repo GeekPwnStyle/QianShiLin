@@ -1,3 +1,4 @@
+import { useAuth } from '@/src/modules/auth/application/AuthContext';
 import { ServicePricingPage } from '@/src/modules/basic/service-pricing/ui/ServicePricingPage';
 import React from 'react';
 import { useNavigation } from '@/src/modules/navigation/application/NavigationContext';
@@ -38,7 +39,7 @@ import { StoreProfilePage } from '@/src/modules/system/stores/ui/StoreProfilePag
 import { VisionRecordPage } from '@/src/modules/vision-records/ui/VisionRecordPage';
 import { WorkbenchPage } from '@/src/modules/workbench/ui/WorkbenchPage';
 
-export const PageDispatcher: React.FC = () => {
+const ScopedPageDispatcher: React.FC = () => {
   const { activeNode } = useNavigation();
 
   if (activeNode.id === 'workbench') {
@@ -152,3 +153,5 @@ export const PageDispatcher: React.FC = () => {
       return <DocumentListView node={activeNode} />;
   }
 };
+
+export const PageDispatcher: React.FC = () => { const {session}=useAuth(); return <ScopedPageDispatcher key={session.userId+':'+session.currentStoreId} />; };

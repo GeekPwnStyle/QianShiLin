@@ -84,7 +84,9 @@ const server = http.createServer(async (req, res) => {
     }
     if (path === '/overview' && req.method === 'GET') {
       const user=await sessionUser(getToken(req));if(!user)return send(res,401,{error:'Unauthorized'});
-      const scope=user.store_ids||[];
+      const requestedStore=url.searchParams.get('storeId')==='all'?null:url.searchParams.get('storeId');
+      if(requestedStore&&!user.store_ids?.includes(requestedStore))return send(res,403,{error:'门店超出授权范围'});
+      const scope=requestedStore?[requestedStore]:(user.store_ids||[]);
       const {rows:[stats]}=await pool.query(`SELECT
        (SELECT count(*)::int FROM organization.stores WHERE id=ANY($1::text[])) stores,
        (SELECT count(*)::int FROM customer.profiles WHERE store_id=ANY($1::text[])) customers,

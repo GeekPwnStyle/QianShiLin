@@ -1,0 +1,5 @@
+import assert from 'node:assert/strict';const base='http://qsl-scope-api:3001';
+let r=await fetch(base+'/login',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({username:'杨法智',password:'Admin@1234'})});assert.equal(r.status,200);const cookie=r.headers.get('set-cookie').split(';')[0];
+r=await fetch(base+'/staff',{headers:{cookie}});let rows=(await r.json()).rows;const before=rows.find(x=>x.data.sourceSequence===1);assert.ok(before);assert.ok(before.created_at);
+r=await fetch(base+'/staff',{method:'PATCH',headers:{cookie,'content-type':'application/json'},body:JSON.stringify({id:before.id,storeId:before.store_id,data:{...before.data,department:'Synthetic metadata test'},createUserAccount:false})});assert.equal(r.status,200,await r.text());
+r=await fetch(base+'/staff',{headers:{cookie}});rows=(await r.json()).rows;const after=rows.find(x=>x.id===before.id);assert.equal(after.data.sourceSequence,before.data.sourceSequence);assert.equal(after.data.sourceCreatedAt,before.data.sourceCreatedAt);assert.equal(after.created_at,before.created_at);console.log('PASS staff edits preserve original import metadata and creation time');

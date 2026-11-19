@@ -82,6 +82,9 @@ async function resolveUniqueSupplierUsername(client, preferredUsername, supplier
 }
 
 async function provisionSupplierUserAccount(client, supplier, options = {}) {
+  await client.query(`INSERT INTO identity.roles(id,name,identity_type,data_scope,permissions)
+    VALUES('role_supplier_partner','合作供应商','supplier','own_supplier',ARRAY['basic.read','basic.supplier.read','basic.product.read','purchase.read'])
+    ON CONFLICT(id) DO NOTHING`);
   const username = await resolveUniqueSupplierUsername(client, String(supplier.contact||supplier.name||'').trim(), supplier.name);
   const password = 'Admin@1234';
   if (password.length < 6 || password.length > 64) {
@@ -1064,6 +1067,10 @@ export async function handleCatalog({ req, res, url, user, pool, send, readJson 
           ? `WHERE ($1::text IS NULL OR s.name ILIKE $1 ESCAPE '\\' OR s.alias ILIKE $1 ESCAPE '\\' OR s.alias_pinyin ILIKE $1 ESCAPE '\\' OR s.contact ILIKE $1 ESCAPE '\\' OR s.phone ILIKE $1 ESCAPE '\\' OR s.scope ILIKE $1 ESCAPE '\\' OR s.detail_address ILIKE $1 ESCAPE '\\' OR u.username ILIKE $1 ESCAPE '\\')`
           : `WHERE ($1::text IS NULL OR name ILIKE $1 ESCAPE '\\')`;
 
+      const selectedStore=url.searchParams.get('storeId')==='all'?null:url.searchParams.get('storeId');
+      if(selectedStore&&!(user.store_ids||[]).includes(selectedStore)){send(res,403,{error:'门店超出授权范围'});return true;}
+      if(selectedStore&&resource==='warehouses'){values.push(selectedStore);where+=` AND store_id::text=$${values.length}`;}
+      if(selectedStore&&resource==='suppliers'){values.push(selectedStore);where+=` AND $${values.length}::text=ANY(s.authorized_store_ids)`;}
       if (resource === 'suppliers') {
         const enabledParam = url.searchParams.get('enabled');
         if (enabledParam === 'true' || enabledParam === 'false') {

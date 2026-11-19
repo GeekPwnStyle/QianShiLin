@@ -1613,6 +1613,8 @@ export async function handleProducts({ req, res, url, user, pool, send, readJson
       categoryIds = collectDescendantCategoryIds(allCats, categoryId);
     }
 
+    const selectedStore=(url.searchParams.get('storeId')||null)==='all'?null:url.searchParams.get('storeId');
+    if(selectedStore&&!actor.store_ids.includes(selectedStore)){send(res,403,{error:'门店超出授权范围'});return true;}
     const kwPattern = keyword ? `%${keyword.replace(/[\\%_]/g, '\\$&')}%` : null;
     const values = [
       actor.identity_type === 'supplier' ? actor.supplier_id : null,
@@ -1622,9 +1624,13 @@ export async function handleProducts({ req, res, url, user, pool, send, readJson
       isCustomLens === 'true' ? true : isCustomLens === 'false' ? false : null,
       tag && tag !== 'all' ? tag : null,
       kwPattern,
+      actor.identity_type==='supplier'?null:actor.store_ids,
+      selectedStore,
     ];
     const where = `
       WHERE ($1::uuid IS NULL OR supplier_id = $1)
+        AND ($8::text[] IS NULL OR store_id=ANY($8::text[]))
+        AND ($9::text IS NULL OR store_id=$9)
         AND ($2::uuid[] IS NULL OR category_id = ANY($2::uuid[]))
         AND ($3::text IS NULL OR brand_name = $3)
         AND ($4::boolean IS NULL OR enabled = $4)
@@ -1644,7 +1650,7 @@ export async function handleProducts({ req, res, url, user, pool, send, readJson
     const { rows } = await pool.query(
       `SELECT * FROM catalog.products ${where}
        ORDER BY pin_on_sale DESC, ${sortCol} ${sortOrder}, id DESC
-       LIMIT $8 OFFSET $9`,
+       LIMIT $10 OFFSET $11`,
       [...values, pageSize, (page - 1) * pageSize]
     );
 
