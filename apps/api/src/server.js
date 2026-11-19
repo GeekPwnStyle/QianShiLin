@@ -1,3 +1,4 @@
+import { handlePricing } from './pricing.js';
 import { handleSessionPolicy } from './session-policy.js';
 import { customerListCache } from './query-cache.js';
 import { handleAccount, ensureAccountSchema } from './account.js';
@@ -133,6 +134,10 @@ const server = http.createServer(async (req, res) => {
     if (path.startsWith('/account/')) {
       const user = await sessionUser(getToken(req));
       if (await handleAccount({ req, res, url, user, pool, send, readJson, clientIp })) return;
+    }
+    if (path.startsWith('/pricing/')) {
+      const user = await sessionUser(getToken(req));
+      if (await handlePricing({req,res,url,user,pool,send,readJson,clientIp})) return;
     }
     if (path.startsWith('/catalog/')) {
       const user = await sessionUser(getToken(req));

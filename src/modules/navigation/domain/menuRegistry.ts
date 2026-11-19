@@ -218,6 +218,7 @@ const RAW_MODULES: RawNodeInput[] = [
             permission: 'basic.fee.read',
             nodeType: 'page',
             pageKind: 'master_data',
+            implemented: true,
           },
           {
             id: 'basic.fees.items',
@@ -226,6 +227,7 @@ const RAW_MODULES: RawNodeInput[] = [
             permission: 'basic.fee.read',
             nodeType: 'page',
             pageKind: 'master_data',
+            implemented: true,
           },
         ],
       },

@@ -1,3 +1,4 @@
+import { ServicePricingPage } from '@/src/modules/basic/service-pricing/ui/ServicePricingPage';
 import React from 'react';
 import { useNavigation } from '@/src/modules/navigation/application/NavigationContext';
 import { ProductListPage } from '@/src/modules/basic/products/ui/ProductListPage';
@@ -50,6 +51,8 @@ export const PageDispatcher: React.FC = () => {
   if (activeNode.id === 'basic.product.tags') return <ProductTagsPage />;
   if (activeNode.id === 'basic.product.lens_surcharge') return <LensSurchargePage />;
 
+  if (activeNode.id === 'basic.fees.categories') return <ServicePricingPage key={activeNode.id} kind="categories" />;
+  if (activeNode.id === 'basic.fees.items') return <ServicePricingPage key={activeNode.id} kind="items" />;
   switch (activeNode.pageKind) {
     case 'catalog_brand': return <BrandPage />;
     case 'catalog_supplier': return <SupplierPage />;

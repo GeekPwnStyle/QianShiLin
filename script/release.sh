@@ -8,7 +8,7 @@ usage() {
   cat <<'HELP'
 Usage:
   bash script/release.sh deploy [VERSION]  Build and deploy (default: v1.0.0).
-  bash script/release.sh push              Push the last successful deployment.
+  bash script/release.sh push              Push both images from the last successful deployment.
   bash script/release.sh --help
 
 Examples:
@@ -39,26 +39,34 @@ if [[ "$ACTION" == push ]]; then
   [[ -f "$STATE_FILE" ]] || { echo 'No deployment recorded in .env.deploy.' >&2; exit 1; }
   IMAGE="$(sed -n 's/^QIANSHILIN_IMAGE=//p' "$STATE_FILE")"
   [[ "$IMAGE" == "$REPOSITORY"-*:* && "$IMAGE" != *$'\n'* && "$IMAGE" != *' '* ]] || { echo 'Invalid deployment image.' >&2; exit 1; }
+  API_IMAGE="$(sed -n 's/^QIANSHILIN_API_IMAGE=//p' "$STATE_FILE")"
+  [[ "$API_IMAGE" == "$REPOSITORY-api"-*:* && "$API_IMAGE" != *$'\n'* && "$API_IMAGE" != *' '* ]] || { echo 'Missing or invalid API image; run deploy first.' >&2; exit 1; }
+  [[ "${IMAGE##*:}" == "${API_IMAGE##*:}" ]] || { echo 'Frontend/API tag mismatch.' >&2; exit 1; }
   docker push "$IMAGE"
-  printf 'Pushed: %s\n' "$IMAGE"
+  docker push "$API_IMAGE"
+  printf 'Pushed frontend: %s\nPushed API: %s\n' "$IMAGE" "$API_IMAGE"
   exit 0
 fi
 VERSION="${2:-v1.0.0}"
 [[ "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo 'Version must look like v1.0.0.' >&2; exit 2; }
 IMAGE="$REPOSITORY-$VERSION:$(TZ=Asia/Shanghai date +Y%Y-D%m%d-T%H%M%S)"
+API_IMAGE="$REPOSITORY-api-$VERSION:${IMAGE##*:}"
 export QIANSHILIN_IMAGE="$IMAGE"
+export QIANSHILIN_API_IMAGE="$API_IMAGE"
 docker compose version >/dev/null
 docker info >/dev/null
 docker network inspect proxy >/dev/null
 docker compose -f "$PROJECT_DIR/compose.yaml" config --quiet
 printf 'Building: %s\n' "$IMAGE"
 docker build -t "$IMAGE" "$PROJECT_DIR"
+printf 'Building API: %s\n' "$API_IMAGE"
+docker build -t "$API_IMAGE" "$PROJECT_DIR/apps/api"
 # --wait fails if the application does not become healthy.
-docker compose -f "$PROJECT_DIR/compose.yaml" up -d --build --wait --wait-timeout 120
+docker compose -f "$PROJECT_DIR/compose.yaml" up -d --no-build --wait --wait-timeout 120
 TEMP_STATE="$(mktemp "$PROJECT_DIR/.env.deploy.XXXXXX")"
 trap 'rm -f -- "$TEMP_STATE"' EXIT
-printf 'QIANSHILIN_IMAGE=%s\nQIANSHILIN_DB_PASSWORD=%s\n' "$IMAGE" "$DB_PASSWORD" > "$TEMP_STATE"
+printf 'QIANSHILIN_IMAGE=%s\nQIANSHILIN_API_IMAGE=%s\nQIANSHILIN_DB_PASSWORD=%s\n' "$IMAGE" "$API_IMAGE" "$DB_PASSWORD" > "$TEMP_STATE"
 chmod 600 "$TEMP_STATE"
 mv -f -- "$TEMP_STATE" "$STATE_FILE"
 trap - EXIT
-printf 'Deployed: %s\nURL: https://zhiarch.org/qian/\nTo push: bash script/release.sh push\n' "$IMAGE"
+printf 'Deployed frontend: %s\nDeployed API: %s\nURL: https://zhiarch.org/qian/\nTo push: bash script/release.sh push\n' "$IMAGE" "$API_IMAGE"

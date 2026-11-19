@@ -1,0 +1,27 @@
+import assert from 'node:assert/strict';
+const token=Buffer.from('perf-perf1').toString('hex').padEnd(64,'0');
+async function api(path,method='GET',body,t=token){const r=await fetch('http://qsl-pricing-api:3001/pricing'+path,{method,headers:{cookie:'qsl_session='+t,'content-type':'application/json'},body:body===undefined?undefined:JSON.stringify(body)});return {status:r.status,data:await r.json()};}
+const cat={store_id:'store_hq_01',name:'Synthetic Category',sort_order:1,read_only:false};
+let r=await api('/categories','POST',cat);assert.equal(r.status,201);let c=r.data;
+assert.equal((await api('/categories','POST',cat)).status,409);
+assert.equal((await api('/categories?storeId=store_other')).status,403);
+const item={store_id:cat.store_id,name:'Synthetic Service',sort_order:1,category_id:c.id,cost_price:'10.50',retail_price:'20.00',enabled:true};
+r=await api('/items','POST',item);assert.equal(r.status,201);let i=r.data;
+assert.equal((await api('/items','POST',{...item,name:'Bad',cost_price:'1.001'})).status,400);
+assert.equal((await api('/items','POST',{...item,name:'Foreign',category_id:'11111111-1111-4111-8111-111111111111'})).status,409);
+assert.equal((await api('/categories/batch-delete','POST',{ids:[c.id]})).status,409);
+assert.equal((await api('/items/'+i.id,'PATCH',{...i,retail_price:'30.00',version:0})).status,409);
+r=await api('/items/'+i.id,'PATCH',{...i,retail_price:'30.00'});assert.equal(r.status,200);assert.equal(r.data.retail_price,'30.00');
+r=await api('/categories/'+c.id,'PATCH',{...c,read_only:true});assert.equal(r.status,200);c=r.data;
+assert.equal((await api('/categories/'+c.id,'PATCH',{...c,name:'forbidden'})).status,409);
+assert.equal((await api('/categories/batch-delete','POST',{ids:[c.id]})).status,409);
+r=await api('/items', 'GET',undefined,'b'.repeat(64));assert.equal(r.status,200);assert.equal(r.data.items[0].cost_price,null);
+assert.equal((await api('/items','POST',item,'b'.repeat(64))).status,403);
+r=await api('/categories','POST',{...cat,name:'Delete atomic check'});const other=r.data;
+assert.equal((await api('/categories/batch-delete','POST',{ids:[other.id,c.id]})).status,409);
+assert.equal((await api('/categories?search=Delete')).data.total,1);
+assert.equal((await api('/categories/unlock','POST',{id:c.id,version:c.version})).status,200);
+assert.equal((await api('/items/batch-delete','POST',{ids:[i.id]})).status,200);
+assert.equal((await api('/categories/batch-delete','POST',{ids:[c.id,other.id]})).status,200);
+assert.equal((await api('/categories')).data.total,0);
+console.log('PASS CRUD, duplicate validation, cost redaction, readonly/unlock, stale version conflict, foreign category, scope and write permissions, atomic batch deletion');
