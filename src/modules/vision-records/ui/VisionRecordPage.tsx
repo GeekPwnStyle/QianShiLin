@@ -78,7 +78,7 @@ export const VisionRecordPage: React.FC<{ isOrtho?: boolean; pageTitle: string }
   const [selected, setSelected] = useState<OptometryExamRecord>(INITIAL_RECORDS[0]);
   const [addOpen, setAddOpen] = useState(false);
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(20);
 
   const [customerName, setCustomerName] = useState('');
   const [odSph, setOdSph] = useState('-2.00D');

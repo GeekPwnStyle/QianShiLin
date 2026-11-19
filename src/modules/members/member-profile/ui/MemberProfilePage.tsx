@@ -40,7 +40,7 @@ export const MemberProfilePage: React.FC<{ defaultOpenCreate?: boolean }> = ({
   const [tierFilter, setTierFilter] = useState<MemberTier | 'all'>('all');
   const [applied, setApplied] = useState({ keyword: '', tier: 'all' as MemberTier | 'all' });
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(20);
 
   const [detailMember, setDetailMember] = useState<MemberProfile | null>(null);
   const [detailTab, setDetailTab] = useState<'basic' | 'consumption' | 'wallet' | 'appointments' | 'vision'>('basic');

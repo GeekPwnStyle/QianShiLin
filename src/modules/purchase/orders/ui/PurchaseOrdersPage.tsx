@@ -43,7 +43,7 @@ export const PurchaseOrdersPage: React.FC = () => {
   const client = useQueryClient();
   const [view, setView] = useState<'mine' | 'branch'>('mine');
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(20);
   const [keyword, setKeyword] = useState('');
   const [search, setSearch] = useState('');
   const [createOpen, setCreateOpen] = useState(false);

@@ -1,12 +1,13 @@
 import React, { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Download, Link2, Pencil, Plus, ShieldCheck, Trash2, UserPlus } from 'lucide-react';
+import { ArrowDown, ArrowUp, ArrowUpDown, Download, Link2, Pencil, Plus, ShieldCheck, Trash2, UserPlus } from 'lucide-react';
 import { useAuth } from '@/src/modules/auth/application/AuthContext';
 import { PRESET_SESSIONS } from '@/src/modules/auth/domain/identity';
 import { Modal } from '@/src/shared/ui/Modal';
 import { OperationStatus } from '@/src/shared/ui/OperationStatus';
 import { PaginationBar } from '@/src/shared/ui/PaginationBar';
 import { Select } from '@/src/shared/ui/Select';
+import { TableLoadingOverlay, TableLoadingRows } from '@/src/shared/ui/StateViews';
 
 const columns = [
   ['name', '员工姓名'],
@@ -133,7 +134,7 @@ export function StaffArchivePage() {
   const [sync, setSync] = useState(false);
   const [target, setTarget] = useState('');
   const [page, setPage] = useState(1);
-  const [size, setSize] = useState(10);
+  const [size, setSize] = useState(20);
   const [sort, setSort] = useState<{ key: Key; desc: boolean }>({ key: 'name', desc: false });
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<{ text: string; error?: boolean }>();
@@ -363,7 +364,7 @@ export function StaffArchivePage() {
   }
 
   return (
-    <section className="overflow-hidden rounded-[20px] border border-[#E5E8E0] bg-white text-sm">
+    <section className="overflow-hidden rounded-[20px] border border-[#D9DDD4] bg-white text-sm">
       {status && <OperationStatus role={status.error ? 'alert' : 'status'}>{status.text}</OperationStatus>}
       {busy && <OperationStatus loading>正在处理员工档案</OperationStatus>}
 
@@ -481,118 +482,190 @@ export function StaffArchivePage() {
         </div>
       )}
 
-      <div className="max-h-[65dvh] overflow-auto">
-        <table className="w-full min-w-[1040px] text-left">
-          <thead className="sticky top-0 z-10 bg-[#F5F7F2] text-[#4A4F47]">
-            <tr>
-              <th className="p-2.5">
-                <input
-                  aria-label="选择本页"
-                  type="checkbox"
-                  checked={allChecked}
-                  onChange={() =>
-                    setSelected((previous) =>
-                      allChecked
-                        ? previous.filter((id) => !shown.some((row) => row.id === id))
-                        : [...new Set([...previous, ...shown.map((row) => row.id)])]
-                    )
-                  }
-                />
-              </th>
-              <th className="p-2.5 whitespace-nowrap">操作</th>
-              <th className="p-2.5 whitespace-nowrap">所属门店</th>
-              <th className="p-2.5 whitespace-nowrap">关联登录账号</th>
-              {visibleColumns.map(([key, label]) => (
-                <th
-                  key={key}
-                  className="whitespace-nowrap p-2.5"
-                  aria-sort={sort.key !== key ? 'none' : sort.desc ? 'descending' : 'ascending'}
-                >
-                  <button
-                    type="button"
-                    className="cursor-pointer font-medium hover:text-[#171916]"
-                    onClick={() => setSort({ key, desc: sort.key === key && !sort.desc })}
-                  >
-                    {label}
-                    {sort.key === key ? (sort.desc ? ' ↓' : ' ↑') : ''}
-                  </button>
+      <div className="relative">
+        <div className="overflow-x-auto qsl-scroll">
+          <table className="w-full border-collapse text-left">
+            <thead>
+              <tr className="border-b border-[#E5E8E0] bg-[#F8F9F5]">
+                <th className="w-11 px-3.5 py-3 text-center sticky left-0 bg-[#F8F9F5] z-20 border-r border-[#E5E8E0]">
+                  <input
+                    aria-label="选择本页"
+                    type="checkbox"
+                    checked={allChecked}
+                    onChange={() =>
+                      setSelected((previous) =>
+                        allChecked
+                          ? previous.filter((id) => !shown.some((row) => row.id === id))
+                          : [...new Set([...previous, ...shown.map((row) => row.id)])]
+                      )
+                    }
+                    className="accent-[#171916] w-4 h-4 cursor-pointer"
+                  />
                 </th>
-              ))}
-              <th className="p-2.5 whitespace-nowrap">原创建时间</th>
-            </tr>
-          </thead>
-          <tbody>
-            {shown.map((row) => {
-              const isProtected = row.username === 'admin' || row.user_id === session.userId;
-              return (
-                <tr key={row.id} className="border-t border-[#ECEFE7] even:bg-[#F8F9F5] hover:bg-[#F3F6EE]">
-                  <td className="p-2.5">
-                    <input
-                      type="checkbox"
-                      aria-label={`选择 ${row.data.name}`}
-                      checked={selected.includes(row.id)}
-                      onChange={() =>
-                        setSelected((previous) =>
-                          previous.includes(row.id)
-                            ? previous.filter((id) => id !== row.id)
-                            : [...previous, row.id]
-                        )
-                      }
-                    />
-                  </td>
-                  <td className="whitespace-nowrap p-2.5">
-                    <button
-                      type="button"
-                      title="编辑"
-                      aria-label={`编辑 ${row.data.name}`}
-                      className={primary + ' !px-2 !py-1'}
-                      disabled={!canEdit || busy}
-                      onClick={() => openEditModal(row)}
+                <th className="px-3.5 py-3 text-[13px] font-semibold text-[#5F645D] whitespace-nowrap align-middle sticky left-11 z-20 bg-[#F8F9F5] border-r border-[#D9DDD4] shadow-[4px_0_12px_rgba(23,25,22,0.04)]">
+                  操作
+                </th>
+                <th className="px-3.5 py-3 text-[13px] font-semibold text-[#5F645D] whitespace-nowrap align-middle border-r border-[#E5E8E0]">
+                  所属门店
+                </th>
+                <th className="px-3.5 py-3 text-[13px] font-semibold text-[#5F645D] whitespace-nowrap align-middle border-r border-[#E5E8E0]">
+                  关联登录账号
+                </th>
+                {visibleColumns.map(([key, label]) => {
+                  const isSorted = sort.key === key;
+                  return (
+                    <th
+                      key={key}
+                      className="px-3.5 py-3 text-[13px] font-semibold text-[#5F645D] whitespace-nowrap align-middle border-r border-[#E5E8E0]"
+                      aria-sort={!isSorted ? 'none' : sort.desc ? 'descending' : 'ascending'}
                     >
-                      <Pencil size={14} />
-                    </button>{' '}
-                    <button
-                      type="button"
-                      title={isProtected ? '当前账号或超级管理员不可删除' : '删除'}
-                      aria-label={`删除 ${row.data.name}`}
-                      className={button + ' !px-2 !py-1 text-red-700'}
-                      disabled={!canEdit || busy || isProtected}
-                      onClick={() => setConfirmDeleteIds([row.id])}
-                    >
-                      <Trash2 size={14} />
-                    </button>
+                      <div className="inline-flex items-center gap-1.5">
+                        <span>{label}</span>
+                        <button
+                          type="button"
+                          aria-label={`按 ${label} 排序`}
+                          className={`p-0.5 rounded hover:bg-[#EAECE6] cursor-pointer ${
+                            isSorted ? 'text-[#171916]' : 'text-[#8C9288]'
+                          }`}
+                          onClick={() => setSort({ key, desc: sort.key === key && !sort.desc })}
+                        >
+                          {isSorted ? (
+                            sort.desc ? (
+                              <ArrowDown className="w-3.5 h-3.5" />
+                            ) : (
+                              <ArrowUp className="w-3.5 h-3.5" />
+                            )
+                          ) : (
+                            <ArrowUpDown className="w-3.5 h-3.5" />
+                          )}
+                        </button>
+                      </div>
+                    </th>
+                  );
+                })}
+                <th className="px-3.5 py-3 text-[13px] font-semibold text-[#5F645D] whitespace-nowrap align-middle border-r border-[#E5E8E0] last:border-r-0">
+                  原创建时间
+                </th>
+              </tr>
+            </thead>
+
+            <tbody className="divide-y divide-[#E5E8E0]">
+              {!debugMode && (query.isPending || query.isFetching) && !shown.length ? (
+                <TableLoadingRows
+                  colSpan={visibleColumns.length + 5}
+                  label="正在从数据库加载员工档案…"
+                />
+              ) : !shown.length ? (
+                <tr>
+                  <td colSpan={visibleColumns.length + 5} className="px-4 py-12 text-center text-[#73796F]">
+                    {query.isError && !debugMode ? '员工档案加载失败' : '暂无符合条件的员工档案'}
                   </td>
-                  <td className="whitespace-nowrap p-2.5">{storeName(row.store_id)}</td>
-                  <td className="whitespace-nowrap p-2.5">
-                    {row.username ? (
-                      <span className="inline-flex items-center gap-1 rounded-md border border-[#B7E4C7] bg-[#ECFDF5] px-2 py-0.5 text-xs font-medium text-[#1B4332]">
-                        <ShieldCheck size={12} />@{row.username}
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center rounded-md border border-[#E5E8E0] bg-[#F5F7F2] px-2 py-0.5 text-xs text-[#73796F]">
-                        仅员工档案
-                      </span>
-                    )}
-                  </td>
-                  {visibleColumns.map(([key]) => (
-                    <td key={key} className="max-w-60 truncate p-2.5" title={row.data[key]}>
-                      {key==='loginStatus'?(row.data[key]==='限制'?'禁用':'已启用'):(row.data[key] || '—')}
-                    </td>
-                  ))}
-                  <td className="whitespace-nowrap p-2.5 tabular-nums">{row.created_at?new Date(row.created_at).toLocaleString('zh-CN',{hour12:false,timeZone:'Asia/Shanghai'}):'—'}</td>
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
-        {!shown.length && (
-          <div className="p-10 text-center text-[#73796F]">
-            {query.isPending && !debugMode
-              ? '正在加载员工档案…'
-              : query.isError && !debugMode
-                ? '员工档案加载失败'
-                : '暂无符合条件的员工档案'}
-          </div>
+              ) : (
+                shown.map((row, idx) => {
+                  const isProtected = row.username === 'admin' || row.user_id === session.userId;
+                  const checked = selected.includes(row.id);
+                  const rowBg = checked
+                    ? 'bg-[var(--qsl-accent-soft-35)]'
+                    : idx % 2 === 1
+                      ? 'bg-[#FAFBF8]'
+                      : 'bg-white';
+                  const stickyCellBg = checked
+                    ? 'bg-[var(--qsl-accent-soft)]'
+                    : idx % 2 === 1
+                      ? 'bg-[#FAFBF8]'
+                      : 'bg-white';
+
+                  return (
+                    <tr
+                      key={row.id}
+                      className={`transition-colors hover:bg-[#F1F5EC] ${rowBg}`}
+                    >
+                      <td
+                        className={`w-11 px-3.5 py-2.5 text-center sticky left-0 z-10 border-r border-[#E5E8E0] ${stickyCellBg}`}
+                      >
+                        <input
+                          type="checkbox"
+                          aria-label={`选择 ${row.data.name}`}
+                          checked={checked}
+                          onChange={() =>
+                            setSelected((previous) =>
+                              previous.includes(row.id)
+                                ? previous.filter((id) => id !== row.id)
+                                : [...previous, row.id]
+                            )
+                          }
+                          className="accent-[#171916] w-4 h-4 cursor-pointer"
+                        />
+                      </td>
+                      <td
+                        className={`px-3.5 py-2.5 text-[14px] text-[#171916] whitespace-nowrap align-middle sticky left-11 z-10 border-r border-[#D9DDD4] shadow-[4px_0_12px_rgba(23,25,22,0.04)] ${stickyCellBg}`}
+                      >
+                        <button
+                          type="button"
+                          title="编辑"
+                          aria-label={`编辑 ${row.data.name}`}
+                          className={primary + ' !px-2 !py-1'}
+                          disabled={!canEdit || busy}
+                          onClick={() => openEditModal(row)}
+                        >
+                          <Pencil size={14} />
+                        </button>{' '}
+                        <button
+                          type="button"
+                          title={isProtected ? '当前账号或超级管理员不可删除' : '删除'}
+                          aria-label={`删除 ${row.data.name}`}
+                          className={button + ' !px-2 !py-1 text-red-700'}
+                          disabled={!canEdit || busy || isProtected}
+                          onClick={() => setConfirmDeleteIds([row.id])}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </td>
+                      <td className="px-3.5 py-2.5 text-[14px] text-[#171916] whitespace-nowrap align-middle border-r border-[#E5E8E0]">
+                        {storeName(row.store_id)}
+                      </td>
+                      <td className="px-3.5 py-2.5 text-[14px] text-[#171916] whitespace-nowrap align-middle border-r border-[#E5E8E0]">
+                        {row.username ? (
+                          <span className="inline-flex items-center gap-1 rounded-md border border-[#B7E4C7] bg-[#ECFDF5] px-2 py-0.5 text-xs font-medium text-[#1B4332]">
+                            <ShieldCheck size={12} />@{row.username}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center rounded-md border border-[#E5E8E0] bg-[#F5F7F2] px-2 py-0.5 text-xs text-[#73796F]">
+                            仅员工档案
+                          </span>
+                        )}
+                      </td>
+                      {visibleColumns.map(([key]) => (
+                        <td
+                          key={key}
+                          className="max-w-60 truncate px-3.5 py-2.5 text-[14px] text-[#171916] whitespace-nowrap align-middle border-r border-[#E5E8E0]"
+                          title={row.data[key]}
+                        >
+                          {key === 'loginStatus'
+                            ? row.data[key] === '限制'
+                              ? '禁用'
+                              : '已启用'
+                            : row.data[key] || '—'}
+                        </td>
+                      ))}
+                      <td className="px-3.5 py-2.5 text-[14px] text-[#171916] whitespace-nowrap align-middle border-r border-[#E5E8E0] last:border-r-0 tabular-nums">
+                        {row.created_at
+                          ? new Date(row.created_at).toLocaleString('zh-CN', {
+                              hour12: false,
+                              timeZone: 'Asia/Shanghai',
+                            })
+                          : '—'}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+        {!debugMode && query.isFetching && shown.length > 0 && (
+          <TableLoadingOverlay label="正在同步员工档案…" />
         )}
       </div>
 

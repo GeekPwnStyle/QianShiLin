@@ -134,7 +134,7 @@ export const CustomerArchivePage: React.FC = () => {
     });
   }, [allItems, store, gender, tier, keyword]);
 
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(20);
   const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
   const safePage = Math.min(page, totalPages);
   const shown = rows.slice((safePage - 1) * pageSize, safePage * pageSize);

@@ -24,9 +24,9 @@ export const NoticeAdminPage: React.FC = () => {
   const [search,setSearch]=useState('');
   const [keyword,setKeyword]=useState('');
   const [page,setPage]=useState(1);
-  const [pageSize,setPageSize]=useState(10);
+  const [pageSize,setPageSize]=useState(20);
   const [receiptPage,setReceiptPage]=useState(1);
-  const [receiptPageSize,setReceiptPageSize]=useState(10);
+  const [receiptPageSize,setReceiptPageSize]=useState(20);
   const [publishing,setPublishing]=useState(false);
   const [error,setError]=useState('');
   const [notice,setNotice]=useState('');

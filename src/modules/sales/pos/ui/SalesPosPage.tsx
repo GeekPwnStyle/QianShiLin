@@ -35,9 +35,9 @@ export const SalesPosPage: React.FC = () => {
   const [discountError, setDiscountError] = useState<string | null>(null);
 
   const [productPage, setProductPage] = useState(1);
-  const [productPageSize, setProductPageSize] = useState(10);
+  const [productPageSize, setProductPageSize] = useState(20);
   const [ordersPage, setOrdersPage] = useState(1);
-  const [ordersPageSize, setOrdersPageSize] = useState(10);
+  const [ordersPageSize, setOrdersPageSize] = useState(20);
 
   // Mobile step toggle so mobile users don't get overwhelmed
   const [mobileStep, setMobileStep] = useState<1 | 2>(1);

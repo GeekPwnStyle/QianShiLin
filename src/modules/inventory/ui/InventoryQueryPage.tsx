@@ -39,7 +39,7 @@ export const InventoryQueryPage: React.FC<{ isCrosstab?: boolean; pageTitle: str
   const { navigateToRoute } = useNavigation();
   const [kw, setKw] = useState('');
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(20);
 
   const filtered = STOCK_ROWS.filter((r) => {
     if (session.identityType === 'store' && session.currentStoreId !== 'all') {

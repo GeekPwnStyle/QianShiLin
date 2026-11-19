@@ -404,7 +404,7 @@ export const StoreProfilePage: React.FC = () => {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [columnFilters, setColumnFilters] = useState<Partial<Record<ColumnFilterKey, string>>>({});
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(20);
 
   // Column visibility popover ("设置表头")
   const [detailStore,setDetailStore]=useState<StoreProfileRecord|null>(null);

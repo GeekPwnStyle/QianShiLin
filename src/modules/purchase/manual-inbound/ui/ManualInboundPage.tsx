@@ -37,7 +37,7 @@ export const ManualInboundPage: React.FC = () => {
   const { session, dataScope, hasPermission } = useAuth();
   const cache = useQueryClient();
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(20);
   const [keyword, setKeyword] = useState('');
   const [search, setSearch] = useState('');
   const [createOpen, setCreateOpen] = useState(false);

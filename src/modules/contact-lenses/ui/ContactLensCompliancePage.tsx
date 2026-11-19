@@ -48,7 +48,7 @@ export const ContactLensCompliancePage: React.FC<{ nodeId: string; pageTitle: st
   const [tempVal, setTempVal] = useState('19.8');
   const [humVal, setHumVal] = useState('50');
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(20);
 
   const handleAddTemp = () => {
     const t = Number.parseFloat(tempVal);

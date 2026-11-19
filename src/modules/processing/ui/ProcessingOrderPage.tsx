@@ -25,7 +25,7 @@ const INITIAL_JOBS: ProcessingOrder[] = [
 export const ProcessingOrderPage: React.FC = () => {
   const [jobs, setJobs] = useState(INITIAL_JOBS);
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(20);
 
   const advanceStage = (id: string) => {
     const order: ProcessingOrder['stage'][] = ['待配片', '磨边加工中', '质检完成', '已发往门店'];

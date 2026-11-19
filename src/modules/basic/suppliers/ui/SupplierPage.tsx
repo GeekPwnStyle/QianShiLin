@@ -96,7 +96,7 @@ export const SupplierPage: React.FC = () => {
   const canEditBank = session.identityType === 'admin';
 
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(20);
   const [keywordInput, setKeywordInput] = useState('');
   const [search, setSearch] = useState('');
   const [filterEnabled, setFilterEnabled] = useState<'' | 'true' | 'false'>('');

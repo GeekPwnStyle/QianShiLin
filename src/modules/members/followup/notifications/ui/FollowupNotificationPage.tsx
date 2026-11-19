@@ -77,7 +77,7 @@ export const FollowupNotificationPage: React.FC<Props> = ({ category }) => {
   });
 
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(20);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   // Detail & Log modals

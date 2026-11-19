@@ -92,7 +92,7 @@ export const MasterDataView: React.FC<{ node: NavNode }> = ({ node }) => {
   const seed = getMasterSeedForNode(node.id);
   const [rows, setRows] = useState(seed.rows);
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(20);
   const [addOpen, setAddOpen] = useState(false);
   const [newName, setNewName] = useState('');
   const [newAttr, setNewAttr] = useState('');
@@ -219,7 +219,7 @@ export const DocumentListView: React.FC<{ node: NavNode }> = ({ node }) => {
   const { session } = useAuth();
   const [detail, setDetail] = useState<BusinessDocument | null>(null);
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(20);
 
   const prefix = node.moduleId === 'purchase' ? 'CG' : node.moduleId === 'transfer' ? 'DB' : node.moduleId === 'after_sales' ? 'WX' : 'YW';
   const docs: BusinessDocument[] = [
@@ -313,7 +313,7 @@ export const DocumentListView: React.FC<{ node: NavNode }> = ({ node }) => {
  * ------------------------------------------------------------------ */
 export const VisionScreeningView: React.FC<{ pageTitle: string }> = ({ pageTitle }) => {
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(20);
   const rows = [
     { id: 'sc_1', school: '杭州市西湖区学军小学（示例）', grade: '四年级 (8个班)', screened: 342, alertCount: 94, rate: '27.5%', date: '2026-10-28' },
     { id: 'sc_2', school: '杭州市滨江区江南实验学校（示例）', grade: '七年级 (10个班)', screened: 465, alertCount: 218, rate: '46.9%', date: '2026-11-04' },
@@ -467,7 +467,7 @@ export const HelpDocsPage: React.FC = () => {
   const { navigateToRoute } = useNavigation();
   const unconfirmedNodes = FLAT_MENU_NODES.filter((n) => Boolean(n.unconfirmedNote));
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(20);
   const totalPages = Math.max(1, Math.ceil(unconfirmedNodes.length / pageSize));
   const safePage = Math.min(page, totalPages);
   const visibleNodes = unconfirmedNodes.slice((safePage - 1) * pageSize, safePage * pageSize);

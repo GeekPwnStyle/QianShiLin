@@ -53,7 +53,7 @@ export const CatalogResourcePage: React.FC<{ config: CatalogConfig }> = ({ confi
   const { session } = useAuth();
   const canEdit = session.identityType === 'admin';
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(20);
   const [keyword, setKeyword] = useState('');
   const [search, setSearch] = useState('');
   const [editing, setEditing] = useState<CatalogRow | null>(null);

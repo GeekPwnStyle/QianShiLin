@@ -28,7 +28,7 @@ export const AnalyticsDashboardPage: React.FC<{ pageTitle: string }> = ({ pageTi
   const [selectedStore, setSelectedStore] = useState<string>('all');
   const [definitionOpen, setDefinitionOpen] = useState(false);
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(20);
 
   const visibleRows =
     selectedStore === 'all'

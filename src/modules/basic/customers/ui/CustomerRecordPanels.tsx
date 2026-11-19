@@ -15,7 +15,7 @@ const historyKinds=['全部','用户注册','验光','购买商品','回访','�
 const cell=(p:Record<string,unknown>,key:string,index:number,created:string)=>key==='序号'?String(index+1):key==='操作'?'—':String(p[key]??(key==='时间'||key==='创建时间'?created:'—'));
 export function CustomerRecordPanel({section,items,customer,loading,error,debugMode,refresh}:{section:string;items:Item[];customer:CustomerProfile;loading:boolean;error:boolean;debugMode:boolean;refresh:()=>Promise<unknown>}){
  const [kind,setKind]=useState('全部');const [draft,setDraft]=useState<Record<string,string>>({});const [editing,setEditing]=useState(false);const [saving,setSaving]=useState(false);const [message,setMessage]=useState('');
- const [page,setPage]=useState(1);const [pageSize,setPageSize]=useState(10);
+ const [page,setPage]=useState(1);const [pageSize,setPageSize]=useState(20);
  useEffect(()=>{setPage(1);},[section,customer.id,kind]);
  const shown=section==='history'&&kind!=='全部'?items.filter(i=>String(i.payload['标题']??'')===kind):items;
  const totalPages=Math.max(1,Math.ceil(shown.length/pageSize));

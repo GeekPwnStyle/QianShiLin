@@ -16,7 +16,7 @@ export const NoticeBell: React.FC = () => {
   const [historyOpen,setHistoryOpen]=useState(false);
   const [status,setStatus]=useState<'all'|'unread'>('all');
   const [page,setPage]=useState(1);
-  const [pageSize,setPageSize]=useState(10);
+  const [pageSize,setPageSize]=useState(20);
   const [detail,setDetail]=useState<Notice|null>(null);
   const [error,setError]=useState('');
   const count=useQuery({queryKey:['notices','unread-count',session.userId],queryFn:noticesApi.unreadCount,

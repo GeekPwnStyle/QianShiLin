@@ -34,7 +34,7 @@ export function AccessSummaryTable<T extends { id: string }>({ subjects, selecte
   codesOf: (item: T) => readonly string[]; onEdit: (item: T) => void; loading?: boolean; loadingLabel?: string;
 }) {
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(20);
   const totalPages = Math.max(1, Math.ceil(subjects.length / pageSize));
   const safePage = Math.min(page, totalPages);
   const visibleSubjects = subjects.slice((safePage - 1) * pageSize, safePage * pageSize);
