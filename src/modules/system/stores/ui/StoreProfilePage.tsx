@@ -1,3 +1,4 @@
+import { Eye, Pencil } from 'lucide-react';
 import { OperationStatus } from '@/src/shared/ui/OperationStatus';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -88,7 +89,7 @@ interface ColumnDef {
 
 const ALL_COLUMNS: ColumnDef[] = [
   { key: 'index', label: '#', minWidth: '52px', sticky: true, defaultVisible: true },
-  { key: 'actions', label: '操作', minWidth: '158px', sticky: true, defaultVisible: true },
+  { key: 'actions', label: '操作', minWidth: '86px', sticky: true, defaultVisible: true },
   {
     key: 'name',
     label: '门店名称',
@@ -142,7 +143,7 @@ const ALL_COLUMNS: ColumnDef[] = [
   },
   {
     key: 'province',
-    label: '省',
+    label: '所在省份',
     minWidth: '100px',
     defaultVisible: true,
     sortField: 'province',
@@ -160,7 +161,7 @@ const ALL_COLUMNS: ColumnDef[] = [
   },
   {
     key: 'storeCode',
-    label: '门店代号',
+    label: '门店编码',
     minWidth: '148px',
     defaultVisible: true,
     filterKey: 'storeCode',
@@ -168,7 +169,7 @@ const ALL_COLUMNS: ColumnDef[] = [
   },
   {
     key: 'contactName',
-    label: '联系人',
+    label: '店长',
     minWidth: '104px',
     defaultVisible: true,
     filterKey: 'contactName',
@@ -176,7 +177,7 @@ const ALL_COLUMNS: ColumnDef[] = [
   },
   {
     key: 'phone',
-    label: '手机号码',
+    label: '联系电话',
     minWidth: '132px',
     defaultVisible: true,
     filterKey: 'phone',
@@ -215,7 +216,7 @@ const ALL_COLUMNS: ColumnDef[] = [
   {
     key: 'address',
     label: '门店地址',
-    minWidth: '260px',
+    minWidth: '460px',
     defaultVisible: true,
     filterKey: 'address',
     filterKind: 'text',
@@ -266,6 +267,19 @@ const ALL_COLUMNS: ColumnDef[] = [
     filterKind: 'select',
   },
 ];
+const STORE_COLUMN_ORDER = ['index','actions','brand','name','storeCode','address','contactName','phone','province','providesProcessing','remark'];
+ALL_COLUMNS.push(
+ {key:'brand',label:'门店品牌',minWidth:'108px',defaultVisible:true},
+ {key:'providesProcessing',label:'加工服务',minWidth:'100px',defaultVisible:true},
+ {key:'remark',label:'备注',minWidth:'160px',defaultVisible:true}
+);
+ALL_COLUMNS.sort((a,b)=>{
+ const x=STORE_COLUMN_ORDER.indexOf(a.key),y=STORE_COLUMN_ORDER.indexOf(b.key);
+ return (x<0?100:x)-(y<0?100:y);
+});
+ALL_COLUMNS.forEach(col=>{col.defaultVisible=STORE_COLUMN_ORDER.includes(col.key);});
+const defaultHiddenColumns=()=>Object.fromEntries(ALL_COLUMNS.map(c=>[c.key,!c.defaultVisible]));
+
 
 const STORE_TYPE_STYLE: Record<StoreType, string> = {
   总店: 'bg-[#EFF6FF] text-[#1D4ED8] border-[#BFDBFE]',
@@ -393,7 +407,8 @@ export const StoreProfilePage: React.FC = () => {
   const [pageSize, setPageSize] = useState(10);
 
   // Column visibility popover ("设置表头")
-  const [hiddenCols, setHiddenCols] = useState<Record<string, boolean>>({});
+  const [detailStore,setDetailStore]=useState<StoreProfileRecord|null>(null);
+  const [hiddenCols, setHiddenCols] = useState<Record<string, boolean>>(defaultHiddenColumns);
   const [colMenuOpen, setColMenuOpen] = useState(false);
   const [colSearch, setColSearch] = useState('');
   const colMenuBtnRef = useRef<HTMLButtonElement>(null);
@@ -1048,56 +1063,13 @@ export const StoreProfilePage: React.FC = () => {
         );
 
       case 'actions':
-        return (
-          <div className="flex flex-col gap-1 py-0.5">
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                disabled={!canManageStores}
-                onClick={() => openRenewModal(store)}
-                className="px-2 py-0.5 rounded-[6px] text-[12px] font-medium bg-[#171916] text-white hover:bg-[#2C302A] disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed transition-colors"
-              >
-                续费
-              </button>
-              <button
-                type="button"
-                disabled={!canManageStores}
-                onClick={() => openEditModal(store)}
-                className="px-2 py-0.5 rounded-[6px] text-[12px] font-medium bg-[var(--qsl-accent-soft)] text-[#171916] border border-[var(--qsl-accent-soft-border)] hover:bg-[var(--qsl-accent)] hover:text-[var(--qsl-accent-ink)] disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed transition-colors"
-              >
-                编辑
-              </button>
-              <button
-                type="button"
-                disabled={!canManageStores}
-                onClick={() => setDeleteTargets([store])}
-                title="删除门店"
-                aria-label={`删除 ${store.name}`}
-                className="px-1.5 py-0.5 rounded-[6px] text-[12px] font-medium text-[#DC2626] bg-[#FEF2F2] border border-[#FECACA] hover:bg-[#FEE2E2] disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed transition-colors"
-              >
-                删除
-              </button>
-            </div>
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                disabled={!canManageStores}
-                onClick={() => openPermissionsModal(store)}
-                className="px-2 py-0.5 rounded-[6px] text-[12px] font-medium bg-[#F8F9F5] text-[#171916] border border-[#D9DDD4] hover:border-[#171916] disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed transition-colors"
-              >
-                权限
-              </button>
-              <button
-                type="button"
-                disabled={!canManageStores}
-                onClick={() => openConfigModal(store)}
-                className="px-2 py-0.5 rounded-[6px] text-[12px] font-medium bg-[#F8F9F5] text-[#171916] border border-[#D9DDD4] hover:border-[#171916] disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed transition-colors"
-              >
-                配置
-              </button>
-            </div>
-          </div>
-        );
+        return <div className="flex items-center gap-1">
+          <button type="button" title="查看详情" aria-label={`查看${store.name}详情`} onClick={()=>setDetailStore(store)} className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[#D9DDD4] hover:bg-[#F2F4ED]"><Eye size={15}/></button>
+          <button type="button" title="编辑门店" aria-label={`编辑${store.name}`} disabled={!canManageStores} onClick={()=>openEditModal(store)} className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[#D9DDD4] hover:bg-[var(--qsl-accent-soft)] disabled:opacity-40"><Pencil size={15}/></button>
+        </div>;
+      case 'brand': return store.brand || '—';
+      case 'providesProcessing': return store.providesProcessing ? '提供' : '不提供';
+      case 'remark': return <span className="block max-w-[200px] whitespace-normal">{store.remark||'—'}</span>;
 
       case 'name':
         return (
@@ -1205,7 +1177,7 @@ export const StoreProfilePage: React.FC = () => {
 
       case 'address':
         return (
-          <span className="block max-w-[260px] truncate" title={store.address}>
+          <span className="block min-w-[420px] max-w-[600px] whitespace-normal break-words leading-6" title={store.address}>
             {store.address}
           </span>
         );
@@ -1344,7 +1316,7 @@ export const StoreProfilePage: React.FC = () => {
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
-                      onClick={() => setHiddenCols({})}
+                      onClick={() => setHiddenCols(defaultHiddenColumns())}
                       className="text-[12px] text-[#5F645D] hover:text-[#171916] cursor-pointer"
                     >
                       恢复默认
@@ -1647,6 +1619,20 @@ export const StoreProfilePage: React.FC = () => {
         )}
 
       {/* Modal 1: Create / Edit Store */}
+      <Modal open={!!detailStore} onClose={()=>setDetailStore(null)} title={`门店详情 · ${detailStore?.name||''}`} maxWidthClass="max-w-4xl">
+        {detailStore&&<div className="space-y-5">
+          <dl className="grid gap-x-6 gap-y-4 sm:grid-cols-2">
+            {([
+              ['门店品牌',detailStore.brand],['门店名称',detailStore.name],['门店编码',detailStore.storeCode],['门店类型',detailStore.storeType],
+              ['详细地址',detailStore.address],['店长',detailStore.contactName],['联系电话',detailStore.phone],['所在省份',detailStore.province],['城市',detailStore.city],
+              ['加工服务',detailStore.providesProcessing?'提供':'不提供'],['备注',detailStore.remark],['门店简称',detailStore.shortName],['归属总店',detailStore.parentStoreName],['区域',detailStore.regionName],
+              ['微信',detailStore.wechat],['QQ',detailStore.qq],['医疗器械经营许可证',detailStore.medicalLicenseNo],['许可证到期',detailStore.medicalLicenseExpiry],['系统开户日期',detailStore.openedAt],['系统到期日期',detailStore.expiresAt]
+            ] as const).map(([label,value])=><div key={label} className={label==='详细地址'||label==='备注'?'sm:col-span-2':''}><dt className="text-xs text-[#73796F]">{label}</dt><dd className="mt-1 break-words text-sm">{value||'—'}</dd></div>)}
+          </dl>
+          <section className="border-t pt-4"><h3 className="mb-3 text-sm font-semibold">权限与运营配置</h3><dl className="grid gap-3 sm:grid-cols-2">{ALL_COLUMNS.filter(c=>['showOnMiniProgram','crossStoreView','otherStoresViewThis','viewHqSuppliers','viewInventoryCount'].includes(c.key)).map(c=><div key={c.key}><dt className="mb-1 text-xs text-[#73796F]">{c.label}</dt><dd>{renderCell(detailStore,c.key,0)}</dd></div>)}{Object.entries(detailStore.config).map(([key,value])=><div key={key}><dt className="text-xs text-[#73796F]">{({defaultWarehouse:'默认仓库',processingCenter:'加工中心',blankLensSourceWarehouse:'毛坯片来源仓库',businessHours:'营业时间',appointmentSlotCapacity:'预约容量',allowOnlineAppointment:'在线预约',operatingStatus:'经营状态',miniProgramNotice:'小程序公告'} as Record<string,string>)[key]||key}</dt><dd className="mt-1 text-sm">{typeof value==='boolean'?(value?'是':'否'):key==='operatingStatus'?({operating:'营业中',preparing:'筹备中',disabled:'已停用'} as Record<string,string>)[String(value)]:String(value||'—')}</dd></div>)}</dl></section>
+          {canManageStores&&<div className="flex flex-wrap justify-end gap-2 border-t pt-4"><Button onClick={()=>{setDetailStore(null);openRenewModal(detailStore);}}>续期</Button><Button onClick={()=>{setDetailStore(null);openPermissionsModal(detailStore);}}>权限设置</Button><Button onClick={()=>{setDetailStore(null);openConfigModal(detailStore);}}>运营配置</Button></div>}
+        </div>}
+      </Modal>
       <Modal
         open={formOpen}
         onClose={() => setFormOpen(false)}
@@ -2311,7 +2297,7 @@ export const StoreProfilePage: React.FC = () => {
       >
         <div className="space-y-3 text-[14px] text-[#171916]">
           <p>
-            即将删除以下门店档案（当前为前端演示操作，后续接入服务端时需联动校验历史单据与仓库余额）：
+            即将删除以下门店档案；仍有关联业务资料的门店无法删除：
           </p>
           <div className="max-h-40 overflow-y-auto qsl-scroll space-y-1.5">
             {deleteTargets.map((st) => (

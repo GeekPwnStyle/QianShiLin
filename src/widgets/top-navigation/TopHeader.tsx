@@ -614,12 +614,12 @@ export const TopHeader: React.FC = () => {
                   value={session.currentStoreId}
                   onChange={(val) => switchStore(val)}
                   className="hidden xl:block"
-                  buttonClassName="max-w-[175px] 2xl:max-w-[210px]"
-                  menuMinWidth={210}
+                  buttonClassName="min-w-[232px] max-w-[300px]"
+                  menuMinWidth={280}
                   align="right"
                   options={[
                     ...(session.identityType === 'admin'
-                      ? [{ value: 'all', label: '全部授权门店 (4家)' }]
+                      ? [{ value: 'all', label: `全部授权门店 (${session.authorizedStores.length}家)` }]
                       : []),
                     ...session.authorizedStores.map((st) => ({
                       value: st.id,
