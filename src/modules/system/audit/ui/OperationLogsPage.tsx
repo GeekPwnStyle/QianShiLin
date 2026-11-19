@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { RefreshCw, RotateCcw, Search } from 'lucide-react';
+import { ChevronDown, SlidersHorizontal, RefreshCw, RotateCcw, Search } from 'lucide-react';
 import { useAuth } from '@/src/modules/auth/application/AuthContext';
 import { Button } from '@/src/shared/ui/Button';
 import { PaginationBar } from '@/src/shared/ui/PaginationBar';
@@ -106,6 +106,8 @@ export const OperationLogsPage: React.FC = () => {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const extraFilterCount = [roleFilter, actionFilter, clientTypeFilter].filter(Boolean).length;
 
   const allowed = session.identityType === 'admin' && hasPermission('system.read');
 
@@ -268,25 +270,18 @@ export const OperationLogsPage: React.FC = () => {
   const isBusy = logs.isLoading || logs.isFetching;
 
   return (
-    <div className="space-y-5">
-      <div>
-        <h2 className="text-[25px] font-semibold text-[#171916]">操作日志</h2>
-        <p className="mt-1 text-sm text-[#6D736A]">
-          支持按角色、时间段、操作项目、具体动作及关键词检索。记录登录、退出和权限配置变更。
-        </p>
-      </div>
-
+    <div className="space-y-3">
       <form
-        className="rounded-[20px] border border-[#D9DDD4] bg-white p-4 space-y-3.5"
+        className="rounded-2xl border border-[#D9DDD4] bg-white p-3 space-y-2.5"
         onSubmit={(event) => {
           event.preventDefault();
           setPage(1);
           setSearch(draftSearch.trim());
         }}
       >
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+        <div className="flex flex-wrap items-center gap-2 [&>div]:w-full [&>div]:sm:w-[170px]">
           <div>
-            <label className="mb-1.5 block text-xs font-medium text-[#5F645D]">时间范围</label>
+            <label className="sr-only">时间范围</label>
             <Select
               variant="arc"
               ariaLabel="选择时间范围"
@@ -305,7 +300,7 @@ export const OperationLogsPage: React.FC = () => {
 
           {timePreset === 'month' && (
             <div>
-              <label className="mb-1.5 block text-xs font-medium text-[#5F645D]">选择月份</label>
+              <label className="sr-only">选择月份</label>
               <input
                 aria-label="选择月份"
                 type="month"
@@ -314,7 +309,7 @@ export const OperationLogsPage: React.FC = () => {
                   setMonth(event.target.value);
                   setPage(1);
                 }}
-                className="h-10 w-full rounded-full border border-[#D9DDD4] bg-white px-4 text-[14px] text-[#171916] outline-none transition-colors hover:border-[#9DA498] focus:border-[#171916]"
+                className="h-9 w-full rounded-xl border border-[#D9DDD4] bg-white px-4 text-[14px] text-[#171916] outline-none transition-colors hover:border-[#9DA498] focus:border-[#171916]"
               />
             </div>
           )}
@@ -325,7 +320,7 @@ export const OperationLogsPage: React.FC = () => {
             timePreset === 'custom') && (
             <>
               <div>
-                <label className="mb-1.5 block text-xs font-medium text-[#5F645D]">开始日期</label>
+                <label className="sr-only">开始日期</label>
                 <input
                   aria-label="开始日期"
                   type="date"
@@ -336,11 +331,11 @@ export const OperationLogsPage: React.FC = () => {
                     setStartDate(event.target.value);
                     setPage(1);
                   }}
-                  className="h-10 w-full rounded-full border border-[#D9DDD4] bg-white px-4 text-[14px] text-[#171916] tabular-nums outline-none transition-colors hover:border-[#9DA498] focus:border-[#171916]"
+                  className="h-9 w-full rounded-xl border border-[#D9DDD4] bg-white px-4 text-[14px] text-[#171916] tabular-nums outline-none transition-colors hover:border-[#9DA498] focus:border-[#171916]"
                 />
               </div>
               <div>
-                <label className="mb-1.5 block text-xs font-medium text-[#5F645D]">结束日期</label>
+                <label className="sr-only">结束日期</label>
                 <input
                   aria-label="结束日期"
                   type="date"
@@ -351,29 +346,16 @@ export const OperationLogsPage: React.FC = () => {
                     setEndDate(event.target.value);
                     setPage(1);
                   }}
-                  className="h-10 w-full rounded-full border border-[#D9DDD4] bg-white px-4 text-[14px] text-[#171916] tabular-nums outline-none transition-colors hover:border-[#9DA498] focus:border-[#171916]"
+                  className="h-9 w-full rounded-xl border border-[#D9DDD4] bg-white px-4 text-[14px] text-[#171916] tabular-nums outline-none transition-colors hover:border-[#9DA498] focus:border-[#171916]"
                 />
               </div>
             </>
           )}
 
-          <div>
-            <label className="mb-1.5 block text-xs font-medium text-[#5F645D]">用户角色</label>
-            <Select
-              variant="arc"
-              ariaLabel="按用户角色筛选"
-              value={roleFilter}
-              placeholder="全部角色"
-              onChange={(val) => {
-                setRoleFilter(val);
-                setPage(1);
-              }}
-              options={roleOptions}
-            />
-          </div>
+
 
           <div>
-            <label className="mb-1.5 block text-xs font-medium text-[#5F645D]">操作项目</label>
+            <label className="sr-only">操作项目</label>
             <Select
               variant="arc"
               ariaLabel="按操作项目筛选"
@@ -396,43 +378,15 @@ export const OperationLogsPage: React.FC = () => {
             />
           </div>
 
-          <div>
-            <label className="mb-1.5 block text-xs font-medium text-[#5F645D]">具体操作</label>
-            <Select
-              variant="arc"
-              ariaLabel="按具体操作筛选"
-              value={actionFilter}
-              placeholder="全部操作"
-              onChange={(val) => {
-                setActionFilter(val);
-                setPage(1);
-              }}
-              options={actionOptions}
-            />
-          </div>
 
-          <div>
-            <label className="mb-1.5 block text-xs font-medium text-[#5F645D]">客户端</label>
-            <Select
-              variant="arc"
-              ariaLabel="按客户端筛选"
-              value={clientTypeFilter}
-              placeholder="全部客户端"
-              onChange={(val) => {
-                setClientTypeFilter(val);
-                setPage(1);
-              }}
-              options={clientTypeOptions}
-            />
-          </div>
-        </div>
 
-        <div className="flex flex-wrap items-center gap-2.5 pt-1 border-t border-[#EFF2EA]">
-          <label className="flex h-10 min-w-[240px] flex-1 items-center gap-2 rounded-full border border-[#D9DDD4] bg-[#F8F9F5] px-4 transition-colors focus-within:border-[#171916] focus-within:bg-white">
+
+
+          <label className="flex h-9 min-w-[180px] flex-1 items-center gap-2 rounded-full border border-[#D9DDD4] bg-[#F8F9F5] px-4 transition-colors focus-within:border-[#171916] focus-within:bg-white">
             <Search className="h-4 w-4 text-[#73796F] shrink-0" />
             <input
               aria-label="搜索日志"
-              placeholder="操作人 / 账号 / 项目 / 操作 / IP / 详情关键词"
+              placeholder="搜索操作人、账号、IP 或关键词"
               value={draftSearch}
               onChange={(event) => setDraftSearch(event.target.value)}
               className="w-full bg-transparent text-sm text-[#171916] outline-none placeholder:text-[#8B9188]"
@@ -451,6 +405,13 @@ export const OperationLogsPage: React.FC = () => {
               重置筛选
             </Button>
           )}
+          <button type="button" aria-expanded={filtersOpen} aria-controls="audit-extra-filters"
+            onClick={() => setFiltersOpen(!filtersOpen)}
+            className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg px-2.5 text-sm text-[#5F645D] hover:bg-[#F2F4ED] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#171916]">
+            <SlidersHorizontal className="h-3.5 w-3.5" />更多筛选
+            {extraFilterCount > 0 && <span className="rounded-full bg-[#E8F5B7] px-1.5 text-xs font-medium text-[#171916]">{extraFilterCount}</span>}
+            <ChevronDown className={`h-3.5 w-3.5 transition-transform ${filtersOpen ? 'rotate-180' : ''}`} />
+          </button>
           <Button
             type="button"
             variant="ghost"
@@ -460,13 +421,59 @@ export const OperationLogsPage: React.FC = () => {
             刷新
           </Button>
         </div>
+        {filtersOpen && (
+          <div id="audit-extra-filters" className="grid grid-cols-1 gap-2 border-t border-[#EFF2EA] pt-2.5 sm:grid-cols-3 xl:max-w-[720px]">
+          <div>
+            <label className="sr-only">用户角色</label>
+            <Select
+              variant="arc"
+              ariaLabel="按用户角色筛选"
+              value={roleFilter}
+              placeholder="全部角色"
+              onChange={(val) => {
+                setRoleFilter(val);
+                setPage(1);
+              }}
+              options={roleOptions}
+            />
+          </div>
+          <div>
+            <label className="sr-only">具体操作</label>
+            <Select
+              variant="arc"
+              ariaLabel="按具体操作筛选"
+              value={actionFilter}
+              placeholder="全部操作"
+              onChange={(val) => {
+                setActionFilter(val);
+                setPage(1);
+              }}
+              options={actionOptions}
+            />
+          </div>
+          <div>
+            <label className="sr-only">客户端</label>
+            <Select
+              variant="arc"
+              ariaLabel="按客户端筛选"
+              value={clientTypeFilter}
+              placeholder="全部客户端"
+              onChange={(val) => {
+                setClientTypeFilter(val);
+                setPage(1);
+              }}
+              options={clientTypeOptions}
+            />
+          </div>
+          </div>
+        )}
       </form>
 
       {logs.isError && !logs.data ? (
         <ErrorState message={logs.error.message} onRetry={() => void logs.refetch()} />
       ) : (
         <section className="overflow-hidden rounded-[20px] border border-[#D9DDD4] bg-white">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#E5E8E0] px-5 py-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#E5E8E0] px-4 py-2.5">
             <div className="flex items-center gap-3">
               <h3 className="font-semibold text-[#171916]">审计记录</h3>
               {logs.isFetching && items.length > 0 && (
