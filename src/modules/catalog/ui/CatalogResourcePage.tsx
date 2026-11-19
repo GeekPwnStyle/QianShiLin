@@ -5,6 +5,7 @@ import { Download, Plus, Search, Upload } from 'lucide-react';
 import { downloadCatalogCsv, importRows } from '../application/catalogCsv';
 import { useAuth } from '@/src/modules/auth/application/AuthContext';
 import { Button } from '@/src/shared/ui/Button';
+import { ConfirmDeleteModal } from '@/src/shared/ui/ConfirmDeleteModal';
 import { DataTable, type TableColumn } from '@/src/shared/ui/DataTable';
 import { Modal } from '@/src/shared/ui/Modal';
 import { EmptyState, ErrorState } from '@/src/shared/ui/StateViews';
@@ -58,6 +59,7 @@ export const CatalogResourcePage: React.FC<{ config: CatalogConfig }> = ({ confi
   const [search, setSearch] = useState('');
   const [editing, setEditing] = useState<CatalogRow | null>(null);
   const [form, setForm] = useState<Record<string, unknown> | null>(null);
+  const [deletingRow, setDeletingRow] = useState<CatalogRow | null>(null);
   const [message, setMessage] = useState('');
   const [transferring, setTransferring] = useState(false);
   const importInput = useRef<HTMLInputElement>(null);
@@ -80,8 +82,12 @@ export const CatalogResourcePage: React.FC<{ config: CatalogConfig }> = ({ confi
   const remove = useMutation({
     mutationFn: (id: string) => api<{ ok: boolean }>(`/${config.resource}/${id}`, 'DELETE'),
     onSuccess: async () => {
+      setDeletingRow(null);
       setMessage('已删除');
       await client.invalidateQueries({ queryKey: ['catalog', config.resource] });
+    },
+    onError: () => {
+      setDeletingRow(null);
     },
   });
 
@@ -133,9 +139,7 @@ export const CatalogResourcePage: React.FC<{ config: CatalogConfig }> = ({ confi
     key: 'actions', header: '操作',
     render: row => <div className="flex gap-3">
       <button type="button" className="text-[#171916] underline cursor-pointer" onClick={() => openForm(row)}>编辑</button>
-      <button type="button" className="text-[#9C3232] underline cursor-pointer" onClick={() => {
-        if (window.confirm(`确认删除「${row.name}」？`)) remove.mutate(row.id);
-      }}>删除</button>
+      <button type="button" className="text-[#9C3232] underline cursor-pointer" onClick={() => setDeletingRow(row)}>删除</button>
     </div>,
   });
 
@@ -207,5 +211,21 @@ export const CatalogResourcePage: React.FC<{ config: CatalogConfig }> = ({ confi
       </div>
       {save.error && <OperationStatus role="alert">{save.error.message}</OperationStatus>}
     </Modal>
+    <ConfirmDeleteModal
+      open={Boolean(deletingRow)}
+      title={`确认删除${config.title}`}
+      subtitle="危险操作二次确认：删除后该记录将从数据库移除"
+      description={
+        <span>
+          确定删除{config.title}「<strong>{deletingRow?.name}</strong>」吗？
+        </span>
+      }
+      note="此操作不可撤销；若仍有关联业务数据，删除可能会被系统拒绝。"
+      loading={remove.isPending}
+      onClose={() => setDeletingRow(null)}
+      onConfirm={() => {
+        if (deletingRow) remove.mutate(deletingRow.id);
+      }}
+    />
   </div>;
 };

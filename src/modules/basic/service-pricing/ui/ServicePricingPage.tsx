@@ -3,6 +3,7 @@ import {useQuery,useQueryClient} from '@tanstack/react-query';
 import {Plus,Search,RefreshCw,Copy,Pencil,Trash2,Download,Upload,Unlock} from 'lucide-react';
 import {useAuth} from '@/src/modules/auth/application/AuthContext';
 import {Button} from '@/src/shared/ui/Button';
+import {ConfirmDeleteModal} from '@/src/shared/ui/ConfirmDeleteModal';
 import {Modal} from '@/src/shared/ui/Modal';
 import {Select} from '@/src/shared/ui/Select';
 import {PaginationBar} from '@/src/shared/ui/PaginationBar';
@@ -60,6 +61,17 @@ export function ServicePricingPage({kind}:{kind:'categories'|'items'}){
     {message&&<p role="alert" className="text-sm">{message}</p>}<div className="flex justify-end gap-2 border-t pt-4"><Button disabled={busy} onClick={()=>setEditor(null)}>取消</Button><Button type="submit" variant="accent" loading={busy}>保存</Button></div>
    </form>}
   </Modal>
-  <Modal open={!!deleting} onClose={()=>{if(!busy)setDeleting(null);}} title="确认删除" maxWidthClass="max-w-md"><p className="text-sm">确定删除选中的 {deleting?.length} 条记录？类别下仍有项目或包含只读类别时，整批操作会被拒绝。</p>{message&&<p role="alert" className="mt-3 text-sm">{message}</p>}<div className="mt-5 flex justify-end gap-2"><Button disabled={busy} onClick={()=>setDeleting(null)}>取消</Button><Button variant="danger" loading={busy} onClick={()=>void perform(()=>api('/'+kind+'/batch-delete','POST',{ids:deleting}),'已删除')}>确认删除</Button></div></Modal>
+  <ConfirmDeleteModal
+    open={!!deleting}
+    title="确认删除服务收费记录"
+    subtitle="危险操作二次确认：删除后将从数据库移除"
+    description={<span>确定删除选中的 <strong>{deleting?.length ?? 0}</strong> 条记录吗？</span>}
+    note="类别下仍有项目或包含只读类别时，整批操作会被拒绝。"
+    items={(deleting ?? []).map((id) => ({ id, label: rows.find((r) => r.id === id)?.name || id }))}
+    loading={busy}
+    error={message || undefined}
+    onClose={() => setDeleting(null)}
+    onConfirm={() => void perform(() => api('/' + kind + '/batch-delete', 'POST', { ids: deleting }), '已删除')}
+  />
  </div>;
 }

@@ -24,6 +24,7 @@ import {
 } from '@/src/modules/basic/suppliers/ui/SupplierActionModals';
 import { SupplierFormModal } from '@/src/modules/basic/suppliers/ui/SupplierFormModal';
 import { Button } from '@/src/shared/ui/Button';
+import { ConfirmDeleteModal } from '@/src/shared/ui/ConfirmDeleteModal';
 import { HelpTooltip } from '@/src/shared/ui/HelpTooltip';
 import { Modal } from '@/src/shared/ui/Modal';
 import { OperationStatus } from '@/src/shared/ui/OperationStatus';
@@ -999,32 +1000,33 @@ export const SupplierPage: React.FC = () => {
       />
 
       {/* 删除确认弹窗 */}
-      {deletingSupplier && (
-        <Modal
-          open
-          title="确认删除供应商资料"
-          maxWidthClass="max-w-md"
-          onClose={() => !busy && setDeletingSupplier(null)}
-          footer={
-            <>
-              <Button onClick={() => setDeletingSupplier(null)} disabled={busy}>
-                取消
-              </Button>
-              <Button
-                variant="danger"
-                loading={busy}
-                onClick={() => void handleDeleteConfirm()}
-              >
-                确认删除
-              </Button>
-            </>
-          }
-        >
-          <p className="text-sm text-[#4A4F47]">
-            确定删除供应商「<strong>{deletingSupplier.name}</strong>」？此操作不可撤销；若已存在历史单据关联建议改为停用。
-          </p>
-        </Modal>
-      )}
+      <ConfirmDeleteModal
+        open={Boolean(deletingSupplier)}
+        title="确认删除供应商资料"
+        subtitle="危险操作二次确认：删除后该供应商资料与关联账号将移除"
+        description={
+          <span>
+            确定删除供应商「<strong>{deletingSupplier?.name}</strong>」吗？
+          </span>
+        }
+        note="此操作不可撤销；若已存在历史单据关联建议改为停用。"
+        items={
+          deletingSupplier
+            ? [
+                {
+                  id: deletingSupplier.id,
+                  label: deletingSupplier.name,
+                  meta: deletingSupplier.login_username
+                    ? `@${deletingSupplier.login_username}`
+                    : deletingSupplier.contact || undefined,
+                },
+              ]
+            : undefined
+        }
+        loading={busy}
+        onClose={() => setDeletingSupplier(null)}
+        onConfirm={() => void handleDeleteConfirm()}
+      />
     </div>
   );
 };

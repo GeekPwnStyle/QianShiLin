@@ -35,6 +35,7 @@ import {
 } from '@/src/modules/system/stores/domain/storeProfile';
 import { downloadCsv } from '@/src/shared/lib/exportCsv';
 import { Button } from '@/src/shared/ui/Button';
+import { ConfirmDeleteModal } from '@/src/shared/ui/ConfirmDeleteModal';
 import { HelpTooltip } from '@/src/shared/ui/HelpTooltip';
 import { Modal } from '@/src/shared/ui/Modal';
 import { PaginationBar } from '@/src/shared/ui/PaginationBar';
@@ -89,7 +90,7 @@ interface ColumnDef {
 
 const ALL_COLUMNS: ColumnDef[] = [
   { key: 'index', label: '#', minWidth: '52px', sticky: true, defaultVisible: true },
-  { key: 'actions', label: '操作', minWidth: '86px', sticky: true, defaultVisible: true },
+  { key: 'actions', label: '操作', minWidth: '118px', sticky: true, defaultVisible: true },
   {
     key: 'name',
     label: '门店名称',
@@ -1064,10 +1065,39 @@ export const StoreProfilePage: React.FC = () => {
         );
 
       case 'actions':
-        return <div className="flex items-center gap-1">
-          <button type="button" title="查看详情" aria-label={`查看${store.name}详情`} onClick={()=>setDetailStore(store)} className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[#D9DDD4] hover:bg-[#F2F4ED]"><Eye size={15}/></button>
-          <button type="button" title="编辑门店" aria-label={`编辑${store.name}`} disabled={!canManageStores} onClick={()=>openEditModal(store)} className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[#D9DDD4] hover:bg-[var(--qsl-accent-soft)] disabled:opacity-40"><Pencil size={15}/></button>
-        </div>;
+        return (
+          <div className="inline-flex items-center gap-1">
+            <button
+              type="button"
+              title="编辑门店"
+              aria-label={`编辑${store.name}`}
+              disabled={!canManageStores}
+              onClick={() => openEditModal(store)}
+              className="inline-flex items-center justify-center rounded-lg border border-[var(--qsl-accent-border)] bg-[var(--qsl-accent)] px-2 py-1 font-medium text-[var(--qsl-accent-ink)] hover:bg-[var(--qsl-accent-hover)] disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
+            >
+              <Pencil size={14} />
+            </button>
+            <button
+              type="button"
+              title={canManageStores ? '删除门店' : '当前账号无删除门店权限'}
+              aria-label={`删除${store.name}`}
+              disabled={!canManageStores}
+              onClick={() => setDeleteTargets([store])}
+              className="inline-flex items-center justify-center rounded-lg border border-[#D9DDD4] bg-white px-2 py-1 font-medium text-red-700 hover:bg-red-50 disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
+            >
+              <Trash2 size={14} />
+            </button>
+            <button
+              type="button"
+              title="查看详情"
+              aria-label={`查看${store.name}详情`}
+              onClick={() => setDetailStore(store)}
+              className="inline-flex items-center justify-center rounded-lg border border-[#D9DDD4] bg-white px-2 py-1 font-medium text-[#171916] hover:bg-[#F5F7F2] cursor-pointer"
+            >
+              <Eye size={14} />
+            </button>
+          </div>
+        );
       case 'brand': return store.brand || '—';
       case 'providesProcessing': return store.providesProcessing ? '提供' : '不提供';
       case 'remark': return <span className="block max-w-[200px] whitespace-normal">{store.remark||'—'}</span>;
@@ -2225,7 +2255,7 @@ export const StoreProfilePage: React.FC = () => {
       </Modal>
 
       {/* Modal 6: Delete Confirmation */}
-      <Modal
+      <ConfirmDeleteModal
         open={deleteTargets.length > 0}
         onClose={() => setDeleteTargets([])}
         title={
@@ -2233,36 +2263,20 @@ export const StoreProfilePage: React.FC = () => {
             ? `确认删除门店 · ${deleteTargets[0]?.name}`
             : `确认批量删除 ${deleteTargets.length} 家门店`
         }
-        subtitle="危险操作二次确认：删除后该门店将从当前门店资料列表中移除。"
-        maxWidthClass="max-w-md"
-        footer={
-          <>
-            <Button variant="secondary" onClick={() => setDeleteTargets([])}>
-              取消
-            </Button>
-            <Button variant="danger" onClick={handleConfirmDelete}>
-              确认删除
-            </Button>
-          </>
+        subtitle="危险操作二次确认：删除后该门店将从当前门店资料列表中移除"
+        description={
+          <span>
+            即将删除以下 <strong>{deleteTargets.length}</strong> 家门店档案。
+          </span>
         }
-      >
-        <div className="space-y-3 text-[14px] text-[#171916]">
-          <p>
-            即将删除以下门店档案；仍有关联业务资料的门店无法删除：
-          </p>
-          <div className="max-h-40 overflow-y-auto qsl-scroll space-y-1.5">
-            {deleteTargets.map((st) => (
-              <div
-                key={st.id}
-                className="px-3 py-2 rounded-lg bg-[#FEF2F2] border border-[#FECACA] flex items-center justify-between gap-2"
-              >
-                <span className="font-semibold">{st.name}</span>
-                <span className="font-mono text-[12px] text-[#5F645D]">代号 {st.storeCode}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </Modal>
+        note="仍有关联业务资料的门店建议改为停用；删除后不可恢复。"
+        items={deleteTargets.map((st) => ({
+          id: st.id,
+          label: st.name,
+          meta: `代号 ${st.storeCode}`,
+        }))}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   );
 };

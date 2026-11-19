@@ -17,6 +17,7 @@ import {
 import { CustomerDetailModal } from '@/src/modules/basic/customers/ui/CustomerDetailModal';
 import { CustomerFormModal } from '@/src/modules/basic/customers/ui/CustomerFormModal';
 import { maskPhone } from '@/src/shared/lib/format';
+import { ConfirmDeleteModal } from '@/src/shared/ui/ConfirmDeleteModal';
 import { OperationStatus } from '@/src/shared/ui/OperationStatus';
 import { PaginationBar } from '@/src/shared/ui/PaginationBar';
 import { ErrorState, LoadingSkeleton } from '@/src/shared/ui/StateViews';
@@ -74,6 +75,7 @@ export const CustomerArchivePage: React.FC = () => {
   const [editingCustomer, setEditingCustomer] = useState<CustomerProfile | null>(null);
 
   const [batchBusy, setBatchBusy] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [statusNotice, setStatusNotice] = useState<{
     key: number;
     role: 'status' | 'alert';
@@ -200,14 +202,15 @@ export const CustomerArchivePage: React.FC = () => {
 
   const handleBatchDelete = async () => {
     if (!selectedIds.length || !canDelete) return;
-    if (!window.confirm(`确认从数据库删除选中的 ${selectedIds.length} 条顾客资料？`)) return;
     setBatchBusy(true);
     try {
       const res = await customersApi.batchDelete(selectedIds, debugMode);
       setSelectedIds([]);
+      setDeleteConfirmOpen(false);
       await queryClient.invalidateQueries({ queryKey: ['customer-archive'] });
       showToast(`已删除 ${res.deletedCount} 条顾客资料`);
     } catch (error) {
+      setDeleteConfirmOpen(false);
       showToast(error instanceof Error ? error.message : '批量删除失败', 'alert');
     } finally {
       setBatchBusy(false);
@@ -357,7 +360,7 @@ export const CustomerArchivePage: React.FC = () => {
 
         <button
           type="button"
-          onClick={() => void handleBatchDelete()}
+          onClick={() => setDeleteConfirmOpen(true)}
           disabled={!selectedIds.length || !canDelete || batchBusy}
           className="rounded-lg bg-red-600 hover:bg-red-700 px-3 py-2 text-white disabled:opacity-40 cursor-pointer transition-colors inline-flex items-center gap-1"
         >
@@ -795,6 +798,32 @@ export const CustomerArchivePage: React.FC = () => {
         onRefreshTags={refetchTags}
         onClose={closeFormModal}
         onSaved={handleSaved}
+      />
+      <ConfirmDeleteModal
+        open={deleteConfirmOpen}
+        title={
+          selectedIds.length === 1
+            ? '确认删除顾客档案'
+            : `确认批量删除 ${selectedIds.length} 条顾客档案`
+        }
+        subtitle="危险操作二次确认：删除后顾客资料将从数据库移除"
+        description={
+          <span>
+            确定从数据库删除选中的 <strong>{selectedIds.length}</strong> 条顾客资料吗？
+          </span>
+        }
+        note="此操作不可撤销；请确认所选顾客无需继续保留历史配镜及验光记录。"
+        items={selectedIds.map((id) => {
+          const customer = allItems.find((item) => item.id === id);
+          return {
+            id,
+            label: customer?.name || id,
+            meta: customer ? displayPhone(customer) : undefined,
+          };
+        })}
+        loading={batchBusy}
+        onClose={() => setDeleteConfirmOpen(false)}
+        onConfirm={() => void handleBatchDelete()}
       />
     </div>
   );

@@ -1,8 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowDown, ArrowUp, ArrowUpDown, Download, Link2, Pencil, Plus, ShieldCheck, Trash2, UserPlus } from 'lucide-react';
+import { ArrowDown, ArrowUp, ArrowUpDown, Download, Link2, Pencil, Plus, ShieldCheck, SlidersHorizontal, Trash2, UserPlus } from 'lucide-react';
 import { useAuth } from '@/src/modules/auth/application/AuthContext';
 import { PRESET_SESSIONS } from '@/src/modules/auth/domain/identity';
+import { ConfirmDeleteModal } from '@/src/shared/ui/ConfirmDeleteModal';
 import { Modal } from '@/src/shared/ui/Modal';
 import { OperationStatus } from '@/src/shared/ui/OperationStatus';
 import { PaginationBar } from '@/src/shared/ui/PaginationBar';
@@ -417,10 +418,12 @@ export function StaffArchivePage() {
           </button>
           <button
             type="button"
-            className={button}
+            className={`${button} ${columnsOpen ? 'bg-[#F8F9F5] border-[#B9C1B3]' : ''}`}
             aria-expanded={columnsOpen}
+            aria-controls="staff-header-options"
             onClick={() => setColumnsOpen(!columnsOpen)}
           >
+            <SlidersHorizontal className="w-4 h-4" />
             设置表头
           </button>
         </div>
@@ -464,9 +467,15 @@ export function StaffArchivePage() {
       )}
 
       {columnsOpen && (
-        <div className="flex flex-wrap gap-3 border-b border-[#E5E8E0] bg-[#FAFBF8] p-3">
+        <div
+          id="staff-header-options"
+          className="mx-3 my-2.5 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-[#E5E8E0] bg-[#F8F9F5] px-4 py-3"
+        >
           {columns.map(([key, label]) => (
-            <label key={key} className="inline-flex items-center gap-1 cursor-pointer">
+            <label
+              key={key}
+              className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap text-[13px] text-[#171916]"
+            >
               <input
                 type="checkbox"
                 checked={!hidden.includes(key)}
@@ -475,10 +484,18 @@ export function StaffArchivePage() {
                     previous.includes(key) ? previous.filter((value) => value !== key) : [...previous, key]
                   )
                 }
+                className="h-3.5 w-3.5 accent-[var(--qsl-accent)]"
               />
               {label}
             </label>
           ))}
+          <button
+            type="button"
+            onClick={() => setHidden([])}
+            className="ml-auto cursor-pointer text-xs text-[#73796F] hover:text-[#171916]"
+          >
+            恢复默认
+          </button>
         </div>
       )}
 
@@ -871,42 +888,37 @@ export function StaffArchivePage() {
         </Modal>
       )}
 
-      {confirmDeleteIds && (
-        <Modal
-          open
-          title="确认删除员工档案"
-          maxWidthClass="max-w-md"
-          onClose={() => {
-            if (!busy) setConfirmDeleteIds(null);
-          }}
-        >
-          <div className="space-y-4">
-            <p className="text-sm text-[#4A4F47]">
-              确定删除选中的 <strong>{confirmDeleteIds.length}</strong> 条员工档案？此操作不可撤销。
-            </p>
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                className={button}
-                disabled={busy}
-                onClick={() => setConfirmDeleteIds(null)}
-              >
-                取消
-              </button>
-              <button
-                type="button"
-                className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-600 px-3 py-1.5 font-medium text-white hover:bg-red-700 disabled:opacity-40 cursor-pointer"
-                disabled={busy}
-                onClick={() =>
-                  void mutate('?action=delete', 'POST', { ids: confirmDeleteIds }, '已删除')
-                }
-              >
-                确认删除
-              </button>
-            </div>
-          </div>
-        </Modal>
-      )}
+      <ConfirmDeleteModal
+        open={Boolean(confirmDeleteIds)}
+        title={
+          confirmDeleteIds?.length === 1
+            ? '确认删除员工档案'
+            : `确认批量删除 ${confirmDeleteIds?.length ?? 0} 条员工档案`
+        }
+        subtitle="危险操作二次确认：删除后档案与关联关系将从数据库移除"
+        description={
+          <span>
+            确定从员工档案库中删除选中的 <strong>{confirmDeleteIds?.length ?? 0}</strong>{' '}
+            条员工档案吗？
+          </span>
+        }
+        note="此操作不可撤销；若员工仍需保留历史数据，建议在编辑档案中将其状态改为「限制」。"
+        items={(confirmDeleteIds ?? []).map((id) => {
+          const targetRow = all.find((r) => r.id === id);
+          return {
+            id,
+            label: targetRow?.data.name || id,
+            meta: targetRow?.username ? `@${targetRow.username}` : targetRow?.data.role || undefined,
+          };
+        })}
+        loading={busy}
+        onClose={() => setConfirmDeleteIds(null)}
+        onConfirm={() => {
+          if (confirmDeleteIds) {
+            void mutate('?action=delete', 'POST', { ids: confirmDeleteIds }, '已删除');
+          }
+        }}
+      />
 
       {sync && (
         <Modal
