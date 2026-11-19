@@ -7,16 +7,14 @@ import {
   ChevronDown,
   Copy,
   Download,
-  Edit3,
   FileSpreadsheet,
   FileText,
-  Filter,
   MinusSquare,
+  Pencil,
   Plus,
   PlusSquare,
   RotateCcw,
   Search,
-  Settings2,
   SlidersHorizontal,
   Trash2,
   Upload,
@@ -34,13 +32,21 @@ import { getTagBadgeClass } from '@/src/modules/basic/products/ui/ProductTagsPag
 import { downloadCsv } from '@/src/shared/lib/exportCsv';
 import { formatCurrency, formatDate } from '@/src/shared/lib/format';
 import { Button } from '@/src/shared/ui/Button';
+import { ConfirmDeleteModal } from '@/src/shared/ui/ConfirmDeleteModal';
 import { HelpTooltip } from '@/src/shared/ui/HelpTooltip';
 import { Modal } from '@/src/shared/ui/Modal';
 import { OperationStatus } from '@/src/shared/ui/OperationStatus';
 import { PaginationBar } from '@/src/shared/ui/PaginationBar';
 import { Select } from '@/src/shared/ui/Select';
-import { EmptyState, ErrorState, LoadingSkeleton } from '@/src/shared/ui/StateViews';
+import { ErrorState, TableLoadingOverlay, TableLoadingRows } from '@/src/shared/ui/StateViews';
 import { StatusLabel } from '@/src/shared/ui/StatusLabel';
+
+const toolbarBtn =
+  'inline-flex items-center gap-1.5 rounded-lg border border-[#D9DDD4] bg-white px-3 py-1.5 font-medium text-[#171916] hover:bg-[#F5F7F2] disabled:opacity-40 cursor-pointer';
+const primaryBtn =
+  'inline-flex items-center gap-1.5 rounded-lg border border-[var(--qsl-accent-border)] bg-[var(--qsl-accent)] px-3 py-1.5 font-medium text-[var(--qsl-accent-ink)] hover:bg-[var(--qsl-accent-hover)] disabled:opacity-40 cursor-pointer';
+const toolbarInput =
+  'h-9 rounded-lg border border-[#D9DDD4] bg-white px-3 text-sm outline-none focus:border-[var(--qsl-accent-border)]';
 
 interface CategoryTreeNode extends ProductCategoryRecord {
   children: CategoryTreeNode[];
@@ -118,7 +124,6 @@ export const ProductListPage: React.FC = () => {
   const [colPickerOpen, setColPickerOpen] = useState(false);
   const maintMenuRef = useRef<HTMLDivElement>(null);
   const importMenuRef = useRef<HTMLDivElement>(null);
-  const colPickerRef = useRef<HTMLDivElement>(null);
 
   // Modals
   const [formOpen, setFormOpen] = useState(false);
@@ -152,7 +157,7 @@ export const ProductListPage: React.FC = () => {
     queryFn: () => productsApi.listCategories(debugMode),
   });
 
-  const { data: prodResp, isLoading, isError, refetch } = useQuery({
+  const { data: prodResp, isLoading, isFetching, isError, refetch } = useQuery({
     queryKey: [
       'products',
       selectedCategory,
@@ -232,7 +237,6 @@ export const ProductListPage: React.FC = () => {
       const target = e.target as Node;
       if (maintMenuRef.current && !maintMenuRef.current.contains(target)) setMaintMenuOpen(false);
       if (importMenuRef.current && !importMenuRef.current.contains(target)) setImportMenuOpen(false);
-      if (colPickerRef.current && !colPickerRef.current.contains(target)) setColPickerOpen(false);
     };
     document.addEventListener('mousedown', onDown);
     return () => document.removeEventListener('mousedown', onDown);
@@ -793,429 +797,452 @@ export const ProductListPage: React.FC = () => {
           </div>
         </aside>
 
-        {/* Right Product Workspace matching Screenshot 1 */}
-        <div className="flex-1 min-w-0 w-full space-y-3">
+        {/* Right Product Workspace - Unified Connected Section */}
+        <section className="flex-1 min-w-0 w-full overflow-hidden rounded-[20px] border border-[#D9DDD4] bg-white text-sm">
           {/* Top Action Toolbar */}
-          <div className="bg-white border border-[#D9DDD4] rounded-[18px] p-3.5 space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-2.5">
-              {/* Left Action Cluster */}
-              <div className="flex flex-wrap items-center gap-2">
-                {canCreate && (
-                  <Button
-                    variant="accent"
-                    size="sm"
-                    icon={<Plus className="w-3.5 h-3.5" />}
-                    onClick={() => openCreateModal()}
-                  >
-                    新 增
-                  </Button>
-                )}
+          <div className="flex flex-wrap items-center gap-2 border-b border-[#E5E8E0] p-3">
+            {canCreate && (
+              <button type="button" className={primaryBtn} onClick={() => openCreateModal()}>
+                <Plus size={15} />
+                新增
+              </button>
+            )}
 
-                {canImport && (
-                  <div ref={importMenuRef} className="relative">
-                    <Button
-                      variant="accent"
-                      size="sm"
-                      icon={<Upload className="w-3.5 h-3.5" />}
-                      onClick={() => setImportMenuOpen((p) => !p)}
-                    >
-                      <span>导 入</span>
-                      <ChevronDown className="w-3.5 h-3.5" />
-                    </Button>
-                    {importMenuOpen && (
-                      <div className="absolute left-0 top-full mt-1.5 z-40 w-48 rounded-xl bg-white border border-[#D9DDD4] shadow-lg p-1.5 text-[13px]">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setImportMenuOpen(false);
-                            setImportTab('excel_v2');
-                            setImportOpen(true);
-                          }}
-                          className="w-full px-3 py-2 rounded-lg text-left hover:bg-[#F8F9F5] cursor-pointer"
-                        >
-                          导入新版（Excel / CSV）
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setImportMenuOpen(false);
-                            setImportTab('lens_catalog');
-                            setImportOpen(true);
-                          }}
-                          className="w-full px-3 py-2 rounded-lg text-left text-[#5F645D] hover:bg-[#F8F9F5] cursor-pointer"
-                        >
-                          从镜片画册导入
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setImportMenuOpen(false);
-                            setImportTab('trade_sync');
-                            setImportOpen(true);
-                          }}
-                          className="w-full px-3 py-2 rounded-lg text-left text-[#5F645D] hover:bg-[#F8F9F5] cursor-pointer"
-                        >
-                          从商贸导入
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {canDelete && (
-                  <Button
-                    variant="danger"
-                    size="sm"
-                    icon={<Trash2 className="w-3.5 h-3.5" />}
-                    disabled={selectedIds.length === 0}
-                    onClick={() => {
-                      setDeleteTargetLabel(`批量删除选中的 ${selectedIds.length} 个商品`);
-                      setDeleteTargetIds(selectedIds);
-                    }}
-                  >
-                    删 除{selectedIds.length > 0 ? ` (${selectedIds.length})` : ''}
-                  </Button>
-                )}
-
-                {canUpdate && (
-                  <Button
-                    variant="accent"
-                    size="sm"
-                    disabled={selectedIds.length === 0}
-                    onClick={() => setBatchModalOpen(true)}
-                  >
-                    批量设置{selectedIds.length > 0 ? ` (${selectedIds.length})` : ''}
-                  </Button>
-                )}
-
-                <div ref={maintMenuRef} className="relative">
-                  <Button
-                    variant="accent"
-                    size="sm"
-                    onClick={() => setMaintMenuOpen((p) => !p)}
-                  >
-                    <span>商品维护管理</span>
-                    <ChevronDown className="w-3.5 h-3.5" />
-                  </Button>
-                  {maintMenuOpen && (
-                    <div className="absolute left-0 top-full mt-1.5 z-40 w-44 rounded-xl bg-white border border-[#D9DDD4] shadow-lg p-1.5 text-[13px]">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setMaintMenuOpen(false);
-                          navigateToSubPage('basic.product.categories');
-                        }}
-                        className="w-full px-3 py-2 rounded-lg text-left hover:bg-[#F8F9F5] cursor-pointer"
-                      >
-                        商品分类体系
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setMaintMenuOpen(false);
-                          navigateToSubPage('basic.product.tags');
-                        }}
-                        className="w-full px-3 py-2 rounded-lg text-left hover:bg-[#F8F9F5] cursor-pointer"
-                      >
-                        选品标签维护
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setMaintMenuOpen(false);
-                          navigateToSubPage('basic.product.lens_surcharge');
-                        }}
-                        className="w-full px-3 py-2 rounded-lg text-left hover:bg-[#F8F9F5] cursor-pointer"
-                      >
-                        镜片工艺加价
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                <div className="inline-flex items-center gap-1 text-[13px] text-[var(--qsl-brand-dark)] font-medium">
-                  <span>说明</span>
-                  <HelpTooltip
-                    title="商品总览操作说明"
-                    content={
-                      '1. 左侧品类树支持按分类及子分类实时过滤商品。\n2. 镜片/定制镜片行操作列提供快捷按钮，可直达「镜片工艺加价」配置散光附加费矩阵。\n3. 点击“设置表头”可自定义显示或隐藏价格、条码、供应商等字段。'
-                    }
-                  />
-                </div>
-              </div>
-
-              {/* Right Search & Column Cluster */}
-              <div className="flex flex-wrap items-center gap-2">
-                {canExport && (
-                  <Button
-                    variant="accent"
-                    size="sm"
-                    icon={<Download className="w-3.5 h-3.5" />}
-                    onClick={handleExportProducts}
-                  >
-                    导 出
-                  </Button>
-                )}
-
-                <div className="flex items-center">
-                  <div className="relative">
-                    <Search className="w-3.5 h-3.5 text-[#73796F] absolute left-2.5 top-1/2 -translate-y-1/2" />
-                    <input
-                      type="text"
-                      value={keywordInput}
-                      onChange={(e) => setKeywordInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') handleApplySearch();
-                      }}
-                      placeholder="模糊搜索"
-                      className="w-40 sm:w-48 h-9 pl-8 pr-2.5 rounded-l-[8px] bg-[#F8F9F5] border border-r-0 border-[#D9DDD4] text-[13px] outline-none focus:border-[#171916]"
-                    />
-                  </div>
-                  <Button
-                    variant="accent"
-                    size="sm"
-                    className="!rounded-l-none"
-                    onClick={handleApplySearch}
-                  >
-                    搜 索
-                  </Button>
-                </div>
-
-                <Button
-                  variant={showFilters ? 'primary' : 'accent'}
-                  size="sm"
-                  icon={<Filter className="w-3.5 h-3.5" />}
-                  onClick={() => setShowFilters((p) => !p)}
+            {canImport && (
+              <div ref={importMenuRef} className="relative">
+                <button
+                  type="button"
+                  className={toolbarBtn}
+                  onClick={() => setImportMenuOpen((p) => !p)}
                 >
-                  筛选搜索
-                </Button>
-
-                <div ref={colPickerRef} className="relative">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    icon={<Settings2 className="w-3.5 h-3.5" />}
-                    onClick={() => setColPickerOpen((p) => !p)}
-                  >
-                    设置表头
-                  </Button>
-                  {colPickerOpen && (
-                    <div className="absolute right-0 top-full mt-1.5 z-40 w-60 rounded-xl bg-white border border-[#D9DDD4] shadow-xl p-3 space-y-2">
-                      <div className="flex items-center justify-between pb-1.5 border-b border-[#E5E8E0] text-[13px] font-semibold">
-                        <span>自定义显示列</span>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setVisibleColKeys(columnDefs.filter((c) => c.defaultVisible).map((c) => c.key))
-                          }
-                          className="text-[12px] text-[var(--qsl-brand-dark)] hover:underline cursor-pointer"
-                        >
-                          恢复默认
-                        </button>
-                      </div>
-                      <div className="max-h-64 overflow-y-auto space-y-1 qsl-scroll">
-                        {columnDefs.map((col) => {
-                          const checked = visibleColKeys.includes(col.key);
-                          return (
-                            <label
-                              key={col.key}
-                              className="flex items-center gap-2 px-2 py-1 rounded-md hover:bg-[#F8F9F5] text-[13px] cursor-pointer"
-                            >
-                              <input
-                                type="checkbox"
-                                checked={checked}
-                                onChange={(e) => {
-                                  if (e.target.checked) {
-                                    setVisibleColKeys((prev) => [...prev, col.key]);
-                                  } else if (visibleColKeys.length > 2) {
-                                    setVisibleColKeys((prev) => prev.filter((k) => k !== col.key));
-                                  }
-                                }}
-                                className="accent-[var(--qsl-brand-dark)] cursor-pointer"
-                              />
-                              <span>{col.label}</span>
-                            </label>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Expandable Filter Search Drawer */}
-            {showFilters && (
-              <div className="pt-3 border-t border-[#E5E8E0] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-                <div>
-                  <label className="block text-[12px] text-[#5F645D] mb-1">品牌</label>
-                  <Select
-                    ariaLabel="筛选品牌"
-                    value={brandFilter}
-                    onChange={setBrandFilter}
-                    options={[
-                      { value: 'all', label: '全部品牌' },
-                      ...(meta?.brands ?? []).map((b) => ({ value: b.name, label: b.name })),
-                    ]}
-                  />
-                </div>
-                <div>
-                  <label className="block text-[12px] text-[#5F645D] mb-1">启用状态</label>
-                  <Select
-                    ariaLabel="筛选启用状态"
-                    value={enabledFilter}
-                    onChange={(v) => setEnabledFilter(v as 'all' | 'true' | 'false')}
-                    options={[
-                      { value: 'all', label: '全部状态' },
-                      { value: 'true', label: '启用' },
-                      { value: 'false', label: '停用' },
-                    ]}
-                  />
-                </div>
-                <div>
-                  <label className="block text-[12px] text-[#5F645D] mb-1">是否定制镜片</label>
-                  <Select
-                    ariaLabel="筛选定制镜片"
-                    value={customLensFilter}
-                    onChange={(v) => setCustomLensFilter(v as 'all' | 'true' | 'false')}
-                    options={[
-                      { value: 'all', label: '全部' },
-                      { value: 'true', label: '仅定制镜片' },
-                      { value: 'false', label: '非定制现片/标品' },
-                    ]}
-                  />
-                </div>
-                <div>
-                  <label className="block text-[12px] text-[#5F645D] mb-1">选品标签</label>
-                  <Select
-                    ariaLabel="筛选选品标签"
-                    value={tagFilter}
-                    onChange={setTagFilter}
-                    options={[
-                      { value: 'all', label: '全部标签' },
-                      ...(meta?.tags ?? []).map((t) => ({ value: t.name, label: t.name })),
-                    ]}
-                  />
-                </div>
-                <div className="flex items-end gap-2">
-                  <Button variant="primary" size="sm" onClick={handleApplySearch}>
-                    应用筛选
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    icon={<RotateCcw className="w-3.5 h-3.5" />}
-                    onClick={handleResetFilters}
-                  >
-                    重置
-                  </Button>
-                </div>
+                  <Upload size={15} />
+                  <span>导入</span>
+                  <ChevronDown className="w-3.5 h-3.5" />
+                </button>
+                {importMenuOpen && (
+                  <div className="absolute left-0 top-full mt-1.5 z-40 w-48 rounded-xl bg-white border border-[#D9DDD4] shadow-lg p-1.5 text-[13px]">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setImportMenuOpen(false);
+                        setImportTab('excel_v2');
+                        setImportOpen(true);
+                      }}
+                      className="w-full px-3 py-2 rounded-lg text-left hover:bg-[#F8F9F5] cursor-pointer"
+                    >
+                      导入新版（Excel / CSV）
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setImportMenuOpen(false);
+                        setImportTab('lens_catalog');
+                        setImportOpen(true);
+                      }}
+                      className="w-full px-3 py-2 rounded-lg text-left text-[#5F645D] hover:bg-[#F8F9F5] cursor-pointer"
+                    >
+                      从镜片画册导入
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setImportMenuOpen(false);
+                        setImportTab('trade_sync');
+                        setImportOpen(true);
+                      }}
+                      className="w-full px-3 py-2 rounded-lg text-left text-[#5F645D] hover:bg-[#F8F9F5] cursor-pointer"
+                    >
+                      从商贸导入
+                    </button>
+                  </div>
+                )}
               </div>
             )}
+
+            {canDelete && (
+              <button
+                type="button"
+                className={toolbarBtn + ' text-red-700'}
+                disabled={selectedIds.length === 0}
+                onClick={() => {
+                  setDeleteTargetLabel(`批量删除选中的 ${selectedIds.length} 个商品`);
+                  setDeleteTargetIds(selectedIds);
+                }}
+              >
+                批量删除{selectedIds.length > 0 ? ` (${selectedIds.length})` : ''}
+              </button>
+            )}
+
+            {canUpdate && (
+              <button
+                type="button"
+                className={toolbarBtn}
+                disabled={selectedIds.length === 0}
+                onClick={() => setBatchModalOpen(true)}
+              >
+                批量设置{selectedIds.length > 0 ? ` (${selectedIds.length})` : ''}
+              </button>
+            )}
+
+            <div ref={maintMenuRef} className="relative">
+              <button
+                type="button"
+                className={toolbarBtn}
+                onClick={() => setMaintMenuOpen((p) => !p)}
+              >
+                <span>商品维护管理</span>
+                <ChevronDown className="w-3.5 h-3.5" />
+              </button>
+              {maintMenuOpen && (
+                <div className="absolute left-0 top-full mt-1.5 z-40 w-44 rounded-xl bg-white border border-[#D9DDD4] shadow-lg p-1.5 text-[13px]">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMaintMenuOpen(false);
+                      navigateToSubPage('basic.product.categories');
+                    }}
+                    className="w-full px-3 py-2 rounded-lg text-left hover:bg-[#F8F9F5] cursor-pointer"
+                  >
+                    商品分类体系
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMaintMenuOpen(false);
+                      navigateToSubPage('basic.product.tags');
+                    }}
+                    className="w-full px-3 py-2 rounded-lg text-left hover:bg-[#F8F9F5] cursor-pointer"
+                  >
+                    选品标签维护
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMaintMenuOpen(false);
+                      navigateToSubPage('basic.product.lens_surcharge');
+                    }}
+                    className="w-full px-3 py-2 rounded-lg text-left hover:bg-[#F8F9F5] cursor-pointer"
+                  >
+                    镜片工艺加价
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <span className="inline-flex items-center gap-1 rounded-lg bg-[#F5F7F2] px-2.5 py-1 text-xs font-medium text-[#2D6A4F]">
+              <span>说明</span>
+              <HelpTooltip
+                title="商品总览操作说明"
+                content={
+                  '1. 左侧品类树支持按分类及子分类实时过滤商品。\n2. 镜片/定制镜片行操作列提供快捷按钮，可直达「镜片工艺加价」配置散光附加费矩阵。\n3. 点击“设置表头”可自定义显示或隐藏价格、条码、供应商等字段。'
+                }
+              />
+            </span>
+
+            <div className="ml-auto flex flex-wrap items-center gap-2">
+              {canExport && (
+                <button
+                  type="button"
+                  className={toolbarBtn}
+                  disabled={!rows.length}
+                  onClick={handleExportProducts}
+                >
+                  <Download size={15} />
+                  导出
+                </button>
+              )}
+
+              <div className="flex items-center">
+                <input
+                  type="text"
+                  value={keywordInput}
+                  onChange={(e) => setKeywordInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleApplySearch();
+                  }}
+                  aria-label="模糊搜索"
+                  placeholder="名称 / 编码 / 型号"
+                  className={toolbarInput + ' w-40 sm:w-44 rounded-r-none border-r-0'}
+                />
+                <button
+                  type="button"
+                  onClick={handleApplySearch}
+                  className="inline-flex h-9 items-center gap-1 rounded-r-lg border border-[var(--qsl-accent-border)] bg-[var(--qsl-accent)] px-3 font-medium text-[var(--qsl-accent-ink)] hover:bg-[var(--qsl-accent-hover)] cursor-pointer"
+                >
+                  <Search size={14} />
+                  搜索
+                </button>
+              </div>
+
+              <button
+                type="button"
+                aria-expanded={showFilters}
+                className={`${toolbarBtn} ${showFilters ? 'bg-[#F8F9F5] border-[#B9C1B3]' : ''}`}
+                onClick={() => setShowFilters((p) => !p)}
+              >
+                筛选搜索
+              </button>
+
+              <button
+                type="button"
+                aria-expanded={colPickerOpen}
+                aria-controls="product-header-options"
+                className={`${toolbarBtn} ${colPickerOpen ? 'bg-[#F8F9F5] border-[#B9C1B3]' : ''}`}
+                onClick={() => setColPickerOpen((p) => !p)}
+              >
+                <SlidersHorizontal className="w-4 h-4" />
+                设置表头
+              </button>
+            </div>
           </div>
 
+          {/* Expandable Filter Search Drawer */}
+          {showFilters && (
+            <div className="flex flex-wrap items-center gap-2.5 border-b border-[#E5E8E0] bg-[#FAFBF8] p-3">
+              <Select
+                variant="compact"
+                ariaLabel="筛选品牌"
+                placeholder="全部品牌"
+                className="w-44"
+                buttonClassName="w-full rounded-full px-3.5 bg-white"
+                value={brandFilter}
+                onChange={(v) => {
+                  setBrandFilter(v);
+                  setPage(1);
+                  setApplied((prev) => ({ ...prev, brand: v }));
+                }}
+                options={[
+                  { value: 'all', label: '全部品牌' },
+                  ...(meta?.brands ?? []).map((b) => ({ value: b.name, label: b.name })),
+                ]}
+              />
+              <Select
+                variant="compact"
+                ariaLabel="筛选启用状态"
+                placeholder="全部状态"
+                className="w-36"
+                buttonClassName="w-full rounded-full px-3.5 bg-white"
+                value={enabledFilter}
+                onChange={(v) => {
+                  const next = v as 'all' | 'true' | 'false';
+                  setEnabledFilter(next);
+                  setPage(1);
+                  setApplied((prev) => ({ ...prev, enabled: next }));
+                }}
+                options={[
+                  { value: 'all', label: '全部启用状态' },
+                  { value: 'true', label: '仅看启用' },
+                  { value: 'false', label: '仅看停用' },
+                ]}
+              />
+              <Select
+                variant="compact"
+                ariaLabel="筛选定制镜片"
+                placeholder="镜片类型"
+                className="w-44"
+                buttonClassName="w-full rounded-full px-3.5 bg-white"
+                value={customLensFilter}
+                onChange={(v) => {
+                  const next = v as 'all' | 'true' | 'false';
+                  setCustomLensFilter(next);
+                  setPage(1);
+                  setApplied((prev) => ({ ...prev, isCustomLens: next }));
+                }}
+                options={[
+                  { value: 'all', label: '全部商品类型' },
+                  { value: 'true', label: '仅定制镜片' },
+                  { value: 'false', label: '非定制现片/标品' },
+                ]}
+              />
+              <Select
+                variant="compact"
+                ariaLabel="筛选选品标签"
+                placeholder="全部标签"
+                className="w-44"
+                buttonClassName="w-full rounded-full px-3.5 bg-white"
+                value={tagFilter}
+                onChange={(v) => {
+                  setTagFilter(v);
+                  setPage(1);
+                  setApplied((prev) => ({ ...prev, tag: v }));
+                }}
+                options={[
+                  { value: 'all', label: '全部选品标签' },
+                  ...(meta?.tags ?? []).map((t) => ({ value: t.name, label: t.name })),
+                ]}
+              />
+              {(brandFilter !== 'all' ||
+                enabledFilter !== 'all' ||
+                customLensFilter !== 'all' ||
+                tagFilter !== 'all' ||
+                keywordInput ||
+                selectedCategory !== 'all') && (
+                <button
+                  type="button"
+                  className={toolbarBtn}
+                  onClick={handleResetFilters}
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  重置筛选
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Connected Header Options Strip */}
+          {colPickerOpen && (
+            <div
+              id="product-header-options"
+              className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-[#E5E8E0] bg-[#F8F9F5] px-4 py-3"
+            >
+              {columnDefs.map((col) => {
+                const checked = visibleColKeys.includes(col.key);
+                return (
+                  <label
+                    key={col.key}
+                    className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap text-[13px] text-[#171916]"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setVisibleColKeys((prev) => [...prev, col.key]);
+                        } else if (visibleColKeys.length > 2) {
+                          setVisibleColKeys((prev) => prev.filter((k) => k !== col.key));
+                        }
+                      }}
+                      className="h-3.5 w-3.5 accent-[var(--qsl-accent)] border-0 outline-none focus:ring-0 cursor-pointer"
+                    />
+                    <span>{col.label}</span>
+                  </label>
+                );
+              })}
+              <button
+                type="button"
+                onClick={() =>
+                  setVisibleColKeys(columnDefs.filter((c) => c.defaultVisible).map((c) => c.key))
+                }
+                className="ml-auto cursor-pointer text-xs text-[#73796F] hover:text-[#171916]"
+              >
+                恢复默认
+              </button>
+            </div>
+          )}
+
           {/* Product Data Table + PaginationBar */}
-          <div className="bg-white border border-[#D9DDD4] rounded-[18px] overflow-hidden">
-            {isLoading ? (
-              <div className="p-5">
-                <LoadingSkeleton rows={6} />
-              </div>
-            ) : isError ? (
-              <div className="p-5">
-                <ErrorState onRetry={() => void refetch()} />
-              </div>
-            ) : rows.length === 0 ? (
-              <div className="p-6">
-                <EmptyState
-                  mode="filtered"
-                  actionLabel="清除筛选"
-                  onAction={handleResetFilters}
-                />
-              </div>
-            ) : (
-              <>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse text-[13px]">
-                    <thead>
-                      <tr className="bg-[#F8F9F5] border-b border-[#E5E8E0] text-[#5F645D]">
-                        <th className="w-10 px-3 py-2.5 text-center border-r border-[#E5E8E0]">
-                          <input
-                            type="checkbox"
-                            aria-label="全选当前页商品"
-                            checked={allSelectedOnPage}
-                            onChange={(e) => {
-                              const pageIds = rows.map((r) => r.id);
-                              if (e.target.checked) {
-                                setSelectedIds((prev) => Array.from(new Set([...prev, ...pageIds])));
-                              } else {
-                                setSelectedIds((prev) => prev.filter((id) => !pageIds.includes(id)));
-                              }
-                            }}
-                            className="w-4 h-4 accent-[var(--qsl-brand-dark)] cursor-pointer"
-                          />
-                        </th>
-                        <th className="w-36 px-3 py-2.5 text-center border-r border-[#E5E8E0] font-semibold whitespace-nowrap">
-                          操作
-                        </th>
-                        {activeColumns.map((col, idx) => {
-                          const isStickyName = col.key === 'name' && idx === 0;
-                          const isActiveSort = sortBy === col.key;
-                          return (
-                            <th
-                              key={col.key}
-                              className={`px-3 py-2.5 border-r last:border-r-0 border-[#E5E8E0] font-semibold whitespace-nowrap ${
-                                col.align === 'right'
-                                  ? 'text-right'
-                                  : col.align === 'center'
-                                    ? 'text-center'
-                                    : 'text-left'
-                              } ${isStickyName ? 'sticky left-0 z-10 bg-[#F8F9F5]' : ''}`}
-                            >
-                              {col.sortable ? (
+          {isError ? (
+            <div className="p-5">
+              <ErrorState onRetry={() => void refetch()} />
+            </div>
+          ) : (
+            <div className="relative">
+              <div className="overflow-x-auto qsl-scroll">
+                <table className="w-full border-collapse text-left">
+                  <thead>
+                    <tr className="border-b border-[#E5E8E0] bg-[#F8F9F5]">
+                      <th className="w-11 px-3.5 py-3 text-center sticky left-0 bg-[#F8F9F5] z-20 border-r border-[#E5E8E0]">
+                        <input
+                          type="checkbox"
+                          aria-label="全选当前页商品"
+                          checked={allSelectedOnPage}
+                          onChange={(e) => {
+                            const pageIds = rows.map((r) => r.id);
+                            if (e.target.checked) {
+                              setSelectedIds((prev) => Array.from(new Set([...prev, ...pageIds])));
+                            } else {
+                              setSelectedIds((prev) => prev.filter((id) => !pageIds.includes(id)));
+                            }
+                          }}
+                          className="accent-[#171916] w-4 h-4 cursor-pointer"
+                        />
+                      </th>
+                      <th className="px-3.5 py-3 text-[13px] font-semibold text-[#5F645D] whitespace-nowrap align-middle sticky left-11 z-20 bg-[#F8F9F5] border-r border-[#D9DDD4] shadow-[4px_0_12px_rgba(23,25,22,0.04)]">
+                        操作
+                      </th>
+                      {activeColumns.map((col) => {
+                        const isActiveSort = sortBy === col.key;
+                        return (
+                          <th
+                            key={col.key}
+                            className={`px-3.5 py-3 text-[13px] font-semibold text-[#5F645D] whitespace-nowrap align-middle border-r border-[#E5E8E0] last:border-r-0 ${
+                              col.align === 'right'
+                                ? 'text-right'
+                                : col.align === 'center'
+                                  ? 'text-center'
+                                  : 'text-left'
+                            }`}
+                          >
+                            {col.sortable ? (
+                              <div className="inline-flex items-center gap-1.5">
+                                <span>{col.label}</span>
                                 <button
                                   type="button"
+                                  aria-label={`按 ${col.label} 排序`}
                                   onClick={() => handleSort(col.key)}
-                                  className="inline-flex items-center gap-1 hover:text-[#171916] cursor-pointer"
+                                  className={`p-0.5 rounded hover:bg-[#EAECE6] cursor-pointer ${
+                                    isActiveSort ? 'text-[#171916]' : 'text-[#8C9288]'
+                                  }`}
                                 >
-                                  <span>{col.label}</span>
                                   {isActiveSort ? (
                                     sortOrder === 'asc' ? (
-                                      <ArrowUp className="w-3 h-3" />
+                                      <ArrowUp className="w-3.5 h-3.5" />
                                     ) : (
-                                      <ArrowDown className="w-3 h-3" />
+                                      <ArrowDown className="w-3.5 h-3.5" />
                                     )
                                   ) : (
-                                    <ArrowUpDown className="w-3 h-3 opacity-45" />
+                                    <ArrowUpDown className="w-3.5 h-3.5" />
                                   )}
                                 </button>
-                              ) : (
-                                col.label
-                              )}
-                            </th>
-                          );
-                        })}
-                      </tr>
-                    </thead>
+                              </div>
+                            ) : (
+                              col.label
+                            )}
+                          </th>
+                        );
+                      })}
+                    </tr>
+                  </thead>
 
-                    <tbody className="divide-y divide-[#E5E8E0]">
-                      {rows.map((row) => {
+                  <tbody className="divide-y divide-[#E5E8E0]">
+                    {(isLoading || isFetching) && rows.length === 0 ? (
+                      <TableLoadingRows
+                        colSpan={activeColumns.length + 2}
+                        label="正在从数据库加载商品档案…"
+                      />
+                    ) : rows.length === 0 ? (
+                      <tr>
+                        <td colSpan={activeColumns.length + 2} className="px-4 py-12 text-center text-[#73796F]">
+                          暂无符合条件的商品档案，可调整品类或筛选条件重试
+                        </td>
+                      </tr>
+                    ) : (
+                      rows.map((row, idx) => {
                         const checked = selectedIds.includes(row.id);
                         const isLensRow =
                           row.isCustomLens ||
                           row.categoryName.includes('镜片') ||
                           row.categoryName.includes('离焦') ||
                           row.categoryName.includes('单光');
+                        const rowBg = checked
+                          ? 'bg-[var(--qsl-accent-soft-35)]'
+                          : idx % 2 === 1
+                            ? 'bg-[#FAFBF8]'
+                            : 'bg-white';
+                        const stickyCellBg = checked
+                          ? 'bg-[var(--qsl-accent-soft)]'
+                          : idx % 2 === 1
+                            ? 'bg-[#FAFBF8]'
+                            : 'bg-white';
 
                         return (
                           <tr
                             key={row.id}
-                            className={`transition-colors ${
-                              checked
-                                ? 'bg-[var(--qsl-accent-soft)]'
-                                : 'bg-white hover:bg-[#F8F9F5]'
-                            }`}
+                            className={`transition-colors hover:bg-[#F1F5EC] ${rowBg}`}
                           >
-                            <td className="px-3 py-2 text-center border-r border-[#E5E8E0]">
+                            <td
+                              className={`w-11 px-3.5 py-2.5 text-center sticky left-0 z-10 border-r border-[#E5E8E0] ${stickyCellBg}`}
+                            >
                               <input
                                 type="checkbox"
                                 aria-label={`选择 ${row.name}`}
@@ -1224,44 +1251,48 @@ export const ProductListPage: React.FC = () => {
                                   if (e.target.checked) setSelectedIds((p) => [...p, row.id]);
                                   else setSelectedIds((p) => p.filter((x) => x !== row.id));
                                 }}
-                                className="w-4 h-4 accent-[var(--qsl-brand-dark)] cursor-pointer"
+                                className="accent-[#171916] w-4 h-4 cursor-pointer"
                               />
                             </td>
 
-                            {/* Row operation icon buttons matching Screenshot 1 */}
-                            <td className="px-2.5 py-2 border-r border-[#E5E8E0]">
-                              <div className="flex items-center justify-center gap-1">
+                            <td
+                              className={`px-3.5 py-2.5 text-[14px] text-[#171916] whitespace-nowrap align-middle sticky left-11 z-10 border-r border-[#D9DDD4] shadow-[4px_0_12px_rgba(23,25,22,0.04)] ${stickyCellBg}`}
+                            >
+                              <div className="inline-flex items-center gap-1.5">
                                 {canCreate && (
                                   <button
                                     type="button"
                                     title="复制新增"
+                                    aria-label={`复制新增 ${row.name}`}
                                     onClick={() => openCreateModal(row)}
-                                    className="w-7 h-7 rounded-md bg-[var(--qsl-accent)] text-[var(--qsl-accent-ink)] hover:bg-[var(--qsl-accent-hover)] border border-[var(--qsl-accent-border)] inline-flex items-center justify-center cursor-pointer"
+                                    className={toolbarBtn + ' !px-2 !py-1'}
                                   >
-                                    <Copy className="w-3.5 h-3.5" />
+                                    <Copy size={14} />
                                   </button>
                                 )}
                                 {canUpdate && (
                                   <button
                                     type="button"
                                     title="编辑商品"
+                                    aria-label={`编辑 ${row.name}`}
                                     onClick={() => openEditModal(row)}
-                                    className="w-7 h-7 rounded-md bg-[var(--qsl-accent)] text-[var(--qsl-accent-ink)] hover:bg-[var(--qsl-accent-hover)] border border-[var(--qsl-accent-border)] inline-flex items-center justify-center cursor-pointer"
+                                    className={primaryBtn + ' !px-2 !py-1'}
                                   >
-                                    <Edit3 className="w-3.5 h-3.5" />
+                                    <Pencil size={14} />
                                   </button>
                                 )}
                                 {canDelete && (
                                   <button
                                     type="button"
                                     title="删除商品"
+                                    aria-label={`删除 ${row.name}`}
                                     onClick={() => {
                                       setDeleteTargetLabel(`删除商品「${row.name}」`);
                                       setDeleteTargetIds([row.id]);
                                     }}
-                                    className="w-7 h-7 rounded-md bg-[#DC2626] text-white hover:bg-[#B91C1C] inline-flex items-center justify-center cursor-pointer"
+                                    className={toolbarBtn + ' !px-2 !py-1 text-red-700'}
                                   >
-                                    <Trash2 className="w-3.5 h-3.5" />
+                                    <Trash2 size={14} />
                                   </button>
                                 )}
                                 {isLensRow && (
@@ -1270,62 +1301,58 @@ export const ProductListPage: React.FC = () => {
                                     title="配置镜片工艺/散光加价"
                                     aria-label="配置镜片工艺/散光加价"
                                     onClick={() => navigateToSubPage('basic.product.lens_surcharge')}
-                                    className="w-7 h-7 rounded-md bg-[#E0F2FE] text-[#0369A1] border border-[#7DD3FC] hover:bg-[#BAE6FD] inline-flex items-center justify-center cursor-pointer transition-colors"
+                                    className={toolbarBtn + ' !px-2 !py-1 text-[#0369A1] border-[#BAE6FD] bg-[#F0F9FF] hover:bg-[#E0F2FE]'}
                                   >
-                                    <SlidersHorizontal className="w-3.5 h-3.5" />
+                                    <SlidersHorizontal size={14} />
                                   </button>
                                 )}
                               </div>
                             </td>
 
-                            {activeColumns.map((col, idx) => {
-                              const isStickyName = col.key === 'name' && idx === 0;
-                              return (
-                                <td
-                                  key={col.key}
-                                  className={`px-3 py-2 border-r last:border-r-0 border-[#E5E8E0] whitespace-nowrap ${
-                                    col.align === 'right'
-                                      ? 'text-right'
-                                      : col.align === 'center'
-                                        ? 'text-center'
-                                        : 'text-left'
-                                  } ${
-                                    isStickyName
-                                      ? `sticky left-0 z-10 ${checked ? 'bg-[var(--qsl-accent-soft)]' : 'bg-white'}`
-                                      : ''
-                                  }`}
-                                >
-                                  {renderCell(col.key, row)}
-                                </td>
-                              );
-                            })}
+                            {activeColumns.map((col) => (
+                              <td
+                                key={col.key}
+                                className={`px-3.5 py-2.5 text-[14px] text-[#171916] whitespace-nowrap align-middle border-r border-[#E5E8E0] last:border-r-0 ${
+                                  col.align === 'right'
+                                    ? 'text-right'
+                                    : col.align === 'center'
+                                      ? 'text-center'
+                                      : 'text-left'
+                                }`}
+                              >
+                                {renderCell(col.key, row)}
+                              </td>
+                            ))}
                           </tr>
                         );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              {isFetching && rows.length > 0 && (
+                <TableLoadingOverlay label="正在同步商品档案…" />
+              )}
+            </div>
+          )}
 
-                <PaginationBar
-                  total={total}
-                  page={page}
-                  pageSize={pageSize}
-                  onPageChange={setPage}
-                  onPageSizeChange={(next) => {
-                    setPageSize(next);
-                    setPage(1);
-                  }}
-                  unit="条商品"
-                  summaryExtra={
-                    <span className="font-medium text-[#171916]">
-                      当前已选: {selectedIds.length}
-                    </span>
-                  }
-                />
-              </>
-            )}
-          </div>
-        </div>
+          <PaginationBar
+            total={total}
+            page={page}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={(next) => {
+              setPageSize(next);
+              setPage(1);
+            }}
+            unit="条商品"
+            summaryExtra={
+              <span className="font-medium text-[#171916]">
+                当前已选: {selectedIds.length}
+              </span>
+            }
+          />
+        </section>
       </div>
 
       {/* Add / Edit Product Modal (Screenshot 3) */}
@@ -1360,30 +1387,27 @@ export const ProductListPage: React.FC = () => {
       />
 
       {/* Delete Confirm Modal */}
-      <Modal
+      <ConfirmDeleteModal
         open={Boolean(deleteTargetIds)}
-        onClose={() => setDeleteTargetIds(null)}
-        title={deleteTargetLabel || '确认删除商品'}
-        maxWidthClass="max-w-md"
-        footer={
-          <>
-            <Button variant="secondary" onClick={() => setDeleteTargetIds(null)}>
-              取消
-            </Button>
-            <Button
-              variant="danger"
-              loading={deleteMutation.isPending}
-              onClick={() => deleteTargetIds && deleteMutation.mutate(deleteTargetIds)}
-            >
-              确认删除
-            </Button>
-          </>
+        title={deleteTargetLabel || '确认删除商品档案'}
+        subtitle="危险操作二次确认：删除后该商品档案将从数据库移除"
+        description={
+          <span>
+            确认删除选中的 <strong>{deleteTargetIds?.length ?? 0}</strong> 项商品档案吗？
+          </span>
         }
-      >
-        <p className="text-[14px] text-[#171916]">
-          确认删除选中的 <strong>{deleteTargetIds?.length ?? 0}</strong> 项商品档案吗？删除后不可恢复。
-        </p>
-      </Modal>
+        items={(deleteTargetIds ?? []).map((id) => {
+          const matched = rows.find((r) => r.id === id);
+          return {
+            id,
+            label: matched?.name || id,
+            meta: matched?.skuCode || undefined,
+          };
+        })}
+        loading={deleteMutation.isPending}
+        onClose={() => setDeleteTargetIds(null)}
+        onConfirm={() => deleteTargetIds && deleteMutation.mutate(deleteTargetIds)}
+      />
 
       {/* Batch Set Modal */}
       <Modal

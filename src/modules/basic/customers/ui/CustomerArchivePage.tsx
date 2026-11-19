@@ -1,8 +1,10 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import {
   Download,
+  Eye,
+  Pencil,
   Plus,
-  Search,
+  RotateCcw,
   SlidersHorizontal,
   Trash2,
   Upload,
@@ -20,7 +22,8 @@ import { maskPhone } from '@/src/shared/lib/format';
 import { ConfirmDeleteModal } from '@/src/shared/ui/ConfirmDeleteModal';
 import { OperationStatus } from '@/src/shared/ui/OperationStatus';
 import { PaginationBar } from '@/src/shared/ui/PaginationBar';
-import { ErrorState, LoadingSkeleton } from '@/src/shared/ui/StateViews';
+import { Select } from '@/src/shared/ui/Select';
+import { ErrorState, TableLoadingOverlay, TableLoadingRows } from '@/src/shared/ui/StateViews';
 
 type ToggleableColumnKey =
   | 'birthday'
@@ -89,6 +92,7 @@ export const CustomerArchivePage: React.FC = () => {
   const {
     data,
     isLoading,
+    isFetching,
     isError,
     refetch,
   } = useQuery({
@@ -334,149 +338,95 @@ export const CustomerArchivePage: React.FC = () => {
     URL.revokeObjectURL(a.href);
   };
 
+  const hasCustomerFilter = Boolean(keyword.trim() || store !== 'all' || gender !== 'all' || tier !== 'all');
+  const toolbarBtn =
+    'inline-flex items-center gap-1.5 rounded-lg border border-[#D9DDD4] bg-white px-3 py-1.5 font-medium text-[#171916] hover:bg-[#F5F7F2] disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed';
+  const primaryBtn =
+    'inline-flex items-center gap-1.5 rounded-lg border border-[var(--qsl-accent-border)] bg-[var(--qsl-accent)] px-3 py-1.5 font-medium text-[var(--qsl-accent-ink)] hover:bg-[var(--qsl-accent-hover)] disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed';
+  const toolbarInput =
+    'h-9 rounded-lg border border-[#D9DDD4] bg-white px-3 text-sm outline-none focus:border-[var(--qsl-accent-border)]';
+
+  const visibleColCount = 12 + TOGGLEABLE_COLUMNS.filter((c) => isColVisible(c.key)).length;
+
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {statusNotice && (
         <OperationStatus key={statusNotice.key} role={statusNotice.role}>
           {statusNotice.text}
         </OperationStatus>
       )}
 
-      <header className="flex min-h-8 flex-wrap items-center gap-x-3 gap-y-1">
-        <h1 className="text-lg font-semibold text-[#171916]">客户档案</h1>
-        {debugMode && <span className="rounded-full bg-[#F2F4EF] px-2 py-0.5 text-xs text-[#5F645D]">演示数据</span>}
-      </header>
+      <section className="overflow-hidden rounded-[20px] border border-[#D9DDD4] bg-white text-sm">
+        <div className="flex flex-wrap items-center gap-2 border-b border-[#E5E8E0] p-3">
+          <button
+            type="button"
+            onClick={openCreateModal}
+            disabled={!canCreate}
+            className={primaryBtn}
+          >
+            <Plus size={15} />
+            新增
+          </button>
 
-      <div className="flex flex-wrap items-center gap-2 rounded-[20px] border border-[#D9DDD4] bg-white p-4 text-sm">
-        <button
-          type="button"
-          onClick={openCreateModal}
-          disabled={!canCreate}
-          className="rounded-lg bg-[var(--qsl-accent)] text-[var(--qsl-accent-ink)] border border-[var(--qsl-accent-border)] hover:bg-[var(--qsl-accent-hover)] font-medium px-3 py-2 cursor-pointer transition-colors disabled:opacity-40"
-        >
-          <Plus className="mr-1 inline h-4 w-4" />
-          新增
-        </button>
+          <button
+            type="button"
+            onClick={() => setDeleteConfirmOpen(true)}
+            disabled={!selectedIds.length || !canDelete || batchBusy}
+            className={`${toolbarBtn} text-red-700`}
+          >
+            <Trash2 size={14} />
+            批量删除{selectedIds.length > 0 ? ` (${selectedIds.length})` : ''}
+          </button>
 
-        <button
-          type="button"
-          onClick={() => setDeleteConfirmOpen(true)}
-          disabled={!selectedIds.length || !canDelete || batchBusy}
-          className="rounded-lg bg-red-600 hover:bg-red-700 px-3 py-2 text-white disabled:opacity-40 cursor-pointer transition-colors inline-flex items-center gap-1"
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-          <span>批量删除</span>
-        </button>
+          <button
+            type="button"
+            onClick={() => void handleBatchVisit()}
+            disabled={!selectedIds.length || !canUpdate || batchBusy}
+            className={toolbarBtn}
+          >
+            更新到店时间
+          </button>
 
-        <button
-          type="button"
-          onClick={() => void handleBatchVisit()}
-          disabled={!selectedIds.length || !canUpdate || batchBusy}
-          className="rounded-lg bg-[var(--qsl-brand-dark)] hover:bg-[var(--qsl-brand-dark-hover)] px-3 py-2 text-white disabled:opacity-40 cursor-pointer transition-colors"
-        >
-          更新到店时间
-        </button>
+          <button
+            type="button"
+            onClick={() => showToast('子账号家庭成员绑定将在后续版本开放，可先在编辑页记录「关联账号」')}
+            className={toolbarBtn}
+          >
+            子账号操作
+          </button>
 
-        <button
-          type="button"
-          onClick={() => showToast('子账号家庭成员绑定将在后续版本开放，可先在编辑页记录「关联账号」')}
-          className="rounded-lg bg-[var(--qsl-brand-dark)] hover:bg-[var(--qsl-brand-dark-hover)] px-3 py-2 text-white cursor-pointer transition-colors"
-        >
-          子账号操作⌄
-        </button>
+          <button
+            type="button"
+            onClick={() => showToast('顾客合并需要服务端冲突校验，当前暂未开放')}
+            className={toolbarBtn}
+          >
+            合并顾客资料
+          </button>
 
-        <button
-          type="button"
-          onClick={() => showToast('顾客合并需要服务端冲突校验，当前暂未开放')}
-          className="rounded-lg bg-[var(--qsl-brand-dark)] hover:bg-[var(--qsl-brand-dark-hover)] px-3 py-2 text-white cursor-pointer transition-colors"
-        >
-          合并顾客资料
-        </button>
+          {debugMode && (
+            <span className="rounded-md bg-[#F5F7F2] px-2 py-1 text-xs text-[#5F645D]">演示数据</span>
+          )}
 
-        <span className="flex-1" />
+          <div className="ml-auto flex flex-wrap items-center gap-2">
+            <button type="button" onClick={downloadImportTemplate} className={toolbarBtn}>
+              <Download size={15} />
+              模板
+            </button>
 
-        <button
-          type="button"
-          onClick={downloadImportTemplate}
-          className="rounded-lg border border-[#D9DDD4] hover:border-[#171916] px-3 py-2 cursor-pointer transition-colors"
-        >
-          <Download className="mr-1 inline h-4 w-4" />
-          导入模板下载
-        </button>
+            <button
+              type="button"
+              onClick={() => showToast('批量导入解析需完成字段映射校验，当前请点击「新增」录入')}
+              className={toolbarBtn}
+            >
+              <Upload size={15} />
+              导入
+            </button>
 
-        <button
-          type="button"
-          onClick={() => showToast('批量导入解析需完成字段映射校验，当前请点击「新增」录入')}
-          className="rounded-lg border border-[#D9DDD4] hover:border-[#171916] px-3 py-2 cursor-pointer transition-colors"
-        >
-          <Upload className="mr-1 inline h-4 w-4" />
-          导入
-        </button>
+            <button type="button" onClick={exportCsv} className={toolbarBtn}>
+              <Download size={15} />
+              导出
+            </button>
 
-        <button
-          type="button"
-          onClick={exportCsv}
-          className="rounded-lg border border-[#D9DDD4] hover:border-[#171916] px-3 py-2 cursor-pointer transition-colors"
-        >
-          <Download className="mr-1 inline h-4 w-4" />
-          导出
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setExtraFilters((v) => !v)}
-          className={`rounded-lg border px-3 py-2 cursor-pointer transition-colors ${
-            extraFilters
-              ? 'border-[#171916] bg-[var(--qsl-accent-soft-55)] font-medium'
-              : 'border-[#D9DDD4] hover:border-[#171916]'
-          }`}
-        >
-          筛选搜索
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setColumnsOpen((v) => !v)}
-          className={`rounded-lg border px-3 py-2 cursor-pointer transition-colors ${
-            columnsOpen
-              ? 'border-[#171916] bg-[var(--qsl-accent-soft-55)] font-medium'
-              : 'border-[#D9DDD4] hover:border-[#171916]'
-          }`}
-        >
-          设置表头
-        </button>
-      </div>
-
-      {extraFilters && (
-        <div className="rounded-xl border border-[#D9DDD4] bg-white px-4 py-3 text-sm text-[#5F645D]">
-          支持按姓名、手机号、会员卡号、导购员、证件号以及标签关键词检索，并可叠加门店、性别和会员等级过滤。
-        </div>
-      )}
-
-      {columnsOpen && (
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-[#D9DDD4] bg-white p-4 text-sm">
-          <span className="font-medium text-[#171916]">显示列：</span>
-          {TOGGLEABLE_COLUMNS.map((col) => (
-            <label key={col.key} className="inline-flex items-center gap-1.5 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={isColVisible(col.key)}
-                onChange={() => toggleColumn(col.key)}
-              />
-              <span>{col.label}</span>
-            </label>
-          ))}
-        </div>
-      )}
-
-      <section className="rounded-[24px] border border-[#D9DDD4] bg-white p-5">
-        <div className="mb-4 flex items-center gap-2 font-semibold text-[#171916]">
-          <SlidersHorizontal className="h-4 w-4" />
-          筛选顾客
-        </div>
-        <div className="grid gap-3 md:grid-cols-4">
-          <label className="relative md:col-span-1">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-[#73796F]" />
             <input
               aria-label="搜索顾客"
               value={keyword}
@@ -485,282 +435,466 @@ export const CustomerArchivePage: React.FC = () => {
                 setPage(1);
               }}
               placeholder="姓名 / 手机号 / 卡号 / 导购 / 标签"
-              className="h-10 w-full rounded-xl border border-[#D9DDD4] pl-9 pr-3 text-sm outline-none focus:border-[#171916]"
+              className={`${toolbarInput} w-52 min-w-0`}
             />
-          </label>
-          <select
-            aria-label="筛选门店"
-            value={store}
-            onChange={(e) => {
-              setStore(e.target.value);
-              setPage(1);
-            }}
-            className="h-10 rounded-xl border border-[#D9DDD4] px-3 text-sm outline-none focus:border-[#171916]"
-          >
-            <option value="all">全部授权门店</option>
-            {session.authorizedStores.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
-          <select
-            aria-label="筛选性别"
-            value={gender}
-            onChange={(e) => {
-              setGender(e.target.value);
-              setPage(1);
-            }}
-            className="h-10 rounded-xl border border-[#D9DDD4] px-3 text-sm outline-none focus:border-[#171916]"
-          >
-            <option value="all">全部性别</option>
-            <option value="男">男</option>
-            <option value="女">女</option>
-          </select>
-          <select
-            aria-label="筛选会员等级"
-            value={tier}
-            onChange={(e) => {
-              setTier(e.target.value);
-              setPage(1);
-            }}
-            className="h-10 rounded-xl border border-[#D9DDD4] px-3 text-sm outline-none focus:border-[#171916]"
-          >
-            <option value="all">全部等级</option>
-            {CUSTOMER_TIER_OPTIONS.map((t) => (
-              <option key={t} value={t}>
-                {t}
-              </option>
-            ))}
-          </select>
-        </div>
-      </section>
 
-      <section className="overflow-hidden rounded-[24px] border border-[#D9DDD4] bg-white">
-        <div className="flex items-center justify-between border-b border-[#E7EAE2] px-5 py-4">
-          <h2 className="font-semibold text-[#171916]">顾客列表</h2>
-          <span className="text-sm text-[#73796F]">
-            共 {rows.length} 条 · 已勾选 {selectedIds.length} 条
-          </span>
-        </div>
+            <button
+              type="button"
+              onClick={() => setExtraFilters((v) => !v)}
+              aria-expanded={extraFilters}
+              className={`${toolbarBtn} ${extraFilters ? 'bg-[#F8F9F5] border-[#B9C1B3]' : ''}`}
+            >
+              筛选搜索
+            </button>
 
-        {isLoading ? (
-          <div className="p-5">
-            <LoadingSkeleton />
+            <button
+              type="button"
+              onClick={() => setColumnsOpen((v) => !v)}
+              aria-expanded={columnsOpen}
+              aria-controls="customer-header-options"
+              className={`${toolbarBtn} ${columnsOpen ? 'bg-[#F8F9F5] border-[#B9C1B3]' : ''}`}
+            >
+              <SlidersHorizontal className="w-4 h-4" />
+              设置表头
+            </button>
           </div>
-        ) : isError ? (
+        </div>
+
+        {extraFilters && (
+          <div className="flex flex-wrap items-center gap-2.5 border-b border-[#E5E8E0] bg-[#FAFBF8] p-3">
+            <Select
+              variant="compact"
+              ariaLabel="筛选门店"
+              placeholder="全部授权门店"
+              className="w-48"
+              buttonClassName="w-full rounded-full px-3.5 bg-white"
+              value={store}
+              onChange={(next) => {
+                setStore(next);
+                setPage(1);
+              }}
+              options={[
+                { value: 'all', label: '全部授权门店' },
+                ...session.authorizedStores.map((s) => ({ value: s.id, label: s.name })),
+              ]}
+            />
+            <Select
+              variant="compact"
+              ariaLabel="筛选性别"
+              placeholder="全部性别"
+              className="w-36"
+              buttonClassName="w-full rounded-full px-3.5 bg-white"
+              value={gender}
+              onChange={(next) => {
+                setGender(next);
+                setPage(1);
+              }}
+              options={[
+                { value: 'all', label: '全部性别' },
+                { value: '男', label: '男' },
+                { value: '女', label: '女' },
+              ]}
+            />
+            <Select
+              variant="compact"
+              ariaLabel="筛选会员等级"
+              placeholder="全部等级"
+              className="w-40"
+              buttonClassName="w-full rounded-full px-3.5 bg-white"
+              value={tier}
+              onChange={(next) => {
+                setTier(next);
+                setPage(1);
+              }}
+              options={[
+                { value: 'all', label: '全部等级' },
+                ...CUSTOMER_TIER_OPTIONS.map((t) => ({ value: t, label: t })),
+              ]}
+            />
+            {hasCustomerFilter && (
+              <button
+                type="button"
+                onClick={() => {
+                  setKeyword('');
+                  setStore('all');
+                  setGender('all');
+                  setTier('all');
+                  setPage(1);
+                }}
+                className="inline-flex h-8 items-center gap-1 rounded-full border border-[#D9DDD4] bg-white px-3 text-xs text-[#5F645D] hover:text-[#171916] cursor-pointer"
+              >
+                <RotateCcw className="w-3 h-3" />
+                重置筛选
+              </button>
+            )}
+          </div>
+        )}
+
+        {columnsOpen && (
+          <div
+            id="customer-header-options"
+            className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-[#E5E8E0] bg-[#F8F9F5] px-4 py-3"
+          >
+            {TOGGLEABLE_COLUMNS.map((col) => (
+              <label
+                key={col.key}
+                className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap text-[13px] text-[#171916]"
+              >
+                <input
+                  type="checkbox"
+                  checked={isColVisible(col.key)}
+                  onChange={() => toggleColumn(col.key)}
+                  className="h-3.5 w-3.5 accent-[var(--qsl-accent)] border-0 outline-none focus:ring-0 cursor-pointer"
+                />
+                <span>{col.label}</span>
+              </label>
+            ))}
+            <button
+              type="button"
+              onClick={() => setHiddenColumns([])}
+              className="ml-auto cursor-pointer text-xs text-[#73796F] hover:text-[#171916]"
+            >
+              恢复默认
+            </button>
+          </div>
+        )}
+
+        {isError ? (
           <div className="p-5">
             <ErrorState onRetry={() => void refetch()} />
           </div>
         ) : (
           <>
-            <div className="overflow-x-auto qsl-scroll">
-              <table className="w-full min-w-[1680px] text-left text-sm">
-                <thead className="bg-[#F8F9F5] text-[#5F645D]">
-                  <tr>
-                    <th className="whitespace-nowrap px-4 py-3 font-medium">
-                      <input
-                        type="checkbox"
-                        aria-label="全选当前页"
-                        checked={allShownSelected}
-                        onChange={toggleSelectAllShown}
-                      />
-                    </th>
-                    <th className="whitespace-nowrap px-4 py-3 font-medium">操作</th>
-                    <th className="sticky left-0 z-10 bg-[#F8F9F5] whitespace-nowrap px-4 py-3 font-medium">
-                      顾客姓名
-                    </th>
-                    <th className="whitespace-nowrap px-4 py-3 font-medium">手机号</th>
-                    <th className="whitespace-nowrap px-4 py-3 font-medium">性别</th>
-                    {isColVisible('birthday') && (
-                      <th className="whitespace-nowrap px-4 py-3 font-medium">生日</th>
-                    )}
-                    <th className="whitespace-nowrap px-4 py-3 font-medium">年龄</th>
-                    {isColVisible('ageGroup') && (
-                      <th className="whitespace-nowrap px-4 py-3 font-medium">年龄段</th>
-                    )}
-                    <th className="whitespace-nowrap px-4 py-3 font-medium">会员等级</th>
-                    <th className="whitespace-nowrap px-4 py-3 font-medium">会员卡号</th>
-                    {isColVisible('medicalIdNo') && (
-                      <th className="whitespace-nowrap px-4 py-3 font-medium">医保/证件号</th>
-                    )}
-                    <th className="whitespace-nowrap px-4 py-3 font-medium">注册门店</th>
-                    {isColVisible('relatedAccount') && (
-                      <th className="whitespace-nowrap px-4 py-3 font-medium">关联账号</th>
-                    )}
-                    {isColVisible('source') && (
-                      <th className="whitespace-nowrap px-4 py-3 font-medium">顾客来源</th>
-                    )}
-                    <th className="whitespace-nowrap px-4 py-3 font-medium">导购绑定</th>
-                    {isColVisible('refundableAmount') && (
-                      <th className="whitespace-nowrap px-4 py-3 font-medium">可退金额</th>
-                    )}
-                    {isColVisible('storedValueBalance') && (
-                      <th className="whitespace-nowrap px-4 py-3 font-medium">余额</th>
-                    )}
-                    {isColVisible('pointsBalance') && (
-                      <th className="whitespace-nowrap px-4 py-3 font-medium">积分</th>
-                    )}
-                    {isColVisible('address') && (
-                      <th className="whitespace-nowrap px-4 py-3 font-medium">地址</th>
-                    )}
-                    {isColVisible('customerType') && (
-                      <th className="whitespace-nowrap px-4 py-3 font-medium">类型</th>
-                    )}
-                    {isColVisible('wechatFollowed') && (
-                      <th className="whitespace-nowrap px-4 py-3 font-medium">是否关注公众号</th>
-                    )}
-                    {isColVisible('tags') && (
-                      <th className="whitespace-nowrap px-4 py-3 font-medium">标签</th>
-                    )}
-                    {isColVisible('createdAt') && (
-                      <th className="whitespace-nowrap px-4 py-3 font-medium">注册时间</th>
-                    )}
-                    {isColVisible('remark') && (
-                      <th className="whitespace-nowrap px-4 py-3 font-medium">备注</th>
-                    )}
-                    <th className="whitespace-nowrap px-4 py-3 font-medium">到店次数</th>
-                    <th className="whitespace-nowrap px-4 py-3 font-medium">最近到店</th>
-
-                  </tr>
-                </thead>
-                <tbody>
-                  {shown.map((m) => (
-                    <tr key={m.id} className="border-t border-[#EEF0E9] hover:bg-[#FBFCF7]">
-                      <td className="px-4 py-3.5">
+            <div className="relative">
+              <div className="overflow-x-auto qsl-scroll">
+                <table className="w-full min-w-[1680px] border-collapse text-left">
+                  <thead>
+                    <tr className="border-b border-[#E5E8E0] bg-[#F8F9F5]">
+                      <th className="w-11 px-3.5 py-3 text-center sticky left-0 bg-[#F8F9F5] z-20 border-r border-[#E5E8E0]">
                         <input
                           type="checkbox"
-                          aria-label={`选择${m.name}`}
-                          checked={selectedIds.includes(m.id)}
-                          onChange={() =>
-                            setSelectedIds((v) =>
-                              v.includes(m.id) ? v.filter((id) => id !== m.id) : [...v, m.id]
-                            )
-                          }
+                          aria-label="全选当前页"
+                          checked={allShownSelected}
+                          onChange={toggleSelectAllShown}
+                          className="accent-[#171916] w-4 h-4 cursor-pointer"
                         />
-                      </td>
-                      <td className="px-4 py-3.5 whitespace-nowrap"><button type="button" onClick={()=>setDetailCustomer(m)} className="rounded-lg border border-[var(--qsl-accent-border)] bg-[var(--qsl-accent)] px-3 py-1.5 text-xs font-semibold text-[var(--qsl-accent-ink)] transition-colors hover:bg-[var(--qsl-accent-hover)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--qsl-accent-border)]">查看详情</button></td>
-                      <td className="sticky left-0 bg-white px-4 py-3.5 font-semibold text-[#171916]">
-                        <div className="flex items-center gap-2.5 whitespace-nowrap">
-                          {m.avatarUrl ? (
-                            <img
-                              src={m.avatarUrl}
-                              alt={m.name}
-                              className="h-8 w-8 rounded-full object-cover border border-[#D9DDD4] shrink-0"
-                            />
-                          ) : (
-                            <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--qsl-accent-soft-85)] text-xs font-bold text-[#171916]">
-                              {m.name.slice(0, 1)}
-                            </span>
-                          )}
-                          <span>{m.name}</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3.5 font-mono whitespace-nowrap">{displayPhone(m)}</td>
-                      <td className="px-4 py-3.5 whitespace-nowrap">{m.gender}</td>
+                      </th>
+                      <th className="px-3.5 py-3 text-[13px] font-semibold text-[#5F645D] whitespace-nowrap align-middle sticky left-11 z-20 bg-[#F8F9F5] border-r border-[#D9DDD4] shadow-[4px_0_12px_rgba(23,25,22,0.04)]">
+                        操作
+                      </th>
+                      <th className="px-3.5 py-3 text-[13px] font-semibold text-[#5F645D] whitespace-nowrap align-middle border-r border-[#E5E8E0]">
+                        顾客姓名
+                      </th>
+                      <th className="px-3.5 py-3 text-[13px] font-semibold text-[#5F645D] whitespace-nowrap align-middle border-r border-[#E5E8E0]">
+                        手机号
+                      </th>
+                      <th className="px-3.5 py-3 text-[13px] font-semibold text-[#5F645D] whitespace-nowrap align-middle border-r border-[#E5E8E0]">
+                        性别
+                      </th>
                       {isColVisible('birthday') && (
-                        <td className="px-4 py-3.5 whitespace-nowrap font-mono text-[#5F645D]">
-                          {m.birthday || '—'}
-                        </td>
+                        <th className="px-3.5 py-3 text-[13px] font-semibold text-[#5F645D] whitespace-nowrap align-middle border-r border-[#E5E8E0]">
+                          生日
+                        </th>
                       )}
-                      <td className="px-4 py-3.5 whitespace-nowrap tabular-nums">{m.age} 岁</td>
+                      <th className="px-3.5 py-3 text-[13px] font-semibold text-[#5F645D] whitespace-nowrap align-middle border-r border-[#E5E8E0]">
+                        年龄
+                      </th>
                       {isColVisible('ageGroup') && (
-                        <td className="px-4 py-3.5 whitespace-nowrap text-[#5F645D]">
-                          {m.ageGroup || '—'}
-                        </td>
+                        <th className="px-3.5 py-3 text-[13px] font-semibold text-[#5F645D] whitespace-nowrap align-middle border-r border-[#E5E8E0]">
+                          年龄段
+                        </th>
                       )}
-                      <td className="px-4 py-3.5 whitespace-nowrap">
-                        <span className="inline-flex items-center rounded-md bg-[#F4F6F0] px-2 py-0.5 text-xs font-medium text-[#171916]">
-                          {m.tier}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3.5 font-mono whitespace-nowrap">{m.memberNo}</td>
+                      <th className="px-3.5 py-3 text-[13px] font-semibold text-[#5F645D] whitespace-nowrap align-middle border-r border-[#E5E8E0]">
+                        会员等级
+                      </th>
+                      <th className="px-3.5 py-3 text-[13px] font-semibold text-[#5F645D] whitespace-nowrap align-middle border-r border-[#E5E8E0]">
+                        会员卡号
+                      </th>
                       {isColVisible('medicalIdNo') && (
-                        <td className="px-4 py-3.5 font-mono whitespace-nowrap text-[#5F645D]">
-                          {m.medicalIdNo || '—'}
-                        </td>
+                        <th className="px-3.5 py-3 text-[13px] font-semibold text-[#5F645D] whitespace-nowrap align-middle border-r border-[#E5E8E0]">
+                          医保/证件号
+                        </th>
                       )}
-                      <td className="px-4 py-3.5 whitespace-nowrap">{m.storeName}</td>
+                      <th className="px-3.5 py-3 text-[13px] font-semibold text-[#5F645D] whitespace-nowrap align-middle border-r border-[#E5E8E0]">
+                        注册门店
+                      </th>
                       {isColVisible('relatedAccount') && (
-                        <td className="px-4 py-3.5 whitespace-nowrap text-[#5F645D]">
-                          {m.relatedAccount || '—'}
-                        </td>
+                        <th className="px-3.5 py-3 text-[13px] font-semibold text-[#5F645D] whitespace-nowrap align-middle border-r border-[#E5E8E0]">
+                          关联账号
+                        </th>
                       )}
                       {isColVisible('source') && (
-                        <td className="px-4 py-3.5 whitespace-nowrap text-[#5F645D]">
-                          {m.source || '—'}
-                        </td>
+                        <th className="px-3.5 py-3 text-[13px] font-semibold text-[#5F645D] whitespace-nowrap align-middle border-r border-[#E5E8E0]">
+                          顾客来源
+                        </th>
                       )}
-                      <td className="px-4 py-3.5 whitespace-nowrap">{m.guideName || '—'}</td>
+                      <th className="px-3.5 py-3 text-[13px] font-semibold text-[#5F645D] whitespace-nowrap align-middle border-r border-[#E5E8E0]">
+                        导购绑定
+                      </th>
                       {isColVisible('refundableAmount') && (
-                        <td className="px-4 py-3.5 whitespace-nowrap tabular-nums">
-                          {m.refundableAmount}
-                        </td>
+                        <th className="px-3.5 py-3 text-[13px] font-semibold text-[#5F645D] whitespace-nowrap align-middle border-r border-[#E5E8E0]">
+                          可退金额
+                        </th>
                       )}
                       {isColVisible('storedValueBalance') && (
-                        <td className="px-4 py-3.5 whitespace-nowrap tabular-nums">
-                          {m.storedValueBalance}
-                        </td>
+                        <th className="px-3.5 py-3 text-[13px] font-semibold text-[#5F645D] whitespace-nowrap align-middle border-r border-[#E5E8E0]">
+                          余额
+                        </th>
                       )}
                       {isColVisible('pointsBalance') && (
-                        <td className="px-4 py-3.5 whitespace-nowrap tabular-nums">
-                          {m.pointsBalance}
-                        </td>
+                        <th className="px-3.5 py-3 text-[13px] font-semibold text-[#5F645D] whitespace-nowrap align-middle border-r border-[#E5E8E0]">
+                          积分
+                        </th>
                       )}
                       {isColVisible('address') && (
-                        <td className="px-4 py-3.5 max-w-[200px] truncate text-[#5F645D]" title={m.address}>
-                          {m.address || '—'}
-                        </td>
+                        <th className="px-3.5 py-3 text-[13px] font-semibold text-[#5F645D] whitespace-nowrap align-middle border-r border-[#E5E8E0]">
+                          地址
+                        </th>
                       )}
                       {isColVisible('customerType') && (
-                        <td className="px-4 py-3.5 whitespace-nowrap text-[#5F645D]">
-                          {m.customerType || '—'}
-                        </td>
+                        <th className="px-3.5 py-3 text-[13px] font-semibold text-[#5F645D] whitespace-nowrap align-middle border-r border-[#E5E8E0]">
+                          类型
+                        </th>
                       )}
                       {isColVisible('wechatFollowed') && (
-                        <td className="px-4 py-3.5 whitespace-nowrap">
-                          {m.wechatFollowed ? '已关注' : '未关注'}
-                        </td>
+                        <th className="px-3.5 py-3 text-[13px] font-semibold text-[#5F645D] whitespace-nowrap align-middle border-r border-[#E5E8E0]">
+                          是否关注公众号
+                        </th>
                       )}
                       {isColVisible('tags') && (
-                        <td className="px-4 py-3.5 whitespace-nowrap">
-                          {m.tags.length > 0 ? (
-                            <div className="flex flex-wrap gap-1">
-                              {m.tags.map((t) => (
-                                <span
-                                  key={t}
-                                  className="inline-block rounded-md bg-[var(--qsl-accent-soft)] border border-[var(--qsl-accent-soft-border)] px-1.5 py-0.5 text-xs text-[#171916]"
-                                >
-                                  {t}
-                                </span>
-                              ))}
-                            </div>
-                          ) : (
-                            <span className="text-[#8A9086]">—</span>
-                          )}
-                        </td>
+                        <th className="px-3.5 py-3 text-[13px] font-semibold text-[#5F645D] whitespace-nowrap align-middle border-r border-[#E5E8E0]">
+                          标签
+                        </th>
                       )}
                       {isColVisible('createdAt') && (
-                        <td className="px-4 py-3.5 whitespace-nowrap font-mono text-xs text-[#5F645D]">
-                          {m.createdAt ? m.createdAt.slice(0, 10) : '—'}
-                        </td>
+                        <th className="px-3.5 py-3 text-[13px] font-semibold text-[#5F645D] whitespace-nowrap align-middle border-r border-[#E5E8E0]">
+                          注册时间
+                        </th>
                       )}
                       {isColVisible('remark') && (
-                        <td className="px-4 py-3.5 max-w-[220px] truncate text-[#5F645D]" title={m.remark}>
-                          {m.remark || '—'}
-                        </td>
+                        <th className="px-3.5 py-3 text-[13px] font-semibold text-[#5F645D] whitespace-nowrap align-middle border-r border-[#E5E8E0]">
+                          备注
+                        </th>
                       )}
-                      <td className="px-4 py-3.5 whitespace-nowrap tabular-nums">{m.visitCount}</td>
-                      <td className="px-4 py-3.5 whitespace-nowrap font-mono">
-                        {m.lastVisitDate || '—'}
-                      </td>
-
+                      <th className="px-3.5 py-3 text-[13px] font-semibold text-[#5F645D] whitespace-nowrap align-middle border-r border-[#E5E8E0]">
+                        到店次数
+                      </th>
+                      <th className="px-3.5 py-3 text-[13px] font-semibold text-[#5F645D] whitespace-nowrap align-middle">
+                        最近到店
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-              {rows.length === 0 && (
-                <div className="py-12 text-center text-[#73796F]">没有符合条件的顾客</div>
+                  </thead>
+                  <tbody className="divide-y divide-[#E5E8E0]">
+                    {isLoading && !shown.length ? (
+                      <TableLoadingRows colSpan={visibleColCount} label="正在从数据库加载顾客档案…" />
+                    ) : shown.length === 0 ? (
+                      <tr>
+                        <td colSpan={visibleColCount} className="px-4 py-12 text-center text-[#73796F]">
+                          没有符合条件的顾客
+                        </td>
+                      </tr>
+                    ) : (
+                      shown.map((m, idx) => {
+                        const checked = selectedIds.includes(m.id);
+                        const rowBg = checked
+                          ? 'bg-[var(--qsl-accent-soft-35)]'
+                          : idx % 2 === 1
+                            ? 'bg-[#FAFBF8]'
+                            : 'bg-white';
+                        const stickyCellBg = checked
+                          ? 'bg-[var(--qsl-accent-soft)]'
+                          : idx % 2 === 1
+                            ? 'bg-[#FAFBF8]'
+                            : 'bg-white';
+
+                        return (
+                          <tr
+                            key={m.id}
+                            className={`transition-colors hover:bg-[#F1F5EC] ${rowBg}`}
+                          >
+                            <td
+                              className={`w-11 px-3.5 py-2.5 text-center sticky left-0 z-10 border-r border-[#E5E8E0] ${stickyCellBg}`}
+                            >
+                              <input
+                                type="checkbox"
+                                aria-label={`选择${m.name}`}
+                                checked={checked}
+                                onChange={() =>
+                                  setSelectedIds((v) =>
+                                    v.includes(m.id) ? v.filter((id) => id !== m.id) : [...v, m.id]
+                                  )
+                                }
+                                className="accent-[#171916] w-4 h-4 cursor-pointer"
+                              />
+                            </td>
+                            <td
+                              className={`px-3.5 py-2.5 text-[14px] text-[#171916] whitespace-nowrap align-middle sticky left-11 z-10 border-r border-[#D9DDD4] shadow-[4px_0_12px_rgba(23,25,22,0.04)] ${stickyCellBg}`}
+                            >
+                              <div className="inline-flex items-center gap-1">
+                                <button
+                                  type="button"
+                                  title="编辑顾客"
+                                  aria-label={`编辑 ${m.name}`}
+                                  disabled={!canUpdate}
+                                  onClick={() => openEditModal(m)}
+                                  className={`${primaryBtn} !px-2 !py-1`}
+                                >
+                                  <Pencil size={14} />
+                                </button>
+                                <button
+                                  type="button"
+                                  title="查看详情"
+                                  aria-label={`查看 ${m.name} 详情`}
+                                  onClick={() => setDetailCustomer(m)}
+                                  className={`${toolbarBtn} !px-2 !py-1`}
+                                >
+                                  <Eye size={14} />
+                                </button>
+                              </div>
+                            </td>
+                            <td className="px-3.5 py-2.5 text-[14px] font-semibold text-[#171916] whitespace-nowrap align-middle border-r border-[#E5E8E0]">
+                              <div className="flex items-center gap-2 whitespace-nowrap">
+                                {m.avatarUrl ? (
+                                  <img
+                                    src={m.avatarUrl}
+                                    alt={m.name}
+                                    className="h-7 w-7 rounded-full object-cover border border-[#D9DDD4] shrink-0"
+                                  />
+                                ) : (
+                                  <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--qsl-accent-soft-85)] text-xs font-bold text-[#171916]">
+                                    {m.name.slice(0, 1)}
+                                  </span>
+                                )}
+                                <span>{m.name}</span>
+                              </div>
+                            </td>
+                            <td className="px-3.5 py-2.5 text-[14px] font-mono text-[#171916] whitespace-nowrap align-middle border-r border-[#E5E8E0]">
+                              {displayPhone(m)}
+                            </td>
+                            <td className="px-3.5 py-2.5 text-[14px] text-[#171916] whitespace-nowrap align-middle border-r border-[#E5E8E0]">
+                              {m.gender}
+                            </td>
+                            {isColVisible('birthday') && (
+                              <td className="px-3.5 py-2.5 text-[14px] whitespace-nowrap align-middle font-mono text-[#5F645D] border-r border-[#E5E8E0]">
+                                {m.birthday || '—'}
+                              </td>
+                            )}
+                            <td className="px-3.5 py-2.5 text-[14px] text-[#171916] whitespace-nowrap align-middle tabular-nums border-r border-[#E5E8E0]">
+                              {m.age} 岁
+                            </td>
+                            {isColVisible('ageGroup') && (
+                              <td className="px-3.5 py-2.5 text-[14px] whitespace-nowrap align-middle text-[#5F645D] border-r border-[#E5E8E0]">
+                                {m.ageGroup || '—'}
+                              </td>
+                            )}
+                            <td className="px-3.5 py-2.5 text-[14px] whitespace-nowrap align-middle border-r border-[#E5E8E0]">
+                              <span className="inline-flex items-center rounded-md bg-[#F4F6F0] px-2 py-0.5 text-xs font-medium text-[#171916]">
+                                {m.tier}
+                              </span>
+                            </td>
+                            <td className="px-3.5 py-2.5 text-[14px] text-[#171916] font-mono whitespace-nowrap align-middle border-r border-[#E5E8E0]">
+                              {m.memberNo}
+                            </td>
+                            {isColVisible('medicalIdNo') && (
+                              <td className="px-3.5 py-2.5 text-[14px] font-mono whitespace-nowrap align-middle text-[#5F645D] border-r border-[#E5E8E0]">
+                                {m.medicalIdNo || '—'}
+                              </td>
+                            )}
+                            <td className="px-3.5 py-2.5 text-[14px] text-[#171916] whitespace-nowrap align-middle border-r border-[#E5E8E0]">
+                              {m.storeName}
+                            </td>
+                            {isColVisible('relatedAccount') && (
+                              <td className="px-3.5 py-2.5 text-[14px] whitespace-nowrap align-middle text-[#5F645D] border-r border-[#E5E8E0]">
+                                {m.relatedAccount || '—'}
+                              </td>
+                            )}
+                            {isColVisible('source') && (
+                              <td className="px-3.5 py-2.5 text-[14px] whitespace-nowrap align-middle text-[#5F645D] border-r border-[#E5E8E0]">
+                                {m.source || '—'}
+                              </td>
+                            )}
+                            <td className="px-3.5 py-2.5 text-[14px] text-[#171916] whitespace-nowrap align-middle border-r border-[#E5E8E0]">
+                              {m.guideName || '—'}
+                            </td>
+                            {isColVisible('refundableAmount') && (
+                              <td className="px-3.5 py-2.5 text-[14px] text-[#171916] whitespace-nowrap align-middle tabular-nums border-r border-[#E5E8E0]">
+                                {m.refundableAmount}
+                              </td>
+                            )}
+                            {isColVisible('storedValueBalance') && (
+                              <td className="px-3.5 py-2.5 text-[14px] text-[#171916] whitespace-nowrap align-middle tabular-nums border-r border-[#E5E8E0]">
+                                {m.storedValueBalance}
+                              </td>
+                            )}
+                            {isColVisible('pointsBalance') && (
+                              <td className="px-3.5 py-2.5 text-[14px] text-[#171916] whitespace-nowrap align-middle tabular-nums border-r border-[#E5E8E0]">
+                                {m.pointsBalance}
+                              </td>
+                            )}
+                            {isColVisible('address') && (
+                              <td
+                                className="px-3.5 py-2.5 text-[14px] max-w-[200px] truncate align-middle text-[#5F645D] border-r border-[#E5E8E0]"
+                                title={m.address}
+                              >
+                                {m.address || '—'}
+                              </td>
+                            )}
+                            {isColVisible('customerType') && (
+                              <td className="px-3.5 py-2.5 text-[14px] whitespace-nowrap align-middle text-[#5F645D] border-r border-[#E5E8E0]">
+                                {m.customerType || '—'}
+                              </td>
+                            )}
+                            {isColVisible('wechatFollowed') && (
+                              <td className="px-3.5 py-2.5 text-[14px] text-[#171916] whitespace-nowrap align-middle border-r border-[#E5E8E0]">
+                                {m.wechatFollowed ? '已关注' : '未关注'}
+                              </td>
+                            )}
+                            {isColVisible('tags') && (
+                              <td className="px-3.5 py-2.5 text-[14px] whitespace-nowrap align-middle border-r border-[#E5E8E0]">
+                                {m.tags.length > 0 ? (
+                                  <div className="flex flex-wrap gap-1">
+                                    {m.tags.map((t) => (
+                                      <span
+                                        key={t}
+                                        className="inline-block rounded-md bg-[var(--qsl-accent-soft)] border border-[var(--qsl-accent-soft-border)] px-1.5 py-0.5 text-xs text-[#171916]"
+                                      >
+                                        {t}
+                                      </span>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <span className="text-[#8A9086]">—</span>
+                                )}
+                              </td>
+                            )}
+                            {isColVisible('createdAt') && (
+                              <td className="px-3.5 py-2.5 whitespace-nowrap align-middle font-mono text-xs text-[#5F645D] border-r border-[#E5E8E0]">
+                                {m.createdAt ? m.createdAt.slice(0, 10) : '—'}
+                              </td>
+                            )}
+                            {isColVisible('remark') && (
+                              <td
+                                className="px-3.5 py-2.5 text-[14px] max-w-[220px] truncate align-middle text-[#5F645D] border-r border-[#E5E8E0]"
+                                title={m.remark}
+                              >
+                                {m.remark || '—'}
+                              </td>
+                            )}
+                            <td className="px-3.5 py-2.5 text-[14px] text-[#171916] whitespace-nowrap align-middle tabular-nums border-r border-[#E5E8E0]">
+                              {m.visitCount}
+                            </td>
+                            <td className="px-3.5 py-2.5 text-[14px] text-[#171916] whitespace-nowrap align-middle font-mono">
+                              {m.lastVisitDate || '—'}
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              {isFetching && shown.length > 0 && (
+                <TableLoadingOverlay label="正在同步顾客档案…" />
               )}
             </div>
 

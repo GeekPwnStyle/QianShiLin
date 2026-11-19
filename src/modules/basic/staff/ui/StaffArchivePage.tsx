@@ -469,7 +469,7 @@ export function StaffArchivePage() {
       {columnsOpen && (
         <div
           id="staff-header-options"
-          className="mx-3 my-2.5 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-[#E5E8E0] bg-[#F8F9F5] px-4 py-3"
+          className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-[#E5E8E0] bg-[#F8F9F5] px-4 py-3"
         >
           {columns.map(([key, label]) => (
             <label
@@ -484,7 +484,7 @@ export function StaffArchivePage() {
                     previous.includes(key) ? previous.filter((value) => value !== key) : [...previous, key]
                   )
                 }
-                className="h-3.5 w-3.5 accent-[var(--qsl-accent)]"
+                className="h-3.5 w-3.5 accent-[var(--qsl-accent)] border-0 outline-none focus:ring-0 cursor-pointer"
               />
               {label}
             </label>

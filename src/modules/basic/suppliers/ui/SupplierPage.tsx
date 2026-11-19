@@ -1,6 +1,9 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
   Download,
   Pencil,
   Plus,
@@ -23,14 +26,19 @@ import {
   SupplierMoreModal,
 } from '@/src/modules/basic/suppliers/ui/SupplierActionModals';
 import { SupplierFormModal } from '@/src/modules/basic/suppliers/ui/SupplierFormModal';
-import { Button } from '@/src/shared/ui/Button';
 import { ConfirmDeleteModal } from '@/src/shared/ui/ConfirmDeleteModal';
 import { HelpTooltip } from '@/src/shared/ui/HelpTooltip';
-import { Modal } from '@/src/shared/ui/Modal';
 import { OperationStatus } from '@/src/shared/ui/OperationStatus';
 import { PaginationBar } from '@/src/shared/ui/PaginationBar';
 import { Select } from '@/src/shared/ui/Select';
-import { ErrorState, LoadingSkeleton } from '@/src/shared/ui/StateViews';
+import { ErrorState, TableLoadingOverlay, TableLoadingRows } from '@/src/shared/ui/StateViews';
+
+const toolbarBtn =
+  'inline-flex items-center gap-1.5 rounded-lg border border-[#D9DDD4] bg-white px-3 py-1.5 font-medium text-[#171916] hover:bg-[#F5F7F2] disabled:opacity-40 cursor-pointer';
+const primaryBtn =
+  'inline-flex items-center gap-1.5 rounded-lg border border-[var(--qsl-accent-border)] bg-[var(--qsl-accent)] px-3 py-1.5 font-medium text-[var(--qsl-accent-ink)] hover:bg-[var(--qsl-accent-hover)] disabled:opacity-40 cursor-pointer';
+const toolbarInput =
+  'h-9 rounded-lg border border-[#D9DDD4] bg-white px-3 text-sm outline-none focus:border-[var(--qsl-accent-border)]';
 
 type ColumnKey =
   | 'name'
@@ -403,15 +411,14 @@ export const SupplierPage: React.FC = () => {
       )}
       {busy && <OperationStatus loading>正在处理供应商资料</OperationStatus>}
 
-      <section className="overflow-hidden rounded-[20px] border border-[#E5E8E0] bg-white text-sm">
+      <section className="overflow-hidden rounded-[20px] border border-[#D9DDD4] bg-white text-sm">
         {/* 顶部工具栏 */}
         <div className="flex flex-wrap items-center gap-2 border-b border-[#E5E8E0] p-3">
           {canEdit && (
             <>
-              <Button
-                variant="accent"
-                size="sm"
-                icon={<Plus className="w-4 h-4" />}
+              <button
+                type="button"
+                className={primaryBtn}
                 disabled={busy}
                 onClick={() => {
                   setFormMode('create');
@@ -419,20 +426,21 @@ export const SupplierPage: React.FC = () => {
                   setFormOpen(true);
                 }}
               >
+                <Plus size={15} />
                 新增
-              </Button>
-              <Button
-                variant="accent"
-                size="sm"
+              </button>
+              <button
+                type="button"
+                className={toolbarBtn}
                 disabled={busy}
                 onClick={() => setInviteOpen(true)}
               >
                 通过邀请码新增
-              </Button>
+              </button>
             </>
           )}
 
-          <span className="inline-flex items-center gap-1 px-1.5 text-xs font-medium text-[#2D6A4F]">
+          <span className="inline-flex items-center gap-1 rounded-lg bg-[#F5F7F2] px-2.5 py-1 text-xs font-medium text-[#2D6A4F]">
             <span>供应商说明</span>
             <HelpTooltip
               title="供应商说明"
@@ -443,34 +451,37 @@ export const SupplierPage: React.FC = () => {
 
           {canEdit && (
             <>
-              <Button
-                size="sm"
+              <button
+                type="button"
+                className={toolbarBtn}
                 disabled={!selectedIds.length || busy}
                 onClick={() => setBatchAuthOpen(true)}
               >
                 批量授权门店{selectedIds.length ? ` (${selectedIds.length})` : ''}
-              </Button>
-              <Button
-                size="sm"
+              </button>
+              <button
+                type="button"
+                className={toolbarBtn}
                 disabled={selectedIds.length < 2 || busy}
                 onClick={() => setMergeOpen(true)}
               >
                 合并供应商
-              </Button>
+              </button>
             </>
           )}
 
           <div className="ml-auto flex flex-wrap items-center gap-2">
             {canEdit && (
               <>
-                <Button
-                  size="sm"
-                  icon={<Upload className="w-3.5 h-3.5" />}
+                <button
+                  type="button"
+                  className={toolbarBtn}
                   disabled={busy}
                   onClick={() => importInputRef.current?.click()}
                 >
+                  <Upload size={15} />
                   导入
-                </Button>
+                </button>
                 <input
                   ref={importInputRef}
                   type="file"
@@ -484,19 +495,20 @@ export const SupplierPage: React.FC = () => {
                 />
               </>
             )}
-            <Button
-              size="sm"
-              icon={<Download className="w-3.5 h-3.5" />}
+            <button
+              type="button"
+              className={toolbarBtn}
               disabled={!total || busy}
               onClick={() => void handleExport()}
             >
+              <Download size={15} />
               导出
-            </Button>
+            </button>
             <div className="flex items-center">
               <input
                 type="text"
                 aria-label="模糊搜索"
-                placeholder="模糊搜索"
+                placeholder="供应商 / 联系人 / 电话"
                 value={keywordInput}
                 onChange={(e) => setKeywordInput(e.target.value)}
                 onKeyDown={(e) => {
@@ -505,7 +517,7 @@ export const SupplierPage: React.FC = () => {
                     setPage(1);
                   }
                 }}
-                className="h-9 w-44 rounded-l-lg border border-r-0 border-[#D9DDD4] bg-white px-3 text-sm outline-none focus:border-[#171916]"
+                className={toolbarInput + ' w-44 rounded-r-none border-r-0'}
               />
               <button
                 type="button"
@@ -513,33 +525,42 @@ export const SupplierPage: React.FC = () => {
                   setSearch(keywordInput.trim());
                   setPage(1);
                 }}
-                className="inline-flex h-9 items-center gap-1 rounded-r-lg border border-[var(--qsl-accent-border)] bg-[var(--qsl-accent)] px-3 text-xs font-semibold text-[var(--qsl-accent-ink)] hover:bg-[var(--qsl-accent-hover)] cursor-pointer"
+                className="inline-flex h-9 items-center gap-1 rounded-r-lg border border-[var(--qsl-accent-border)] bg-[var(--qsl-accent)] px-3 font-medium text-[var(--qsl-accent-ink)] hover:bg-[var(--qsl-accent-hover)] cursor-pointer"
               >
-                <Search className="w-3.5 h-3.5" />
+                <Search size={14} />
                 搜索
               </button>
             </div>
-            <Button
-              size="sm"
-              icon={<SlidersHorizontal className="w-3.5 h-3.5" />}
+            <button
+              type="button"
+              aria-expanded={filtersOpen}
+              className={`${toolbarBtn} ${filtersOpen ? 'bg-[#F8F9F5] border-[#B9C1B3]' : ''}`}
               onClick={() => setFiltersOpen((p) => !p)}
             >
               筛选搜索
-            </Button>
-            <Button size="sm" onClick={() => setColumnsOpen((p) => !p)}>
+            </button>
+            <button
+              type="button"
+              aria-expanded={columnsOpen}
+              aria-controls="supplier-header-options"
+              className={`${toolbarBtn} ${columnsOpen ? 'bg-[#F8F9F5] border-[#B9C1B3]' : ''}`}
+              onClick={() => setColumnsOpen((p) => !p)}
+            >
+              <SlidersHorizontal className="w-4 h-4" />
               设置表头
-            </Button>
+            </button>
           </div>
         </div>
 
         {/* 筛选展开区 */}
         {filtersOpen && (
-          <div className="flex flex-wrap items-center gap-3 border-b border-[#E5E8E0] bg-[#FAFBF8] px-4 py-3">
+          <div className="flex flex-wrap items-center gap-2.5 border-b border-[#E5E8E0] bg-[#FAFBF8] p-3">
             <Select
-              variant="arc"
+              variant="compact"
               ariaLabel="启用状态筛选"
               placeholder="全部启用状态"
               className="w-40"
+              buttonClassName="w-full rounded-full px-3.5 bg-white"
               value={filterEnabled}
               onChange={(v) => {
                 setFilterEnabled(v as '' | 'true' | 'false');
@@ -552,10 +573,11 @@ export const SupplierPage: React.FC = () => {
               ]}
             />
             <Select
-              variant="arc"
+              variant="compact"
               ariaLabel="默认供应商筛选"
               placeholder="全部默认状态"
               className="w-40"
+              buttonClassName="w-full rounded-full px-3.5 bg-white"
               value={filterDefault}
               onChange={(v) => {
                 setFilterDefault(v as '' | 'true' | 'false');
@@ -568,10 +590,11 @@ export const SupplierPage: React.FC = () => {
               ]}
             />
             <Select
-              variant="arc"
+              variant="compact"
               ariaLabel="供应链筛选"
               placeholder="全部供应链类型"
               className="w-44"
+              buttonClassName="w-full rounded-full px-3.5 bg-white"
               value={filterSupplyChain}
               onChange={(v) => {
                 setFilterSupplyChain(v as '' | 'true' | 'false');
@@ -584,10 +607,11 @@ export const SupplierPage: React.FC = () => {
               ]}
             />
             <Select
-              variant="arc"
+              variant="compact"
               ariaLabel="授权门店筛选"
               placeholder="全部授权门店"
               className="w-48"
+              buttonClassName="w-full rounded-full px-3.5 bg-white"
               value={filterStoreId}
               onChange={(v) => {
                 setFilterStoreId(v);
@@ -599,8 +623,9 @@ export const SupplierPage: React.FC = () => {
               ]}
             />
             {(filterEnabled || filterDefault || filterSupplyChain || filterStoreId || search) && (
-              <Button
-                size="sm"
+              <button
+                type="button"
+                className={toolbarBtn}
                 onClick={() => {
                   setFilterEnabled('');
                   setFilterDefault('');
@@ -612,16 +637,22 @@ export const SupplierPage: React.FC = () => {
                 }}
               >
                 重置筛选
-              </Button>
+              </button>
             )}
           </div>
         )}
 
         {/* 设置表头展开区 */}
         {columnsOpen && (
-          <div className="flex flex-wrap gap-3 border-b border-[#E5E8E0] bg-[#FAFBF8] px-4 py-3 text-xs">
+          <div
+            id="supplier-header-options"
+            className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-[#E5E8E0] bg-[#F8F9F5] px-4 py-3"
+          >
             {ALL_COLUMNS.map((col) => (
-              <label key={col.key} className="inline-flex items-center gap-1.5 cursor-pointer">
+              <label
+                key={col.key}
+                className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap text-[13px] text-[#171916]"
+              >
                 <input
                   type="checkbox"
                   checked={!hiddenColumns.includes(col.key)}
@@ -632,143 +663,195 @@ export const SupplierPage: React.FC = () => {
                         : [...prev, col.key]
                     )
                   }
+                  className="h-3.5 w-3.5 accent-[var(--qsl-accent)] border-0 outline-none focus:ring-0 cursor-pointer"
                 />
                 <span>{col.label}</span>
               </label>
             ))}
+            <button
+              type="button"
+              onClick={() => setHiddenColumns([])}
+              className="ml-auto cursor-pointer text-xs text-[#73796F] hover:text-[#171916]"
+            >
+              恢复默认
+            </button>
           </div>
         )}
 
         {/* 主表格 */}
-        {query.isLoading ? (
-          <div className="p-4">
-            <LoadingSkeleton />
-          </div>
-        ) : query.isError ? (
+        {query.isError ? (
           <div className="p-4">
             <ErrorState message={query.error.message} onRetry={() => query.refetch()} />
           </div>
         ) : (
-          <div className="max-h-[66dvh] overflow-auto">
-            <table className="w-full min-w-[1480px] text-left text-[13px]">
-              <thead className="sticky top-0 z-10 bg-[#F5F7F2] text-[#4A4F47] border-b border-[#E5E8E0]">
-                <tr>
-                  <th className="w-12 px-2.5 py-2.5 text-center whitespace-nowrap">序号</th>
-                  <th className="w-10 px-2 py-2.5 text-center">
-                    <input
-                      type="checkbox"
-                      aria-label="选择本页全部供应商"
-                      checked={allCheckedOnPage}
-                      onChange={() =>
-                        setSelectedIds((prev) =>
-                          allCheckedOnPage
-                            ? prev.filter((id) => !rows.some((r) => r.id === id))
-                            : Array.from(new Set([...prev, ...rows.map((r) => r.id)]))
-                        )
-                      }
-                    />
-                  </th>
-                  <th className="px-2.5 py-2.5 whitespace-nowrap">操作</th>
-                  {visibleColumns.map((col) => (
-                    <th key={col.key} className="px-2.5 py-2.5 whitespace-nowrap font-medium">
-                      {col.sortField ? (
-                        <button
-                          type="button"
-                          onClick={() => toggleSort(col.sortField)}
-                          className="inline-flex items-center gap-1 cursor-pointer hover:text-[#171916]"
-                        >
-                          <span>{col.label}</span>
-                          {sortField === col.sortField && (
-                            <span className="text-[11px]">{sortOrder === 'desc' ? '↓' : '↑'}</span>
-                          )}
-                        </button>
-                      ) : (
-                        col.label
-                      )}
+          <div className="relative">
+            <div className="overflow-x-auto qsl-scroll">
+              <table className="w-full min-w-[1480px] border-collapse text-left">
+                <thead>
+                  <tr className="border-b border-[#E5E8E0] bg-[#F8F9F5]">
+                    <th className="w-11 px-3.5 py-3 text-center sticky left-0 bg-[#F8F9F5] z-20 border-r border-[#E5E8E0]">
+                      <input
+                        type="checkbox"
+                        aria-label="选择本页全部供应商"
+                        checked={allCheckedOnPage}
+                        onChange={() =>
+                          setSelectedIds((prev) =>
+                            allCheckedOnPage
+                              ? prev.filter((id) => !rows.some((r) => r.id === id))
+                              : Array.from(new Set([...prev, ...rows.map((r) => r.id)]))
+                          )
+                        }
+                        className="accent-[#171916] w-4 h-4 cursor-pointer"
+                      />
                     </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {rows.length === 0 ? (
-                  <tr>
-                    <td colSpan={visibleColumns.length + 3} className="py-12 text-center text-[#73796F]">
-                      暂无符合条件的供应商资料
-                    </td>
+                    <th className="px-3.5 py-3 text-[13px] font-semibold text-[#5F645D] whitespace-nowrap align-middle sticky left-11 z-20 bg-[#F8F9F5] border-r border-[#D9DDD4] shadow-[4px_0_12px_rgba(23,25,22,0.04)]">
+                      操作
+                    </th>
+                    <th className="w-14 px-3.5 py-3 text-center text-[13px] font-semibold text-[#5F645D] whitespace-nowrap align-middle border-r border-[#E5E8E0]">
+                      序号
+                    </th>
+                    {visibleColumns.map((col) => {
+                      const isSorted = sortField === col.sortField;
+                      return (
+                        <th
+                          key={col.key}
+                          className="px-3.5 py-3 text-[13px] font-semibold text-[#5F645D] whitespace-nowrap align-middle border-r border-[#E5E8E0] last:border-r-0"
+                          aria-sort={!isSorted ? 'none' : sortOrder === 'desc' ? 'descending' : 'ascending'}
+                        >
+                          {col.sortField ? (
+                            <div className="inline-flex items-center gap-1.5">
+                              <span>{col.label}</span>
+                              <button
+                                type="button"
+                                aria-label={`按 ${col.label} 排序`}
+                                onClick={() => toggleSort(col.sortField)}
+                                className={`p-0.5 rounded hover:bg-[#EAECE6] cursor-pointer ${
+                                  isSorted ? 'text-[#171916]' : 'text-[#8C9288]'
+                                }`}
+                              >
+                                {isSorted ? (
+                                  sortOrder === 'desc' ? (
+                                    <ArrowDown className="w-3.5 h-3.5" />
+                                  ) : (
+                                    <ArrowUp className="w-3.5 h-3.5" />
+                                  )
+                                ) : (
+                                  <ArrowUpDown className="w-3.5 h-3.5" />
+                                )}
+                              </button>
+                            </div>
+                          ) : (
+                            col.label
+                          )}
+                        </th>
+                      );
+                    })}
                   </tr>
-                ) : (
-                  rows.map((row, index) => {
-                    const rowNo = (page - 1) * pageSize + index + 1;
-                    const expiryTone = getLicenseExpiryTone(row.device_license_expires_on);
-                    return (
-                      <tr
-                        key={row.id}
-                        className="border-t border-[#ECEFE7] even:bg-[#FAFBF8] hover:bg-[#F2F6EE] transition-colors"
-                      >
-                        <td className="px-2.5 py-2 text-center tabular-nums text-[#5F645D]">
-                          {rowNo}
-                        </td>
-                        <td className="px-2 py-2 text-center">
-                          <input
-                            type="checkbox"
-                            aria-label={`选择 ${row.name}`}
-                            checked={selectedIds.includes(row.id)}
-                            onChange={() =>
-                              setSelectedIds((prev) =>
-                                prev.includes(row.id)
-                                  ? prev.filter((id) => id !== row.id)
-                                  : [...prev, row.id]
-                              )
-                            }
-                          />
-                        </td>
-                        <td className="px-2.5 py-2 whitespace-nowrap">
-                          <div className="inline-flex items-center gap-1">
-                            {canEdit && (
-                              <>
-                                <button
-                                  type="button"
-                                  title="编辑"
-                                  aria-label={`编辑 ${row.name}`}
-                                  onClick={() => {
-                                    setFormMode('edit');
-                                    setEditingSupplier(row);
-                                    setFormOpen(true);
-                                  }}
-                                  className="inline-flex h-6 w-6 items-center justify-center rounded border border-[var(--qsl-accent-border)] bg-[var(--qsl-accent)] text-[var(--qsl-accent-ink)] hover:bg-[var(--qsl-accent-hover)] cursor-pointer"
-                                >
-                                  <Pencil className="w-3.5 h-3.5" />
-                                </button>
-                                <button
-                                  type="button"
-                                  disabled={row.login_username === 'supplier' || busy}
-                                  title={
-                                    row.login_username === 'supplier'
-                                      ? '系统基准供应商账号（@supplier）受保护，请改为停用'
-                                      : '删除'
-                                  }
-                                  aria-label={`删除 ${row.name}`}
-                                  onClick={() => setDeletingSupplier(row)}
-                                  className="inline-flex h-6 w-6 items-center justify-center rounded border border-red-200 bg-red-600 text-white hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
-                              </>
-                            )}
-                            <button
-                              type="button"
-                              onClick={() => setMoreSupplier(row)}
-                              className="inline-flex h-6 items-center rounded border border-[#B7E4C7] bg-[#ECFDF5] px-2 text-[11px] font-medium text-[#1B4332] hover:bg-[#D8F3DC] cursor-pointer"
-                            >
-                              更多
-                            </button>
-                          </div>
-                        </td>
+                </thead>
+                <tbody className="divide-y divide-[#E5E8E0]">
+                  {(query.isLoading || query.isFetching) && rows.length === 0 ? (
+                    <TableLoadingRows
+                      colSpan={visibleColumns.length + 3}
+                      label="正在从数据库加载供应商资料…"
+                    />
+                  ) : rows.length === 0 ? (
+                    <tr>
+                      <td colSpan={visibleColumns.length + 3} className="px-4 py-12 text-center text-[#73796F]">
+                        暂无符合条件的供应商资料
+                      </td>
+                    </tr>
+                  ) : (
+                    rows.map((row, index) => {
+                      const rowNo = (page - 1) * pageSize + index + 1;
+                      const expiryTone = getLicenseExpiryTone(row.device_license_expires_on);
+                      const checked = selectedIds.includes(row.id);
+                      const rowBg = checked
+                        ? 'bg-[var(--qsl-accent-soft-35)]'
+                        : index % 2 === 1
+                          ? 'bg-[#FAFBF8]'
+                          : 'bg-white';
+                      const stickyCellBg = checked
+                        ? 'bg-[var(--qsl-accent-soft)]'
+                        : index % 2 === 1
+                          ? 'bg-[#FAFBF8]'
+                          : 'bg-white';
+
+                      return (
+                        <tr
+                          key={row.id}
+                          className={`transition-colors hover:bg-[#F1F5EC] ${rowBg}`}
+                        >
+                          <td
+                            className={`w-11 px-3.5 py-2.5 text-center sticky left-0 z-10 border-r border-[#E5E8E0] ${stickyCellBg}`}
+                          >
+                            <input
+                              type="checkbox"
+                              aria-label={`选择 ${row.name}`}
+                              checked={checked}
+                              onChange={() =>
+                                setSelectedIds((prev) =>
+                                  prev.includes(row.id)
+                                    ? prev.filter((id) => id !== row.id)
+                                    : [...prev, row.id]
+                                )
+                              }
+                              className="accent-[#171916] w-4 h-4 cursor-pointer"
+                            />
+                          </td>
+                          <td
+                            className={`px-3.5 py-2.5 text-[14px] text-[#171916] whitespace-nowrap align-middle sticky left-11 z-10 border-r border-[#D9DDD4] shadow-[4px_0_12px_rgba(23,25,22,0.04)] ${stickyCellBg}`}
+                          >
+                            <div className="inline-flex items-center gap-1.5">
+                              {canEdit && (
+                                <>
+                                  <button
+                                    type="button"
+                                    title="编辑"
+                                    aria-label={`编辑 ${row.name}`}
+                                    onClick={() => {
+                                      setFormMode('edit');
+                                      setEditingSupplier(row);
+                                      setFormOpen(true);
+                                    }}
+                                    className={primaryBtn + ' !px-2 !py-1'}
+                                  >
+                                    <Pencil size={14} />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={row.login_username === 'supplier' || busy}
+                                    title={
+                                      row.login_username === 'supplier'
+                                        ? '系统基准供应商账号（@supplier）受保护，请改为停用'
+                                        : '删除'
+                                    }
+                                    aria-label={`删除 ${row.name}`}
+                                    onClick={() => setDeletingSupplier(row)}
+                                    className={toolbarBtn + ' !px-2 !py-1 text-red-700'}
+                                  >
+                                    <Trash2 size={14} />
+                                  </button>
+                                </>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => setMoreSupplier(row)}
+                                className={toolbarBtn + ' !px-2 !py-1 text-xs text-[#2D6A4F]'}
+                              >
+                                更多
+                              </button>
+                            </div>
+                          </td>
+                          <td className="px-3.5 py-2.5 text-center tabular-nums text-[14px] text-[#5F645D] whitespace-nowrap align-middle border-r border-[#E5E8E0]">
+                            {rowNo}
+                          </td>
 
                         {visibleColumns.map((col) => {
+                          const tdBase =
+                            'px-3.5 py-2.5 text-[14px] text-[#171916] whitespace-nowrap align-middle border-r border-[#E5E8E0] last:border-r-0';
                           if (col.key === 'name') {
                             return (
-                              <td key={col.key} className="px-2.5 py-2 max-w-[220px]">
+                              <td key={col.key} className={`${tdBase} max-w-[220px]`}>
                                 <div className="truncate font-medium text-[#171916]" title={row.name}>
                                   {row.name}
                                 </div>
@@ -777,7 +860,7 @@ export const SupplierPage: React.FC = () => {
                           }
                           if (col.key === 'login_username') {
                             return (
-                              <td key={col.key} className="px-2.5 py-2 whitespace-nowrap font-mono text-xs text-[#2D6A4F]">
+                              <td key={col.key} className={`${tdBase} font-mono text-xs text-[#2D6A4F]`}>
                                 {row.login_username ? (
                                   <span>
                                     @{row.login_username}
@@ -793,14 +876,14 @@ export const SupplierPage: React.FC = () => {
                           }
                           if (col.key === 'phone') {
                             return (
-                              <td key={col.key} className="px-2.5 py-2 whitespace-nowrap tabular-nums">
+                              <td key={col.key} className={`${tdBase} tabular-nums`}>
                                 {row.phone || '—'}
                               </td>
                             );
                           }
                           if (col.key === 'is_default') {
                             return (
-                              <td key={col.key} className="px-2.5 py-2 whitespace-nowrap">
+                              <td key={col.key} className={tdBase}>
                                 <button
                                   type="button"
                                   role="switch"
@@ -823,35 +906,35 @@ export const SupplierPage: React.FC = () => {
                           if (col.key === 'bound_franchise_stores') {
                             const txt = (row.bound_franchise_stores ?? []).join('、');
                             return (
-                              <td key={col.key} className="px-2.5 py-2 max-w-[160px] truncate" title={txt}>
+                              <td key={col.key} className={`${tdBase} max-w-[160px] truncate`} title={txt}>
                                 {txt || '—'}
                               </td>
                             );
                           }
                           if (col.key === 'sort_order') {
                             return (
-                              <td key={col.key} className="px-2.5 py-2 whitespace-nowrap tabular-nums">
+                              <td key={col.key} className={`${tdBase} tabular-nums`}>
                                 {row.sort_order ?? 100}
                               </td>
                             );
                           }
                           if (col.key === 'scope') {
                             return (
-                              <td key={col.key} className="px-2.5 py-2 max-w-[220px] truncate" title={row.scope}>
+                              <td key={col.key} className={`${tdBase} max-w-[220px] truncate`} title={row.scope}>
                                 {row.scope || '—'}
                               </td>
                             );
                           }
                           if (col.key === 'detail_address') {
                             return (
-                              <td key={col.key} className="px-2.5 py-2 max-w-[220px] truncate" title={row.detail_address}>
+                              <td key={col.key} className={`${tdBase} max-w-[220px] truncate`} title={row.detail_address}>
                                 {row.detail_address || '—'}
                               </td>
                             );
                           }
                           if (col.key === 'device_license_expires_on') {
                             return (
-                              <td key={col.key} className="px-2.5 py-2 whitespace-nowrap tabular-nums">
+                              <td key={col.key} className={`${tdBase} tabular-nums`}>
                                 {row.device_license_expires_on ? (
                                   <span
                                     className={
@@ -872,7 +955,7 @@ export const SupplierPage: React.FC = () => {
                           }
                           if (col.key === 'is_supply_chain') {
                             return (
-                              <td key={col.key} className="px-2.5 py-2 whitespace-nowrap">
+                              <td key={col.key} className={tdBase}>
                                 <span
                                   className={`text-xs font-medium ${
                                     row.is_supply_chain ? 'text-[#2D6A4F]' : 'text-[#73796F]'
@@ -885,7 +968,7 @@ export const SupplierPage: React.FC = () => {
                           }
                           if (col.key === 'enabled') {
                             return (
-                              <td key={col.key} className="px-2.5 py-2 whitespace-nowrap">
+                              <td key={col.key} className={tdBase}>
                                 <button
                                   type="button"
                                   disabled={!canEdit || busy}
@@ -905,7 +988,7 @@ export const SupplierPage: React.FC = () => {
                           const rawVal = row[col.key];
                           const text = typeof rawVal === 'string' && rawVal ? rawVal : '—';
                           return (
-                            <td key={col.key} className="px-2.5 py-2 whitespace-nowrap">
+                            <td key={col.key} className={tdBase}>
                               {text}
                             </td>
                           );
@@ -915,7 +998,11 @@ export const SupplierPage: React.FC = () => {
                   })
                 )}
               </tbody>
-            </table>
+              </table>
+            </div>
+            {query.isFetching && rows.length > 0 && (
+              <TableLoadingOverlay label="正在同步供应商资料…" />
+            )}
           </div>
         )}
 

@@ -1242,16 +1242,18 @@ export const StoreProfilePage: React.FC = () => {
         <OperationStatus>{notice}</OperationStatus>
       )}
 
-      {/* Top Toolbar */}
-      <div className="bg-white border border-[#D9DDD4] rounded-[20px] p-4 flex flex-wrap items-center justify-between gap-3">
+      <section className="overflow-hidden rounded-[20px] border border-[#D9DDD4] bg-white text-sm">
+        {/* Top Toolbar */}
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#E5E8E0] p-3">
         <div className="flex flex-wrap items-center gap-2.5">
           {canManageStores && (
             <>
-              <Button variant="accent" icon={<Plus className="w-4 h-4" />} onClick={openCreateModal}>
+              <Button variant="accent" size="sm" icon={<Plus className="w-4 h-4" />} onClick={openCreateModal}>
                 新增门店
               </Button>
               <Button
                 variant="secondary"
+                size="sm"
                 disabled={selectedIds.length === 0}
                 icon={<ShieldCheck className="w-4 h-4" />}
                 onClick={openBatchPermModal}
@@ -1260,6 +1262,7 @@ export const StoreProfilePage: React.FC = () => {
               </Button>
               <Button
                 variant="danger"
+                size="sm"
                 disabled={selectedIds.length === 0}
                 icon={<Trash2 className="w-4 h-4" />}
                 onClick={() =>
@@ -1284,6 +1287,7 @@ export const StoreProfilePage: React.FC = () => {
         <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="secondary"
+            size="sm"
             icon={<Download className="w-4 h-4" />}
             disabled={filteredStores.length === 0}
             onClick={handleExport}
@@ -1306,10 +1310,10 @@ export const StoreProfilePage: React.FC = () => {
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 placeholder="模糊搜索门店/代号/联系人..."
-                className="w-full h-10 pl-9 pr-3 rounded-[10px] bg-[#F8F9F5] border border-[#D9DDD4] focus:bg-white focus:border-[#171916] text-[14px] text-[#171916] outline-none transition-colors"
+                className="w-full h-9 pl-9 pr-3 rounded-lg bg-white border border-[#D9DDD4] focus:border-[var(--qsl-accent-border)] text-sm text-[#171916] outline-none transition-colors"
               />
             </div>
-            <Button type="submit" variant="primary">
+            <Button type="submit" variant="primary" size="sm">
               搜索
             </Button>
           </form>
@@ -1329,6 +1333,7 @@ export const StoreProfilePage: React.FC = () => {
           <div className="relative">
             <Button
               ref={colMenuBtnRef}
+              size="sm"
               aria-expanded={colMenuOpen}
               aria-controls="store-header-options"
               variant="secondary"
@@ -1337,31 +1342,55 @@ export const StoreProfilePage: React.FC = () => {
             >
               设置表头
             </Button>
-
           </div>
         </div>
       </div>
 
       {colMenuOpen && (
-        <div id="store-header-options" ref={colMenuPopoverRef} className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-[#E5E8E0] bg-[#F8F9F5] px-4 py-3">
-          {ALL_COLUMNS.filter(col=>!col.sticky).map(col=><label key={col.key} className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap text-[13px] text-[#171916]">
-            <input type="checkbox" checked={!hiddenCols[col.key]} onChange={()=>setHiddenCols(prev=>({...prev,[col.key]:!prev[col.key]}))} className="h-3.5 w-3.5 accent-[var(--qsl-accent)]"/>{col.label}
-          </label>)}
-          <button type="button" onClick={()=>setHiddenCols(defaultHiddenColumns())} className="ml-auto text-xs text-[#73796F] hover:text-[#171916]">恢复默认</button>
+        <div
+          id="store-header-options"
+          ref={colMenuPopoverRef}
+          className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-[#E5E8E0] bg-[#F8F9F5] px-4 py-3"
+        >
+          {ALL_COLUMNS.filter((col) => !col.sticky).map((col) => (
+            <label
+              key={col.key}
+              className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap text-[13px] text-[#171916]"
+            >
+              <input
+                type="checkbox"
+                checked={!hiddenCols[col.key]}
+                onChange={() =>
+                  setHiddenCols((prev) => ({ ...prev, [col.key]: !prev[col.key] }))
+                }
+                className="h-3.5 w-3.5 accent-[var(--qsl-accent)] border-0 outline-none focus:ring-0 cursor-pointer"
+              />
+              {col.label}
+            </label>
+          ))}
+          <button
+            type="button"
+            onClick={() => setHiddenCols(defaultHiddenColumns())}
+            className="ml-auto cursor-pointer text-xs text-[#73796F] hover:text-[#171916]"
+          >
+            恢复默认
+          </button>
         </div>
       )}
 
       {/* Connected Wide Store Profile Table */}
       {filteredStores.length === 0 ? (
-        <EmptyState
-          mode="filtered"
-          title="没有匹配的门店档案"
-          description="请调整模糊搜索关键词或表头筛选条件，或点击新增门店建立档案。"
-          actionLabel={hasActiveFilters ? '清除筛选条件' : undefined}
-          onAction={hasActiveFilters ? resetAllFilters : undefined}
-        />
+        <div className="p-6">
+          <EmptyState
+            mode="filtered"
+            title="没有匹配的门店档案"
+            description="请调整模糊搜索关键词或表头筛选条件，或点击新增门店建立档案。"
+            actionLabel={hasActiveFilters ? '清除筛选条件' : undefined}
+            onAction={hasActiveFilters ? resetAllFilters : undefined}
+          />
+        </div>
       ) : (
-        <div className="bg-white border border-[#D9DDD4] rounded-[20px] overflow-hidden">
+        <>
           <div className="overflow-x-auto qsl-scroll">
             <table className="w-full border-collapse text-left">
               <thead>
@@ -1513,8 +1542,9 @@ export const StoreProfilePage: React.FC = () => {
               <span className="text-xs text-[#73796F]">左右滑动查看完整门店资质与跨店权限列</span>
             }
           />
-        </div>
+        </>
       )}
+      </section>
 
       {/* Column Header Filter Portal Popover */}
       {activeFilterCol &&
