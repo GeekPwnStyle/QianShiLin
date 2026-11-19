@@ -1,3 +1,4 @@
+import { SessionPolicySettings } from './SessionPolicySettings';
 import { defaultFontSizes, fontAreas, useFontSizes } from '../domain/displayFontSizes';
 import { OperationStatus } from '@/src/shared/ui/OperationStatus';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
@@ -546,6 +547,7 @@ export const SystemParametersPage: React.FC = () => {
 
   return (
     <div className="space-y-5">
+      <SessionPolicySettings />
       {/* Inline Notice Banner */}
       {noticeText && (
         <OperationStatus>{noticeText}</OperationStatus>

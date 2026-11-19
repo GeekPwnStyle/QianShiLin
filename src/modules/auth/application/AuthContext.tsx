@@ -1,3 +1,4 @@
+import { useSessionIdle } from './useSessionIdle';
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -258,6 +259,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     ...PRESET_SESSIONS.admin,
     themeKey: loadLastTheme(),
   }));
+  useSessionIdle(isAuthenticated && !debugMode, session.userId, () => { setIsAuthenticated(false); queryClient.clear(); });
   const [themeSaving, setThemeSaving] = useState(false);
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
@@ -301,7 +303,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (!r.ok) return;
         const { user }: { user: ServerUser } = await r.json();
         if (active && user?.id) {
-          setSession(buildSessionFromServerUser(user));
+          try { sessionStorage.removeItem('qsl_session_expired'); } catch {}
+      setSession(buildSessionFromServerUser(user));
           setIsAuthenticated(true);
         }
       })

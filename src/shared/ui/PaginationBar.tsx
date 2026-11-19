@@ -2,7 +2,7 @@ import React from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Select } from './Select';
 
-export const DEFAULT_PAGE_SIZE_OPTIONS = [10, 50, 100] as const;
+export const DEFAULT_PAGE_SIZE_OPTIONS = [10, 20, 30, 50, 100] as const;
 
 export type PageToken =
   | number

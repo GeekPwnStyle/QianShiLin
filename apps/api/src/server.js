@@ -1,3 +1,4 @@
+import { handleSessionPolicy } from './session-policy.js';
 import { customerListCache } from './query-cache.js';
 import { handleAccount, ensureAccountSchema } from './account.js';
 import http from 'node:http';
@@ -47,7 +48,7 @@ const getToken = req => (req.headers.cookie ?? '').split(';').map(x => x.trim())
 const sessionUser = async token => {
   if (!token || !/^[a-f0-9]{64}$/.test(token)) return null;
   await ensureAccountSchema(pool);
-  const { rows } = await pool.query(`SELECT u.id, u.username, u.display_name, u.email,
+  const { rows } = await pool.query(`SELECT s.last_activity_at + make_interval(mins=>pcy.idle_timeout_minutes) AS idle_expires_at, u.id, u.username, u.display_name, u.email,
            a.role_id, a.store_ids, a.permission_denies,
            r.name AS role_name, r.identity_type, r.sub_role,
            uca.supplier_id, sup.name AS supplier_name,
@@ -56,14 +57,15 @@ const sessionUser = async token => {
            up.avatar_url,
            COALESCE(up.avatar_color_preset, 'charcoal') AS avatar_color_preset,
            COALESCE(up.theme_key, 'lime_charcoal') AS theme_key
-    FROM identity.sessions s
+    FROM identity.sessions s CROSS JOIN system.session_policy pcy
     JOIN identity.users u ON u.id = s.user_id
     LEFT JOIN identity.user_access a ON a.user_id = u.id
     LEFT JOIN identity.roles r ON r.id = a.role_id
     LEFT JOIN identity.user_profiles up ON up.user_id = u.id
     LEFT JOIN identity.user_catalog_access uca ON uca.user_id = u.id
     LEFT JOIN catalog.suppliers sup ON sup.id = uca.supplier_id
-    WHERE s.token_hash = $1 AND s.expires_at > now() AND u.status = 'active'`, [hash(token)]);
+    WHERE s.token_hash = $1 AND s.expires_at > now() AND u.status = 'active'
+      AND s.last_activity_at > now()-make_interval(mins=>pcy.idle_timeout_minutes)`, [hash(token)]);
   return rows[0] ?? null;
 };
 const server = http.createServer(async (req, res) => {
@@ -76,8 +78,14 @@ const server = http.createServer(async (req, res) => {
       await pool.query('SELECT 1');
       return send(res, 200, { ok: true });
     }
+    if (path === '/session/activity' || path === '/system/session-policy') {
+      const token = getToken(req);
+      const user = await sessionUser(token);
+      if (await handleSessionPolicy({req,res,url,user,pool,send,readJson,tokenHash:token ? hash(token) : ''})) return;
+    }
     if (path === '/session' && req.method === 'GET') {
       const user = await sessionUser(getToken(req));
+      if (!user && getToken(req)) await pool.query('DELETE FROM identity.sessions WHERE token_hash=$1',[hash(getToken(req))]);
       return send(res, user ? 200 : 401, user ? { user } : { error: 'Unauthorized' });
     }
     if (path === '/login' && req.method === 'POST') {

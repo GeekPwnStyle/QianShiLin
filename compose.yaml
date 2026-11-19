@@ -23,6 +23,7 @@ services:
       - ./apps/api/db/migrations/015_staff_profiles.sql:/docker-entrypoint-initdb.d/015_staff_profiles.sql:ro
       - ./apps/api/db/migrations/014_customer_details.sql:/docker-entrypoint-initdb.d/014_customer_details.sql:ro
       - ./apps/api/db/migrations/011_internal_notices.sql:/docker-entrypoint-initdb.d/012_internal_notices.sql:ro
+      - ./apps/api/db/migrations/021_session_idle_timeout.sql:/docker-entrypoint-initdb.d/021_session_idle_timeout.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U qianshilin -d qianshilin"]
       interval: 10s

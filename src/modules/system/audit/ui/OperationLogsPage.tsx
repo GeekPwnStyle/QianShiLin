@@ -392,7 +392,7 @@ export const OperationLogsPage: React.FC = () => {
               className="w-full bg-transparent text-sm text-[#171916] outline-none placeholder:text-[#8B9188]"
             />
           </label>
-          <Button type="submit" variant="primary" icon={<Search className="h-3.5 w-3.5" />}>
+          <Button type="submit" variant="accent" icon={<Search className="h-3.5 w-3.5" />}>
             搜索
           </Button>
           {hasCustomFilter && (

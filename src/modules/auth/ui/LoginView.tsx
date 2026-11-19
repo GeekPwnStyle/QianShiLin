@@ -15,6 +15,7 @@ export const LoginView: React.FC = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [sessionNotice] = useState(() => { try { return sessionStorage.getItem('qsl_session_expired'); } catch { return null; } });
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const roleTooltipContent = (
@@ -115,6 +116,7 @@ export const LoginView: React.FC = () => {
               </p>
             </div>
 
+            {sessionNotice && <p role="status" className="rounded-xl border border-[#D9DDD4] bg-[#F8F9F5] p-3 text-sm text-[#5F645D]">{sessionNotice}</p>}
             {errorMsg && (
               <div
                 role="alert"
