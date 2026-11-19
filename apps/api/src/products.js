@@ -178,7 +178,7 @@ export function ensureProductSchema(pool) {
           origin_place varchar(120) NOT NULL DEFAULT '',
           license_expires_on date,
           license_image_url text,
-          store_id text NOT NULL DEFAULT 'store_hq_01',
+          store_id text NOT NULL DEFAULT 'c103cf20-2c1f-5bb1-b89c-90fe147b5473',
           store_name varchar(120) NOT NULL DEFAULT '杭州西湖旗舰店',
           enabled boolean NOT NULL DEFAULT true,
           created_by uuid REFERENCES identity.users(id),
@@ -217,8 +217,8 @@ export function ensureProductSchema(pool) {
 
       // Seed categories if empty
       const catCountRes = await pool.query(`SELECT count(*)::int AS total FROM catalog.product_categories`);
-      if (catCountRes.rows[0]?.total === 0) {
-        for (const cat of DEFAULT_CATEGORIES) {
+      if (process.env.QSL_ENABLE_DEMO_SEED === '1' && catCountRes.rows[0]?.total === 0) {
+        for (const cat of (process.env.QSL_ENABLE_DEMO_SEED === '1' ? DEFAULT_CATEGORIES : [])) {
           const { rows: [parent] } = await pool.query(
             `INSERT INTO catalog.product_categories (parent_id, name, sort_order, is_readonly)
              VALUES (NULL, $1, $2, $3) RETURNING id`,
@@ -235,7 +235,7 @@ export function ensureProductSchema(pool) {
       }
 
       // Seed tags
-      for (const [name, color, sortOrder, remark] of DEFAULT_TAGS) {
+      for (const [name, color, sortOrder, remark] of (process.env.QSL_ENABLE_DEMO_SEED === '1' ? DEFAULT_TAGS : [])) {
         await pool.query(
           `INSERT INTO catalog.product_tags (name, color, sort_order, remark)
            VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING`,
@@ -244,7 +244,7 @@ export function ensureProductSchema(pool) {
       }
 
       // Seed dictionaries
-      for (const [dictType, name, sortOrder] of DEFAULT_DICTIONARIES) {
+      for (const [dictType, name, sortOrder] of (process.env.QSL_ENABLE_DEMO_SEED === '1' ? DEFAULT_DICTIONARIES : [])) {
         await pool.query(
           `INSERT INTO catalog.product_dictionaries (dict_type, name, sort_order)
            VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`,
@@ -254,7 +254,7 @@ export function ensureProductSchema(pool) {
 
       // Seed initial brands if catalog.brands has none (safely)
       const { rows: brandRows } = await pool.query(`SELECT id, name FROM catalog.brands ORDER BY pinned DESC, name ASC`);
-      if (brandRows.length === 0) {
+      if (process.env.QSL_ENABLE_DEMO_SEED === '1' && brandRows.length === 0) {
         const seedBrands = [
           ['卡尔蔡司', 'ZEISS', '代理品牌', ['镜片', '视觉训练'], ['小瞳堡', '泽锐', '智锐', '防蓝光'], true],
           ['依视路', 'Essilor', '代理品牌', ['镜片'], ['钻晶A4', '膜岩', '星趣控'], true],
@@ -273,7 +273,7 @@ export function ensureProductSchema(pool) {
 
       // Seed products if empty
       const prodCountRes = await pool.query(`SELECT count(*)::int AS total FROM catalog.products`);
-      if (prodCountRes.rows[0]?.total === 0) {
+      if (process.env.QSL_ENABLE_DEMO_SEED === '1' && prodCountRes.rows[0]?.total === 0) {
         const { rows: allCats } = await pool.query(`SELECT id, name FROM catalog.product_categories`);
         const catIdByName = new Map(allCats.map((c) => [c.name, c.id]));
         const { rows: allBrands } = await pool.query(`SELECT id, name FROM catalog.brands`);
@@ -499,7 +499,7 @@ export function ensureProductSchema(pool) {
 
       // Seed default lens surcharge rule if empty
       const surCountRes = await pool.query(`SELECT count(*)::int AS total FROM catalog.lens_surcharges`);
-      if (surCountRes.rows[0]?.total === 0) {
+      if (process.env.QSL_ENABLE_DEMO_SEED === '1' && surCountRes.rows[0]?.total === 0) {
         await pool.query(
           `INSERT INTO catalog.lens_surcharges (
              name, surcharge_type, category_name, brand_name,
@@ -601,7 +601,7 @@ function shapeProduct(row, actor) {
         : String(row.license_expires_on).slice(0, 10))
       : '',
     licenseImageUrl: row.license_image_url ?? undefined,
-    storeId: row.store_id ?? 'store_hq_01',
+    storeId: row.store_id ?? 'c103cf20-2c1f-5bb1-b89c-90fe147b5473',
     storeName: row.store_name ?? '杭州西湖旗舰店',
     enabled: Boolean(row.enabled),
     createdAt: row.created_at,
@@ -750,7 +750,7 @@ function validateProductPayload(body, creating, actor, existing = null) {
     originPlace,
     licenseExpiresOn,
     licenseImageUrl,
-    storeId: 'storeId' in body ? clip(body.storeId, 80) || 'store_hq_01' : existing?.store_id ?? 'store_hq_01',
+    storeId: 'storeId' in body ? clip(body.storeId, 80) || 'c103cf20-2c1f-5bb1-b89c-90fe147b5473' : existing?.store_id ?? 'c103cf20-2c1f-5bb1-b89c-90fe147b5473',
     storeName: 'storeName' in body ? clip(body.storeName, 120) || '杭州西湖旗舰店' : existing?.store_name ?? '杭州西湖旗舰店',
     enabled: 'enabled' in body ? Boolean(body.enabled) : (existing ? Boolean(existing.enabled) : true),
   };

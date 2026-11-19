@@ -439,16 +439,15 @@ export const StoreProfilePage: React.FC = () => {
 
   const [deleteTargets, setDeleteTargets] = useState<StoreProfileRecord[]>([]);
 
+  const pendingStoreSave = useRef<Promise<void>>(Promise.resolve());
   const updateStores = (updater: (prev: StoreProfileRecord[]) => StoreProfileRecord[]) => {
-    setStores((prev) => {
-      const next = updater(prev);
-      saveStoreProfiles(next);
-      return next;
-    });
+    const next=updater(stores);
+    pendingStoreSave.current=saveStoreProfiles(next).then(()=>{setStores(loadStoreProfiles());});
+    // Attach a rejection handler immediately; showSuccess reports the result.
+    void pendingStoreSave.current.catch(()=>{});
   };
-
   const showSuccess = (msg: string) => {
-    setNotice(msg);
+    void pendingStoreSave.current.then(()=>setNotice(msg)).catch(e=>setNotice(e instanceof Error?e.message:'门店保存失败'));
   };
 
   useEffect(() => {
@@ -798,7 +797,7 @@ export const StoreProfilePage: React.FC = () => {
     } else {
       const nextIdNum = stores.reduce((max, s) => Math.max(max, s.numericId), 4000) + 1;
       const created: StoreProfileRecord = {
-        id: `store_${Date.now()}`,
+        id: crypto.randomUUID(),
         numericId: nextIdNum,
         storeCode: formState.storeCode.trim(),
         name: formState.name.trim(),

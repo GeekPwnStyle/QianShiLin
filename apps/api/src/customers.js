@@ -1,3 +1,4 @@
+import { storeNames as STORE_NAMES } from './stores.js';
 import { customerListCache } from './query-cache.js';
 import { randomBytes } from 'node:crypto';
 
@@ -6,12 +7,7 @@ const isoDateRe = /^\d{4}-\d{2}-\d{2}$/;
 const phoneRe = /^1\d{10}$/;
 const DATA_IMAGE_URL_RE = /^data:image\/(png|jpeg|jpg|webp|gif);base64,[A-Za-z0-9+/=]+$/i;
 
-const STORE_NAMES = {
-  store_hq_01: '杭州西湖旗舰店',
-  store_hz_02: '杭州滨江天街店',
-  store_sh_03: '上海静安寺店',
-  store_nj_04: '南京新街口店',
-};
+
 
 const ALLOWED_TIERS = new Set([
   '普通顾客',
@@ -54,7 +50,7 @@ const SEED_CUSTOMERS = [
     tier: '黑卡会员',
     medical_id_no: 'ZJ-33010619970418002X',
     tags: ['高度近视', 'VIP复购'],
-    store_id: 'store_hq_01',
+    store_id: 'c103cf20-2c1f-5bb1-b89c-90fe147b5473',
     store_name: '杭州西湖旗舰店',
     guide_name: '苏晓晴',
     source: '门店接待',
@@ -154,7 +150,7 @@ const SEED_CUSTOMERS = [
     tier: '金卡会员',
     medical_id_no: 'YB-330102196302140118',
     tags: ['老花镜需求', 'VIP复购'],
-    store_id: 'store_hq_01',
+    store_id: 'c103cf20-2c1f-5bb1-b89c-90fe147b5473',
     store_name: '杭州西湖旗舰店',
     guide_name: '苏晓晴',
     source: '门店接待',
@@ -230,7 +226,7 @@ export function ensureCustomerSchema(pool) {
           ON customer.tag_definitions (lower(name))
       `);
 
-      for (const [name, sortOrder] of DEFAULT_TAGS) {
+      for (const [name, sortOrder] of (process.env.QSL_ENABLE_DEMO_SEED === '1' ? DEFAULT_TAGS : [])) {
         await pool.query(
           `INSERT INTO customer.tag_definitions (name, sort_order)
            VALUES ($1, $2)
@@ -240,7 +236,7 @@ export function ensureCustomerSchema(pool) {
       }
 
       const { rows: countRows } = await pool.query(`SELECT count(*)::int AS total FROM customer.profiles`);
-      if (countRows[0]?.total === 0) {
+      if (process.env.QSL_ENABLE_DEMO_SEED === '1' && countRows[0]?.total === 0) {
         for (const item of SEED_CUSTOMERS) {
           await pool.query(
             `INSERT INTO customer.profiles (

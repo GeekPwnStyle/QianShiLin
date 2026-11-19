@@ -1,3 +1,4 @@
+import { refreshStoreRegistry, handleStores } from './stores.js';
 import { handlePricing } from './pricing.js';
 import { handleSessionPolicy } from './session-policy.js';
 import { customerListCache } from './query-cache.js';
@@ -73,12 +74,24 @@ const server = http.createServer(async (req, res) => {
   if (inFlight >= maxInFlight) return send(res, 503, { error: 'Service busy; retry later' }, { 'Retry-After': '2' });
   inFlight++;
   try {
+    await refreshStoreRegistry(pool);
     const url = new URL(req.url, 'http://localhost');
     const path = url.pathname;
     if (path === '/healthz') {
       await pool.query('SELECT 1');
       return send(res, 200, { ok: true });
     }
+    if (path === '/overview' && req.method === 'GET') {
+      const user=await sessionUser(getToken(req));if(!user)return send(res,401,{error:'Unauthorized'});
+      const scope=user.store_ids||[];
+      const {rows:[stats]}=await pool.query(`SELECT
+       (SELECT count(*)::int FROM organization.stores WHERE id=ANY($1::text[])) stores,
+       (SELECT count(*)::int FROM customer.profiles WHERE store_id=ANY($1::text[])) customers,
+       (SELECT count(*)::int FROM catalog.products WHERE store_id=ANY($1::text[])) products,
+       (SELECT count(*)::int FROM purchase.orders WHERE store_id=ANY($1::text[])) orders`,[scope]);
+      return send(res,200,stats);
+    }
+    if (path === '/stores') return await handleStores({req,res,user:await sessionUser(getToken(req)),pool,send,readJson});
     if (path === '/session/activity' || path === '/system/session-policy') {
       const token = getToken(req);
       const user = await sessionUser(token);

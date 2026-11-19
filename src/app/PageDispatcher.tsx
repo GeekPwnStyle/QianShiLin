@@ -53,6 +53,7 @@ export const PageDispatcher: React.FC = () => {
 
   if (activeNode.id === 'basic.fees.categories') return <ServicePricingPage key={activeNode.id} kind="categories" />;
   if (activeNode.id === 'basic.fees.items') return <ServicePricingPage key={activeNode.id} kind="items" />;
+  if (activeNode.implemented !== true) return <UnconfirmedPageShell node={activeNode} />;
   switch (activeNode.pageKind) {
     case 'catalog_brand': return <BrandPage />;
     case 'catalog_supplier': return <SupplierPage />;

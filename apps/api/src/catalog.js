@@ -1,9 +1,10 @@
+import { storeIds as ALL_STORE_IDS } from './stores.js';
 const DATA_IMAGE_URL_RE = /^data:image\/(png|jpeg|jpg|webp|gif);base64,[A-Za-z0-9+/=]+$/i;
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const dateRe = /^\d{4}-\d{2}-\d{2}$/;
 const usernameRe = /^[a-zA-Z0-9_.-]{3,32}$/;
 
-const ALL_STORE_IDS = ['store_hq_01', 'store_hz_02', 'store_sh_03', 'store_nj_04'];
+
 
 const SUPPLIER_USERNAME_BY_NAME = {
   卡尔蔡司光学华东代理: 'supplier',
@@ -220,7 +221,7 @@ const DEFAULT_OPTICAL_SUPPLIERS = [
     sort_order: 40,
     scope: '中高端光学镜架 / 验光辅料及陈列道具',
     is_supply_chain: false,
-    authorized_store_ids: ['store_hq_01', 'store_hz_02'],
+    authorized_store_ids: ['c103cf20-2c1f-5bb1-b89c-90fe147b5473', 'store_hz_02'],
     owner_store_type: '总店',
     owner_store_name: '杭州西湖旗舰店',
   },
@@ -241,7 +242,7 @@ const DEFAULT_OPTICAL_SUPPLIERS = [
     sort_order: 50,
     scope: '潮牌太阳镜 / 板材与金属混搭光学镜架',
     is_supply_chain: false,
-    authorized_store_ids: ['store_hq_01', 'store_sh_03'],
+    authorized_store_ids: ['c103cf20-2c1f-5bb1-b89c-90fe147b5473', 'store_sh_03'],
     owner_store_type: '总店',
     owner_store_name: '杭州西湖旗舰店',
   },
@@ -288,7 +289,7 @@ const DEFAULT_OPTICAL_SUPPLIERS = [
     sort_order: 70,
     scope: '吉瑞祥老光 / 中老年折叠便携老花镜系列',
     is_supply_chain: false,
-    authorized_store_ids: ['store_hq_01', 'store_sh_03', 'store_nj_04'],
+    authorized_store_ids: ['c103cf20-2c1f-5bb1-b89c-90fe147b5473', 'store_sh_03', 'store_nj_04'],
     owner_store_type: '总店',
     owner_store_name: '杭州西湖旗舰店',
   },
@@ -334,7 +335,7 @@ const DEFAULT_OPTICAL_SUPPLIERS = [
     sort_order: 90,
     scope: '杜鲁萨迪 / 陌森太阳镜 / 暴龙太阳镜',
     is_supply_chain: false,
-    authorized_store_ids: ['store_hq_01', 'store_hz_02', 'store_sh_03'],
+    authorized_store_ids: ['c103cf20-2c1f-5bb1-b89c-90fe147b5473', 'store_hz_02', 'store_sh_03'],
     owner_store_type: '总店',
     owner_store_name: '杭州西湖旗舰店',
   },
@@ -355,7 +356,7 @@ const DEFAULT_OPTICAL_SUPPLIERS = [
     sort_order: 100,
     scope: '保时捷太阳镜 / 华尔诗丹 / 芙莱尔高端镜架',
     is_supply_chain: false,
-    authorized_store_ids: ['store_hq_01', 'store_sh_03'],
+    authorized_store_ids: ['c103cf20-2c1f-5bb1-b89c-90fe147b5473', 'store_sh_03'],
     owner_store_type: '总店',
     owner_store_name: '杭州西湖旗舰店',
   },
@@ -541,7 +542,7 @@ export function ensureSupplierSchema(pool) {
           ON catalog.supplier_invitations (applied_at DESC)
       `);
 
-      for (const item of DEFAULT_OPTICAL_SUPPLIERS) {
+      for (const item of (process.env.QSL_ENABLE_DEMO_SEED === '1' ? DEFAULT_OPTICAL_SUPPLIERS : [])) {
         const { rows: [existing] } = await pool.query(
           `SELECT id, sort_order, scope, authorized_store_ids FROM catalog.suppliers WHERE lower(name) = lower($1) LIMIT 1`,
           [item.name]

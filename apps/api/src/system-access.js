@@ -1,3 +1,4 @@
+import { storeSet as stores } from './stores.js';
 import { resolveIpRegion } from './ip-region.js';
 import { ensureAccountSchema } from './account.js';
 import { ensureSupplierSchema } from './catalog.js';
@@ -7,7 +8,7 @@ import { randomUUID } from 'node:crypto';
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const roleId = /^role_[a-z0-9_]{1,80}$/;
 const permission = /^[a-z][a-z0-9_.]{1,100}$/;
-const stores = new Set(['store_hq_01','store_hz_02','store_sh_03','store_nj_04']);
+
 const sensitiveKeys = ['viewCostPrice','viewWholesalePrice','viewProfitMargin','viewPlaintextPhone','batchExport'];
 const shapeRole = row => ({ id: row.id, name: row.name, identityType: row.identity_type,
   subRole: row.sub_role ?? undefined, description: row.description, dataScope: row.data_scope,

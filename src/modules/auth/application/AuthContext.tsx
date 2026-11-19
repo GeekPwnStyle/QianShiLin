@@ -1,3 +1,4 @@
+import { refreshStoreProfilesFromServer } from '@/src/modules/system/stores/domain/storeProfile';
 import { useSessionIdle } from './useSessionIdle';
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -28,17 +29,7 @@ const LAST_THEME_STORAGE_KEY = 'qsl_last_theme_v1';
 const DEBUG_MODE_STORAGE_KEY = 'qsl_auth_debug_mode_v1';
 const DEBUG_SESSION_KEY = 'qsl_debug_auth_preset_v1';
 
-function loadInitialDebugMode(): boolean {
-  if (typeof window === 'undefined') return import.meta.env.BASE_URL === '/';
-  try {
-    const saved = window.localStorage.getItem(DEBUG_MODE_STORAGE_KEY);
-    if (saved === 'true') return true;
-    if (saved === 'false') return false;
-  } catch {
-    // Ignore storage read errors
-  }
-  return import.meta.env.BASE_URL === '/';
-}
+function loadInitialDebugMode(): boolean { return false; }
 
 function loadLastTheme(): ThemeKey {
   if (typeof window === 'undefined') return DEFAULT_THEME_KEY;
@@ -260,6 +251,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     themeKey: loadLastTheme(),
   }));
   useSessionIdle(isAuthenticated && !debugMode, session.userId, () => { setIsAuthenticated(false); queryClient.clear(); });
+  useEffect(() => {
+    const update=()=>setSession(prev=>{
+      const ids=prev.identityType==='admin'?STORE_CATALOG.map(s=>s.id):prev.authorizedStores.map(s=>s.id);
+      return {...prev,authorizedStores:resolveAuthorizedStores(ids),currentStoreName:STORE_CATALOG.find(s=>s.id===prev.currentStoreId)?.name??prev.currentStoreName};
+    });
+    window.addEventListener('qsl-stores-changed',update);return()=>window.removeEventListener('qsl-stores-changed',update);
+  },[]);
   const [themeSaving, setThemeSaving] = useState(false);
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
@@ -271,7 +269,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [session.themeKey]);
 
   const setDebugMode = (enabled: boolean) => {
-    setDebugModeState(enabled);
+    setDebugModeState(false);
     try {
       window.localStorage.setItem(DEBUG_MODE_STORAGE_KEY, String(enabled));
     } catch {
@@ -303,6 +301,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (!r.ok) return;
         const { user }: { user: ServerUser } = await r.json();
         if (active && user?.id) {
+          await refreshStoreProfilesFromServer();
           try { sessionStorage.removeItem('qsl_session_expired'); } catch {}
       setSession(buildSessionFromServerUser(user));
           setIsAuthenticated(true);
@@ -439,6 +438,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       const { user }: { user?: ServerUser } = await response.json();
       if (!user?.id) return { ok: false, error: '登录返回用户信息异常。' };
+      await refreshStoreProfilesFromServer();
       if (!user.role_id) return { ok: false, error: '账号角色尚未在数据库中配置。' };
       setSession(buildSessionFromServerUser(user));
       setIsAuthenticated(true);

@@ -124,6 +124,7 @@ const RAW_MODULES: RawNodeInput[] = [
     permission: 'basic.read',
     nodeType: 'module',
     children: [
+      { id: 'system.stores', label: '门店资料', description: '维护直营/加盟门店编码、营业地址、医疗器械资质、小程序显示与跨店查看权限。', permission: 'system.store.manage', nodeType: 'page', favoritable: true, pageKind: 'store_profiles', implemented: true },
       {
         id: 'basic.product',
         label: '商品档案',
@@ -753,7 +754,6 @@ const RAW_MODULES: RawNodeInput[] = [
       { id: 'system.parameters', label: '参数设置', description: '配置销售收银、充值验光、加工中心、采购调拨、小程序、工作提醒、近效期预警及管理员授权等全局与门店参数。', permission: 'system.read', nodeType: 'page', favoritable: true, pageKind: 'system_parameters', implemented: true },
       { id: 'system.notices_send', label: '内部公告', description: '管理员发布公告并查看每位接收人的阅读状态；用户可在消息中心查阅历史。', permission: 'system.notice.publish', nodeType: 'page', pageKind: 'internal_notices', implemented: true },
       { id: 'system.product_maintenance', label: '商品数据治理', description: '跨门店价格同步、商品合并、效期批量修改及监管数据导出。', permission: 'basic.product.update', nodeType: 'page', pageKind: 'product_list' },
-      { id: 'system.stores', label: '门店资料', description: '维护直营/加盟门店编码、营业地址、医疗器械资质、小程序显示与跨店查看权限。', permission: 'system.store.manage', nodeType: 'page', favoritable: true, pageKind: 'store_profiles', implemented: true },
       { id: 'system.processing_warehouses', label: '加工仓库设置', description: '配置门店对应的中央加工仓与毛坯片默认调出仓。', permission: 'system.store.manage', nodeType: 'page', pageKind: 'catalog_warehouse', implemented: true },
       { id: 'system.banks', label: '结算账户档案', description: '公司收付款对公账户与POS结算账户档案。', permission: 'system.read', nodeType: 'page', pageKind: 'master_data' },
         { id: 'system.audit_logs', label: '操作日志', description: '按月份查询登录与权限变更审计记录。', permission: 'system.read', nodeType: 'page', pageKind: 'operation_logs', implemented: true },

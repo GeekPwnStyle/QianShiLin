@@ -23,6 +23,9 @@ export interface StoreOperationalConfig {
 
 export interface StoreProfileRecord {
   id: string;
+  brand?: string;
+  providesProcessing?: boolean;
+  remark?: string;
   numericId: number;
   storeCode: string;
   name: string;
@@ -52,7 +55,8 @@ export const PROVINCE_CITY_MAP: Record<string, string[]> = {
   重庆市: ['重庆市'],
   北京市: ['北京市'],
   广东省: ['广州市', '深圳市', '佛山市'],
-  四川省: ['成都市'],
+  四川省: ['成都市', '宜宾市'],
+  云南省: ['昆明市'],
 };
 
 export const REGION_OPTIONS = ['华东大区', '西南大区', '华南大区', '华北大区', '华中大区'];
@@ -287,26 +291,21 @@ export const INITIAL_STORE_PROFILES: StoreProfileRecord[] = [
 
 const STORE_PROFILES_STORAGE_KEY = 'qsl_store_profiles_v1';
 
-export function loadStoreProfiles(): StoreProfileRecord[] {
-  if (typeof window === 'undefined') return INITIAL_STORE_PROFILES;
-  try {
-    const raw = window.localStorage.getItem(STORE_PROFILES_STORAGE_KEY);
-    if (!raw) return INITIAL_STORE_PROFILES;
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed) && parsed.length > 0) {
-      return parsed as StoreProfileRecord[];
-    }
-  } catch {
-    // Ignore storage parse error
-  }
-  return INITIAL_STORE_PROFILES;
+let serverProfiles: StoreProfileRecord[] = [];
+let serverRevision: number | null = null;
+export function loadStoreProfiles(): StoreProfileRecord[] { return serverProfiles; }
+export async function refreshStoreProfilesFromServer(): Promise<void> {
+  const r=await fetch(`${import.meta.env.BASE_URL}api/stores`,{credentials:'same-origin'});
+  const data=await r.json();if(!r.ok)throw new Error(data.error||'门店资料加载失败');
+  serverProfiles=data.items;serverRevision=data.revision;
+  const {STORE_CATALOG}=await import('@/src/modules/auth/domain/identity');
+  STORE_CATALOG.splice(0,STORE_CATALOG.length,...serverProfiles.map(s=>({id:s.id,name:s.name,code:s.storeCode,region:s.regionName})));
+  try{localStorage.removeItem(STORE_PROFILES_STORAGE_KEY);}catch{}
 }
-
-export function saveStoreProfiles(records: StoreProfileRecord[]): void {
-  if (typeof window === 'undefined') return;
-  try {
-    window.localStorage.setItem(STORE_PROFILES_STORAGE_KEY, JSON.stringify(records));
-  } catch {
-    // Ignore storage write error
-  }
+export async function saveStoreProfiles(records: StoreProfileRecord[]): Promise<void> {
+  if(serverRevision===null)throw new Error('门店资料未加载，请刷新后重试');
+  const r=await fetch(`${import.meta.env.BASE_URL}api/stores`,{method:'PUT',credentials:'same-origin',headers:{'content-type':'application/json'},body:JSON.stringify({items:records,revision:serverRevision})});
+  const data=await r.json();if(!r.ok)throw new Error(data.error||'门店保存失败');
+  await refreshStoreProfilesFromServer();
+  window.dispatchEvent(new Event('qsl-stores-changed'));
 }

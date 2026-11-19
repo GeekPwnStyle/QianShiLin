@@ -1,7 +1,8 @@
+import { storeIds as ALL_STORE_IDS } from './stores.js';
 const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const usernameRe = /^[a-zA-Z0-9_.-]{3,32}$/;
 const fields = ['name', 'role', 'department', 'limit', 'age', 'gender', 'education', 'phone', 'address', 'loginStatus', 'tags'];
-const ALL_STORE_IDS = ['store_hq_01', 'store_hz_02', 'store_sh_03', 'store_nj_04'];
+
 
 let schemaReadyPromise = null;
 
@@ -64,7 +65,8 @@ async function syncIdentityUsersToStaff(pool) {
       continue;
     }
 
-    const storeId = Array.isArray(u.store_ids) && u.store_ids.length > 0 ? u.store_ids[0] : 'store_hq_01';
+    if (!Array.isArray(u.store_ids) || !u.store_ids.length) continue;
+    const storeId = u.store_ids[0];
     const defaultDept = u.identity_type === 'admin' ? '总部运营' : '门店服务';
     const defaultLimit = u.identity_type === 'admin' ? '5000' : u.sub_role === 'store_manager' ? '1000' : '200';
     const profileData = {
@@ -113,7 +115,7 @@ export async function handleStaff({ req, res, url, user, pool, send, readJson })
   const canManageUsers = actor.identity_type === 'admin' && has('system.user.manage');
 
   if (req.method === 'GET') {
-    await syncIdentityUsersToStaff(pool);
+    if (process.env.QSL_ENABLE_DEMO_SEED === '1') await syncIdentityUsersToStaff(pool);
 
     const [{ rows }, { rows: roles }] = await Promise.all([
       pool.query(
