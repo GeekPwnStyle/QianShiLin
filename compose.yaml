@@ -28,6 +28,7 @@ services:
       - ./apps/api/db/migrations/023_store_master.sql:/docker-entrypoint-initdb.d/023_store_master.sql:ro
       - ./apps/api/db/migrations/024_password_policy.sql:/docker-entrypoint-initdb.d/024_password_policy.sql:ro
       - ./apps/api/db/migrations/025_staff_created_at.sql:/docker-entrypoint-initdb.d/025_staff_created_at.sql:ro
+      - ./apps/api/db/migrations/026_legacy_supplier_accounts.sql:/docker-entrypoint-initdb.d/026_legacy_supplier_accounts.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U qianshilin -d qianshilin"]
       interval: 10s

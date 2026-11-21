@@ -1,4 +1,5 @@
 import { storeIds as ALL_STORE_IDS } from './stores.js';
+import { readFileSync } from 'node:fs';
 const DATA_IMAGE_URL_RE = /^data:image\/(png|jpeg|jpg|webp|gif);base64,[A-Za-z0-9+/=]+$/i;
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const dateRe = /^\d{4}-\d{2}-\d{2}$/;
@@ -440,7 +441,7 @@ export async function syncSuppliersToIdentityUsers(pool) {
       } else {
         const { rows: [zeissOrDefault] } = await client.query(
           `SELECT id, name FROM catalog.suppliers
-           WHERE user_id IS NULL
+           WHERE user_id IS NULL AND auto_provision_account
            ORDER BY CASE WHEN name = '卡尔蔡司光学华东代理' THEN 0 ELSE 1 END,
                     is_default DESC, sort_order ASC, created_at ASC
            LIMIT 1`
@@ -473,7 +474,7 @@ export async function syncSuppliersToIdentityUsers(pool) {
     const { rows: unlinkedSuppliers } = await client.query(
       `SELECT id, name, alias, contact, enabled
        FROM catalog.suppliers
-       WHERE user_id IS NULL
+       WHERE user_id IS NULL AND auto_provision_account
        ORDER BY sort_order ASC, is_default DESC, created_at ASC`
     );
 
@@ -624,6 +625,7 @@ export function ensureSupplierSchema(pool) {
         }
       }
 
+      await pool.query(readFileSync(new URL('../db/migrations/026_legacy_supplier_accounts.sql', import.meta.url), 'utf8'));
       await syncSuppliersToIdentityUsers(pool);
     })().catch((err) => {
       supplierSchemaReadyPromise = null;
@@ -824,6 +826,29 @@ export async function handleCatalog({ req, res, url, user, pool, send, readJson 
 
   if (resource === 'suppliers' && sub1 && !uuid.test(sub1)) {
     try {
+      if (sub1 === 'legacy-accounts') {
+        if (req.method !== 'GET' || access.role !== 'admin' || !allowed('basic.supplier.read')) {
+          send(res, 403, { error: 'Forbidden' }); return true;
+        }
+        if (sub2) {
+          if (!uuid.test(sub2)) { send(res, 400, { error: '无效账号' }); return true; }
+          const { rows } = await pool.query(`SELECT s.id, s.name, g.source_name, g.needs_review
+            FROM catalog.legacy_supplier_account_grants g JOIN catalog.suppliers s ON s.id=g.supplier_id
+            WHERE g.account_id=$1 ORDER BY g.source_name LIMIT 500`, [sub2]);
+          send(res, 200, { items: rows }); return true;
+        }
+        const search = String(url.searchParams.get('search') || '').slice(0, 120);
+        const page = Math.max(1, Math.min(100000, Number.parseInt(url.searchParams.get('page'), 10) || 1));
+        const { rows } = await pool.query(`SELECT a.*, count(g.supplier_id)::int AS supplier_count,
+          count(*) OVER()::int AS total
+          FROM catalog.legacy_supplier_accounts a
+          LEFT JOIN catalog.legacy_supplier_account_grants g ON g.account_id=a.id
+          WHERE strpos(lower(a.username),lower($1))>0 OR EXISTS (
+            SELECT 1 FROM catalog.legacy_supplier_account_grants sg
+            WHERE sg.account_id=a.id AND strpos(lower(sg.source_name),lower($1))>0)
+          GROUP BY a.id ORDER BY a.username LIMIT 20 OFFSET $2`, [search, (page-1)*20]);
+        send(res, 200, { items: rows, total: rows[0]?.total ?? 0, page }); return true;
+      }
       if (sub1 === 'invitations' && !sub2) {
         if (req.method === 'GET') {
           const { rows } = await pool.query(
@@ -1266,7 +1291,7 @@ export async function handleCatalog({ req, res, url, user, pool, send, readJson 
               );
             }
           }
-        } else {
+        } else if (updated.auto_provision_account !== false) {
           await provisionSupplierUserAccount(client, updated, {
             password: loginPassword || undefined,
             actorUserId: user.id,

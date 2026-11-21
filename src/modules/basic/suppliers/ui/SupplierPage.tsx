@@ -26,6 +26,7 @@ import {
   SupplierMoreModal,
 } from '@/src/modules/basic/suppliers/ui/SupplierActionModals';
 import { SupplierFormModal } from '@/src/modules/basic/suppliers/ui/SupplierFormModal';
+import { LegacySupplierAccountsModal } from './LegacySupplierAccountsModal';
 import { ConfirmDeleteModal } from '@/src/shared/ui/ConfirmDeleteModal';
 import { HelpTooltip } from '@/src/shared/ui/HelpTooltip';
 import { OperationStatus } from '@/src/shared/ui/OperationStatus';
@@ -117,7 +118,8 @@ export const SupplierPage: React.FC = () => {
 
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [columnsOpen, setColumnsOpen] = useState(false);
-  const [hiddenColumns, setHiddenColumns] = useState<ColumnKey[]>([]);
+  const [hiddenColumns, setHiddenColumns] = useState<ColumnKey[]>(['bound_franchise_stores', 'sort_order', 'province', 'city', 'district', 'owner_store_type', 'owner_store_name', 'detail_address', 'device_license_expires_on', 'is_supply_chain']);
+  const [legacyAccountsOpen, setLegacyAccountsOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const [formOpen, setFormOpen] = useState(false);
@@ -437,6 +439,7 @@ export const SupplierPage: React.FC = () => {
               >
                 通过邀请码新增
               </button>
+              <button type="button" className={toolbarBtn} onClick={() => setLegacyAccountsOpen(true)}>旧账号授权</button>
             </>
           )}
 
@@ -869,7 +872,7 @@ export const SupplierPage: React.FC = () => {
                                     )}
                                   </span>
                                 ) : (
-                                  '—'
+                                  '未开通'
                                 )}
                               </td>
                             );
@@ -1087,6 +1090,7 @@ export const SupplierPage: React.FC = () => {
       />
 
       {/* 删除确认弹窗 */}
+      {legacyAccountsOpen && <LegacySupplierAccountsModal debugMode={debugMode} onClose={() => setLegacyAccountsOpen(false)} />}
       <ConfirmDeleteModal
         open={Boolean(deletingSupplier)}
         title="确认删除供应商资料"
