@@ -383,14 +383,18 @@ export const TopHeader: React.FC = () => {
               className={`h-9 px-3 xl:px-3.5 rounded-full text-[14px] 2xl:text-[15px] leading-none inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 select-none border border-transparent transition-colors duration-150 cursor-pointer ${
                 workbenchDeveloped
                   ? activeNode.id === 'workbench'
-                    ? 'font-bold bg-[var(--qsl-nav-active-bg)] text-[var(--qsl-nav-active-ink)]'
-                    : 'font-bold bg-transparent text-[#5F645D] hover:text-[#171916] hover:bg-[#F1F2EE]'
+                    ? 'font-extrabold bg-[var(--qsl-nav-active-bg)] text-[var(--qsl-nav-active-ink)]'
+                    : 'font-extrabold bg-transparent text-[#111310] hover:text-black hover:bg-[#EAECE6]/80'
                   : activeNode.id === 'workbench'
                     ? 'font-medium bg-[#E4E7E0] text-[#5F645D] grayscale'
                     : 'font-medium bg-transparent text-[#A8ADA4] opacity-70 grayscale hover:opacity-90 hover:text-[#73796F] hover:bg-[#F1F2EE]/60'
               }`}
             >
-              <ModuleIcon name="LayoutDashboard" className="w-4 h-4 shrink-0" />
+              <ModuleIcon
+                name="LayoutDashboard"
+                strokeWidth={workbenchDeveloped ? 2.25 : 1.75}
+                className="w-4 h-4 shrink-0"
+              />
               <span>工作台</span>
             </button>
 
@@ -447,15 +451,15 @@ export const TopHeader: React.FC = () => {
                   }
                   className={`h-9 px-3 xl:px-3.5 rounded-full text-[14px] 2xl:text-[15px] leading-none inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 select-none border transition-colors duration-150 cursor-grab active:cursor-grabbing ${
                     isDropTarget
-                      ? 'font-bold bg-[var(--qsl-accent)] text-[var(--qsl-accent-ink)] border-[var(--qsl-accent-border)] ring-2 ring-[#171916]/25'
+                      ? 'font-extrabold bg-[var(--qsl-accent)] text-[var(--qsl-accent-ink)] border-[var(--qsl-accent-border)] ring-2 ring-[#171916]/25'
                       : isBeingDragged
-                        ? 'font-bold opacity-50 border-dashed border-[#171916] bg-[#F1F2EE] text-[#171916]'
+                        ? 'font-extrabold opacity-50 border-dashed border-[#171916] bg-[#F1F2EE] text-[#111310]'
                         : isDeveloped
                           ? isActive
-                            ? 'font-bold bg-[var(--qsl-nav-active-bg)] text-[var(--qsl-nav-active-ink)] border-transparent'
+                            ? 'font-extrabold bg-[var(--qsl-nav-active-bg)] text-[var(--qsl-nav-active-ink)] border-transparent'
                             : showDropHint
-                              ? 'font-bold bg-[#F8F9F5] text-[#171916] border-dashed border-[#171916]/40'
-                              : 'font-bold bg-transparent text-[#5F645D] border-transparent hover:text-[#171916] hover:bg-[#F1F2EE]'
+                              ? 'font-extrabold bg-[#F8F9F5] text-[#111310] border-dashed border-[#171916]/40'
+                              : 'font-extrabold bg-transparent text-[#111310] border-transparent hover:text-black hover:bg-[#EAECE6]/80'
                           : isActive
                             ? 'font-medium bg-[#E4E7E0] text-[#5F645D] border-transparent grayscale'
                             : showDropHint
@@ -463,7 +467,11 @@ export const TopHeader: React.FC = () => {
                               : 'font-medium bg-transparent text-[#A8ADA4] opacity-70 grayscale border-transparent hover:opacity-90 hover:text-[#73796F] hover:bg-[#F1F2EE]/60'
                   }`}
                 >
-                  <ModuleIcon name={mod.icon} className="w-4 h-4 shrink-0 pointer-events-none" />
+                  <ModuleIcon
+                    name={mod.icon}
+                    strokeWidth={isDeveloped ? 2.25 : 1.75}
+                    className="w-4 h-4 shrink-0 pointer-events-none"
+                  />
                   <span className="pointer-events-none">{mod.label}</span>
                 </div>
               );
@@ -474,17 +482,17 @@ export const TopHeader: React.FC = () => {
                 type="button"
                 onClick={() => setAllModulesOpen(!allModulesOpen)}
                 aria-expanded={allModulesOpen}
-                className={`h-9 px-2.5 xl:px-3 rounded-full text-[13px] xl:text-[14px] font-bold leading-none whitespace-nowrap shrink-0 select-none inline-flex items-center justify-center gap-1.5 border transition-colors duration-150 cursor-pointer ml-0.5 ${
+                className={`h-9 px-2.5 xl:px-3 rounded-full text-[13px] xl:text-[14px] font-extrabold leading-none whitespace-nowrap shrink-0 select-none inline-flex items-center justify-center gap-1.5 border transition-colors duration-150 cursor-pointer ml-0.5 ${
                   allModulesOpen
                     ? 'bg-[var(--qsl-accent)] text-[var(--qsl-accent-ink)] border-[var(--qsl-accent-border)]'
                     : activeOutsideTopBar
                       ? activeModuleDeveloped
-                        ? 'bg-[var(--qsl-accent-soft)] text-[#171916] border-[var(--qsl-accent-soft-border)]'
+                        ? 'bg-[var(--qsl-accent-soft)] text-[#111310] border-[var(--qsl-accent-soft-border)]'
                         : 'bg-[#EAECE6] text-[#5F645D] border-[#C5CAC0]'
-                      : 'bg-[#F8F9F5] text-[#171916] border-[#D9DDD4] hover:border-[#171916]'
+                      : 'bg-[#F8F9F5] text-[#111310] border-[#D9DDD4] hover:border-[#111310]'
                 }`}
               >
-                <LayoutGrid className="w-4 h-4 shrink-0" />
+                <LayoutGrid className="w-4 h-4 shrink-0" strokeWidth={2.25} />
                 <span className="hidden 2xl:inline">全部菜单</span>
                 <span className="2xl:hidden">全部</span>
               </button>

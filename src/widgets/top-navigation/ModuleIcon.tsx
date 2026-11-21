@@ -54,7 +54,7 @@ import {
   Wrench,
 } from 'lucide-react';
 
-const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
+const ICON_MAP: Record<string, React.ComponentType<{ className?: string; strokeWidth?: number }>> = {
   Layers,
   ShoppingBag,
   Truck,
@@ -77,12 +77,13 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   FileText,
 };
 
-export const ModuleIcon: React.FC<{ name: string; className?: string }> = ({
-  name,
-  className = 'w-4 h-4',
-}) => {
+export const ModuleIcon: React.FC<{
+  name: string;
+  className?: string;
+  strokeWidth?: number;
+}> = ({ name, className = 'w-4 h-4', strokeWidth }) => {
   const IconComp = ICON_MAP[name] ?? FileText;
-  return <IconComp className={className} aria-hidden="true" />;
+  return <IconComp className={className} strokeWidth={strokeWidth} aria-hidden="true" />;
 };
 
 export const L2MenuIcon: React.FC<{ nodeId: string; label: string; className?: string }> = ({
